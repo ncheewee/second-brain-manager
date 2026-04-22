@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BYOC — Context Manager</title>
+<title>Second Brain Manager</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -364,7 +364,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <!-- HEADER -->
   <header>
     <div class="header-left">
-      <span class="header-title">⬡ Second Brain</span>
+      <span class="header-title">⬡ Second Brain Manager</span>
       <span class="version-badge">v02</span>
     </div>
     <div class="header-right">
@@ -743,7 +743,7 @@ async function runSemanticSearch(query) {
       },
       body: JSON.stringify({
         query,
-        jwt: userJwt,
+        user_id: currentUser.id,
         spaces: activeSpaceFilter !== 'all' ? [activeSpaceFilter] : null,
         threshold: 0.35,
         limit: 15
