@@ -457,20 +457,12 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
         <h3>Supabase Connection</h3>
         <div style="display:flex;flex-direction:column;gap:14px;">
           <div class="field">
-            <label>Project URL</label>
-            <input type="url" id="sbUrl" placeholder="https://xxxxx.supabase.co" />
-          </div>
-          <div class="field">
-            <label>Publishable API Key</label>
-            <input type="password" id="sbKey" placeholder="sb_publishable_..." />
-          </div>
-          <div class="field">
             <label>Email</label>
             <input type="email" id="sbEmail" placeholder="you@email.com" />
           </div>
           <div class="field">
             <label>Password</label>
-            <input type="password" id="sbPassword" placeholder="Your Supabase user password" />
+            <input type="password" id="sbPassword" placeholder="Your Supabase password" />
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <button class="btn btn-accent" onclick="saveAndConnect()">Connect</button>
@@ -598,6 +590,11 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
+// ── HARDCODED CONFIG ──────────────────────────
+// Update these once — all devices share the same URL and key
+const SUPABASE_URL = 'https://udajruwgcbshupsvoocn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sYTC7ItxBipUq__w3G3ZBA_e9eFtcM_';
+
 // ── STATE ─────────────────────────────────────
 let supabase = null;
 let currentUser = null;
@@ -637,15 +634,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── CREDENTIALS ──────────────────────────────
 function getSavedCreds() {
   return {
-    url:      localStorage.getItem('byoc_url') || '',
-    key:      localStorage.getItem('byoc_key') || '',
+    url:      SUPABASE_URL,
+    key:      SUPABASE_KEY,
     email:    localStorage.getItem('byoc_email') || '',
     password: localStorage.getItem('byoc_password') || ''
   };
 }
 function clearCredentials() {
   if (!confirm('Clear all saved credentials?')) return;
-  ['byoc_url','byoc_key','byoc_email','byoc_password'].forEach(k => localStorage.removeItem(k));
+  ['byoc_email','byoc_password'].forEach(k => localStorage.removeItem(k));
   supabase = null; currentUser = null; userJwt = null;
   setConnStatus(false); showSetupBanner(true); toast('Credentials cleared');
 }
@@ -670,17 +667,13 @@ async function initSupabase(url, key, email, password) {
 }
 
 async function saveAndConnect() {
-  const url   = document.getElementById('sbUrl').value.trim();
-  const key   = document.getElementById('sbKey').value.trim();
   const email = document.getElementById('sbEmail').value.trim();
   const pw    = document.getElementById('sbPassword').value.trim();
-  if (!url || !key || !email || !pw) { toast('Fill in all four fields', 'error'); return; }
-  localStorage.setItem('byoc_url', url);
-  localStorage.setItem('byoc_key', key);
+  if (!email || !pw) { toast('Enter email and password', 'error'); return; }
   localStorage.setItem('byoc_email', email);
   localStorage.setItem('byoc_password', pw);
   document.getElementById('connectStatus').textContent = 'Connecting…';
-  await initSupabase(url, key, email, pw);
+  await initSupabase(SUPABASE_URL, SUPABASE_KEY, email, pw);
 }
 
 // ── DATA LOADERS ──────────────────────────────
@@ -731,8 +724,8 @@ async function runSemanticSearch(query) {
   document.getElementById('searchModeBadge').className = 'search-mode-badge';
 
   try {
-    const sbUrl = localStorage.getItem('byoc_url');
-    const sbKey = localStorage.getItem('byoc_key');
+    const sbUrl = SUPABASE_URL;
+    const sbKey = SUPABASE_KEY;
 
     const resp = await fetch(`${sbUrl}/functions/v1/search-entries`, {
       method: 'POST',
@@ -1010,8 +1003,8 @@ async function saveEntry() {
 // ── EMBEDDING GENERATION ──────────────────────
 async function generateEmbedding(entry_id, text) {
   try {
-    const sbUrl = localStorage.getItem('byoc_url');
-    const sbKey = localStorage.getItem('byoc_key');
+    const sbUrl = SUPABASE_URL;
+    const sbKey = SUPABASE_KEY;
     await fetch(`${sbUrl}/functions/v1/embed-entry`, {
       method: 'POST',
       headers: {
@@ -1183,8 +1176,6 @@ function loadSettings() {
   document.getElementById('fontSlider').value = fs;
   updateFontSize(fs, false);
   const creds = getSavedCreds();
-  if (creds.url)   document.getElementById('sbUrl').value = creds.url;
-  if (creds.key)   document.getElementById('sbKey').value = creds.key;
   if (creds.email) document.getElementById('sbEmail').value = creds.email;
   renderLayerFilters();
 }
