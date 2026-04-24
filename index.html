@@ -694,8 +694,8 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 // ── HARDCODED CONFIG ──────────────────────────
 // Update these once — all devices share the same URL and key
 const SUPABASE_URL = 'https://udajruwgcbshupsvoocn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2'; // ← paste your current key from Supabase → Settings → API Keys
-const GEMINI_KEY = 'AIzaSyCo97_lTEeS7vNAq-nOOoGhKxSq88QszPA'; // ← paste from aistudio.google.com → Get API Key
+const SUPABASE_KEY = 'sbm_a7f3k9x2m4p8q1w6'; // ← paste your current key from Supabase → Settings → API Keys
+const GROQ_KEY = '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'; // ← paste from console.groq.com → API Keys → Create API Key (free, no credit card)
 
 // ── STATE ─────────────────────────────────────
 let supabase = null;
@@ -1322,8 +1322,8 @@ function clearImport() {
 async function extractEntries() {
   const text = document.getElementById('importText').value.trim();
   if (!text) { toast('Paste some text first', 'error'); return; }
-  if (!GEMINI_KEY || GEMINI_KEY === 'YOUR_GEMINI_KEY_HERE') {
-    toast('Add your Gemini API key to the config constants', 'error'); return;
+  if (!GROQ_KEY || GROQ_KEY === 'YOUR_GROQ_KEY_HERE') {
+    toast('Add your Groq API key to the config constants — free at console.groq.com', 'error'); return;
   }
 
   const btn = document.getElementById('extractBtn');
@@ -1349,19 +1349,22 @@ Rules:
 - Return [] if nothing worth saving is found`;
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: systemPrompt + '\n\nSource: ' + importSource + '\n\n' + text }]
-          }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 4000 }
-        })
-      }
-    );
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.2,
+        max_tokens: 4000,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: 'Source: ' + importSource + '\n\n' + text }
+        ]
+      })
+    });
 
     if (!res.ok) {
       const e = await res.json();
@@ -1369,7 +1372,7 @@ Rules:
     }
 
     const data = await res.json();
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    const raw = data.choices?.[0]?.message?.content || '[]';
 
     // Strip markdown fences if present
     const clean = raw.replace(/```json|```/g, '').trim();
