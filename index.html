@@ -356,6 +356,60 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── IMPORT TAB ─────────────────────────────── */
+.import-info {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px;
+}
+.import-info p { font-size: .83rem; color: var(--text2); line-height: 1.6; }
+.import-label { font-size: .75rem; font-weight: 600; color: var(--text2); letter-spacing: .03em; text-transform: uppercase; display: block; margin-bottom: 8px; }
+.import-source-row { margin-bottom: 16px; }
+
+/* PROPOSAL CARDS */
+.proposals-header {
+  font-size: .78rem; color: var(--text3); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.proposal-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 12px;
+  overflow: hidden; transition: border-color .15s;
+}
+.proposal-card.approved { border-color: var(--success); }
+.proposal-card.skipped  { opacity: .45; }
+.proposal-header {
+  padding: 13px 16px; display: flex; align-items: center;
+  gap: 10px; cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.proposal-header:hover { background: var(--bg3); }
+.proposal-num {
+  font-size: .7rem; font-weight: 600;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--text3); min-width: 24px;
+}
+.proposal-title-text { font-family: 'Lora', serif; font-size: .9rem; font-weight: 600; flex: 1; }
+.proposal-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.proposal-body {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.proposal-body-text { font-size: .83rem; color: var(--text2); line-height: 1.6; white-space: pre-wrap; }
+.proposal-field { font-size: .75rem; color: var(--text3); margin-bottom: 4px; }
+.proposal-field strong { color: var(--text2); }
+.proposal-actions {
+  padding: 10px 16px; display: flex; gap: 8px; align-items: center;
+  background: var(--bg3);
+}
+.proposal-edit {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: .82rem;
+  padding: 8px 10px; resize: vertical; margin-bottom: 8px;
+  font-family: 'IBM Plex Sans', sans-serif; line-height: 1.5;
+}
+.proposal-edit:focus { outline: none; border-color: var(--accent); }
+
 </style>
 </head>
 <body>
@@ -365,7 +419,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <header>
     <div class="header-left">
       <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v02</span>
+      <span class="version-badge">v04</span>
     </div>
     <div class="header-right">
       <span class="conn-dot" id="connDot"></span>
@@ -378,6 +432,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <nav class="tabs">
     <button class="tab-btn active" data-tab="entries">Entries</button>
     <button class="tab-btn" data-tab="audit">Audit Log</button>
+    <button class="tab-btn" data-tab="import">Import</button>
     <button class="tab-btn" data-tab="export">Export</button>
     <button class="tab-btn" data-tab="settings">Settings</button>
   </nav>
@@ -431,6 +486,52 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
       <div class="section-heading">Audit Log <span class="count-badge" id="auditCount">0</span></div>
       <div id="auditContainer">
         <div class="empty"><div class="empty-icon">◈</div><h3>No edits yet</h3><p>All writes appear here automatically.</p></div>
+      </div>
+    </div>
+
+    <!-- ── IMPORT TAB ── -->
+    <div class="tab-panel" id="tab-import">
+      <div class="section-heading">Import from Text</div>
+
+      <div class="import-info">
+        <p>Paste any freeform text — a Grok or Gemini session, meeting notes, a document, voice memo transcript.
+        Claude will extract structured memory proposals for you to review before anything saves.</p>
+      </div>
+
+      <div class="import-source-row">
+        <label class="import-label">Source</label>
+        <div class="filter-group">
+          <button class="filter-chip active" id="src-grok" onclick="setSource('grok')">Grok session</button>
+          <button class="filter-chip" id="src-gemini" onclick="setSource('gemini')">Gemini session</button>
+          <button class="filter-chip" id="src-notes" onclick="setSource('notes')">Meeting notes</button>
+          <button class="filter-chip" id="src-doc" onclick="setSource('doc')">Document</button>
+          <button class="filter-chip" id="src-other" onclick="setSource('other')">Other</button>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:14px;">
+        <label>Paste text here</label>
+        <textarea id="importText" rows="10"
+          placeholder="Paste your text here — conversation transcript, notes, document excerpt..."
+          style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.85rem;padding:12px;resize:vertical;line-height:1.6;"></textarea>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:24px;">
+        <button class="btn btn-accent" onclick="extractEntries()" id="extractBtn">
+          ✦ Extract Entries
+        </button>
+        <button class="btn btn-sm" onclick="clearImport()">Clear</button>
+        <span id="extractStatus" style="font-size:.78rem;color:var(--text3);"></span>
+      </div>
+
+      <!-- PROPOSALS AREA -->
+      <div id="proposalsContainer"></div>
+
+      <!-- BATCH APPROVE -->
+      <div id="batchBar" style="display:none;position:sticky;bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 20px;display:none;align-items:center;gap:12px;box-shadow:var(--shadow-lg);margin-top:16px;">
+        <span id="approvedCount" style="font-size:.85rem;font-weight:600;color:var(--text);flex:1;"></span>
+        <button class="btn btn-sm" onclick="skipAll()">Skip all</button>
+        <button class="btn btn-accent" onclick="saveApproved()" id="saveApprovedBtn">Save approved entries</button>
       </div>
     </div>
 
@@ -593,7 +694,8 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 // ── HARDCODED CONFIG ──────────────────────────
 // Update these once — all devices share the same URL and key
 const SUPABASE_URL = 'https://udajruwgcbshupsvoocn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2';
+const SUPABASE_KEY = 'YOUR_PUBLISHABLE_KEY_HERE'; // ← paste your current key from Supabase → Settings → API Keys
+const GEMINI_KEY = 'AIzaSyCo97_lTEeS7vNAq-nOOoGhKxSq88QszPA'; // ← paste from aistudio.google.com → Get API Key
 
 // ── STATE ─────────────────────────────────────
 let supabase = null;
@@ -1197,6 +1299,225 @@ function toast(msg, type='') {
 function esc(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ── IMPORT FROM TEXT ─────────────────────────
+
+let importSource = 'grok';
+let proposals = []; // {id, title, body, space, layer, perishability, tags, rationale, status: 'pending'|'approved'|'skipped', expanded: bool}
+
+function setSource(src) {
+  importSource = src;
+  document.querySelectorAll('[id^="src-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('src-' + src).classList.add('active');
+}
+
+function clearImport() {
+  document.getElementById('importText').value = '';
+  document.getElementById('extractStatus').textContent = '';
+  proposals = [];
+  document.getElementById('proposalsContainer').innerHTML = '';
+  document.getElementById('batchBar').style.display = 'none';
+}
+
+async function extractEntries() {
+  const text = document.getElementById('importText').value.trim();
+  if (!text) { toast('Paste some text first', 'error'); return; }
+  if (!GEMINI_KEY || GEMINI_KEY === 'YOUR_GEMINI_KEY_HERE') {
+    toast('Add your Gemini API key to the config constants', 'error'); return;
+  }
+
+  const btn = document.getElementById('extractBtn');
+  const status = document.getElementById('extractStatus');
+  btn.innerHTML = '<span class="spinner"></span> Extracting…';
+  btn.disabled = true;
+  status.textContent = '';
+
+  const spaceNames = spaces.map(s => s.name).join(', ');
+
+  const systemPrompt = `You are a second brain assistant. Extract structured memory entries from the provided text.
+Available spaces: ${spaceNames}
+Available layers: domain, workflow, behavioural, artifact
+
+Return ONLY a JSON array of entry objects. No preamble, no markdown fences.
+Each object must have: title (string), body (string, full context — never truncate), space (string), layer (string), perishability (evergreen|slow|fast|single_use), tags (string[]), rationale (string — why this is worth saving).
+
+Rules:
+- Only extract genuinely reusable, durable knowledge — not temporary task outputs
+- body must be complete and self-contained — never a summary or placeholder
+- Assign the most specific matching space
+- evergreen = timeless personal traits; slow = stable facts; fast = time-bound priorities; single_use = one-off
+- Return [] if nothing worth saving is found`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: systemPrompt + '\n\nSource: ' + importSource + '\n\n' + text }]
+          }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 4000 }
+        })
+      }
+    );
+
+    if (!res.ok) {
+      const e = await res.json();
+      throw new Error(e.error?.message || res.statusText);
+    }
+
+    const data = await res.json();
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+
+    // Strip markdown fences if present
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const extracted = JSON.parse(clean);
+
+    if (!Array.isArray(extracted) || extracted.length === 0) {
+      status.textContent = 'No memory-worthy entries found in this text.';
+      btn.innerHTML = '✦ Extract Entries'; btn.disabled = false;
+      return;
+    }
+
+    proposals = extracted.map((e, i) => ({
+      ...e,
+      id: `prop_${Date.now()}_${i}`,
+      status: 'approved', // default approved, user can skip
+      expanded: true
+    }));
+
+    renderProposals();
+    status.textContent = `${proposals.length} entr${proposals.length === 1 ? 'y' : 'ies'} extracted`;
+
+  } catch(e) {
+    toast('Extraction failed: ' + e.message, 'error');
+    status.textContent = '';
+  }
+
+  btn.innerHTML = '✦ Extract Entries'; btn.disabled = false;
+}
+
+function renderProposals() {
+  const container = document.getElementById('proposalsContainer');
+  if (!proposals.length) { container.innerHTML = ''; return; }
+
+  const approved = proposals.filter(p => p.status === 'approved').length;
+  const html = [
+    `<div class="proposals-header"><strong>${proposals.length}</strong> proposals extracted — <strong>${approved}</strong> approved</div>`,
+    ...proposals.map((p, i) => proposalCard(p, i))
+  ].join('');
+
+  container.innerHTML = html;
+
+  // Show/hide batch bar
+  const bar = document.getElementById('batchBar');
+  bar.style.display = approved > 0 ? 'flex' : 'none';
+  document.getElementById('approvedCount').textContent =
+    `${approved} of ${proposals.length} entr${proposals.length === 1 ? 'y' : 'ies'} approved`;
+}
+
+function proposalCard(p, i) {
+  const statusClass = p.status === 'approved' ? 'approved' : p.status === 'skipped' ? 'skipped' : '';
+  const statusIcon = p.status === 'approved' ? '✓' : p.status === 'skipped' ? '✕' : '○';
+  const statusColor = p.status === 'approved' ? 'var(--success)' : p.status === 'skipped' ? 'var(--danger)' : 'var(--text3)';
+
+  return `
+<div class="proposal-card ${statusClass}" id="pcard_${p.id}">
+  <div class="proposal-header" onclick="toggleProposal('${p.id}')">
+    <span class="proposal-num">#${i+1}</span>
+    <span class="proposal-title-text">${esc(p.title)}</span>
+    <div class="proposal-chips">
+      <span class="chip chip-space">${p.space}</span>
+      <span class="chip chip-layer">${p.layer}</span>
+      <span class="chip chip-perish ${p.perishability}">${PERISH_LABELS[p.perishability]||p.perishability}</span>
+    </div>
+    <span style="font-size:.9rem;font-weight:600;color:${statusColor};min-width:18px;">${statusIcon}</span>
+  </div>
+  ${p.expanded ? `
+  <div class="proposal-body">
+    <div class="proposal-field"><strong>Body:</strong></div>
+    <textarea class="proposal-edit" id="pbody_${p.id}" rows="4" onchange="updateProposalBody('${p.id}', this.value)">${esc(p.body)}</textarea>
+    <div class="proposal-field"><strong>Tags:</strong> ${(p.tags||[]).join(', ') || '—'}</div>
+    <div class="proposal-field"><strong>Why:</strong> ${esc(p.rationale||'—')}</div>
+  </div>
+  <div class="proposal-actions">
+    ${p.status !== 'approved'
+      ? `<button class="btn btn-sm btn-accent" onclick="setProposalStatus('${p.id}','approved')">✓ Approve</button>`
+      : `<button class="btn btn-sm" style="color:var(--success);border-color:var(--success);" onclick="setProposalStatus('${p.id}','approved')">✓ Approved</button>`
+    }
+    ${p.status !== 'skipped'
+      ? `<button class="btn btn-sm btn-danger" onclick="setProposalStatus('${p.id}','skipped')">✕ Skip</button>`
+      : `<button class="btn btn-sm" onclick="setProposalStatus('${p.id}','pending')">↩ Undo</button>`
+    }
+    <span style="font-size:.75rem;color:var(--text3);margin-left:auto;">${p.space} · ${p.layer} · ${p.perishability}</span>
+  </div>` : ''}
+</div>`;
+}
+
+function toggleProposal(id) {
+  const p = proposals.find(x => x.id === id);
+  if (p) { p.expanded = !p.expanded; renderProposals(); }
+}
+
+function setProposalStatus(id, status) {
+  const p = proposals.find(x => x.id === id);
+  if (p) { p.status = status; renderProposals(); }
+}
+
+function updateProposalBody(id, val) {
+  const p = proposals.find(x => x.id === id);
+  if (p) p.body = val;
+}
+
+function skipAll() {
+  proposals.forEach(p => p.status = 'skipped');
+  renderProposals();
+}
+
+async function saveApproved() {
+  const toSave = proposals.filter(p => p.status === 'approved');
+  if (!toSave.length) { toast('No approved entries to save', 'error'); return; }
+  if (!supabase) { toast('Not connected', 'error'); return; }
+
+  const btn = document.getElementById('saveApprovedBtn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+
+  let saved = 0;
+  for (const p of toSave) {
+    try {
+      const { data, error } = await supabase.from('entries').insert({
+        title: p.title, body: p.body,
+        space: p.space, layer: p.layer,
+        perishability: p.perishability,
+        tags: p.tags || [],
+        user_id: currentUser.id,
+        created_by_tool: importSource,
+        status: 'active'
+      }).select().single();
+      if (error) throw error;
+      // Fire and forget embedding
+      generateEmbedding(data.id, `${p.title} ${p.body} ${(p.tags||[]).join(' ')}`);
+      p.status = 'saved';
+      saved++;
+    } catch(e) {
+      toast(`Failed to save "${p.title}": ${e.message}`, 'error');
+    }
+  }
+
+  btn.innerHTML = 'Save approved entries'; btn.disabled = false;
+
+  if (saved) {
+    toast(`${saved} entr${saved===1?'y':'ies'} saved to second brain`, 'success');
+    await Promise.all([loadEntries(), loadAudit()]);
+    renderProposals();
+    document.getElementById('batchBar').style.display = 'none';
+  }
+}
+
+
 </script>
 </body>
 </html>
