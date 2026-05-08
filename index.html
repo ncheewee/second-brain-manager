@@ -465,7 +465,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <header>
     <div class="header-left">
       <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v6.3</span>
+      <span class="version-badge">v6.4</span>
     </div>
     <div class="header-right">
       <span class="conn-dot" id="connDot"></span>
@@ -794,7 +794,7 @@ const SUPABASE_URL  = 'https://udajruwgcbshupsvoocn.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2';
 const SUPABASE_EMAIL = 'ncheewee@gmail.com';
 const SUPABASE_PASS  = 'Kiwi31082@';
-const GROQ_KEY      = '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';
+const DEEPSEEK_KEY  = 'sk-a5a11d7df9e741c1ad5dd30d3357fa3b';
 const EJS_SERVICE   = 'service_pkta469';
 const EJS_TEMPLATE  = 'template_ijdn4y8';
 const EJS_KEY       = 'FCXGhGYhKSY8mzokZ';
@@ -1429,8 +1429,8 @@ function clearImport() {
 async function extractEntries() {
   const text = document.getElementById('importText').value.trim();
   if (!text) { toast('Paste some text first', 'error'); return; }
-  if (!GROQ_KEY || GROQ_KEY === 'YOUR_GROQ_KEY_HERE') {
-    toast('Add your Groq API key to the config constants — free at console.groq.com', 'error'); return;
+  if (!DEEPSEEK_KEY) {
+    toast('DeepSeek API key missing from config', 'error'); return;
   }
 
   const btn = document.getElementById('extractBtn');
@@ -1456,14 +1456,14 @@ Rules:
 - Return [] if nothing worth saving is found`;
 
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_KEY}`
+        'Authorization': `Bearer ${DEEPSEEK_KEY}`
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'deepseek-chat',
         temperature: 0.2,
         max_tokens: 4000,
         messages: [
