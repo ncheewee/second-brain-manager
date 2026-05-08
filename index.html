@@ -57,6 +57,19 @@ input, textarea, select { font-family: inherit; }
 /* ── LAYOUT ─────────────────────────────────── */
 .app { display: flex; flex-direction: column; min-height: 100vh; }
 
+.codex-build-banner {
+  background: #102A3A;
+  color: #F7FBFD;
+  border-bottom: 1px solid rgba(255,255,255,.16);
+  padding: 8px 24px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .72rem;
+  line-height: 1.4;
+  letter-spacing: .02em;
+  text-align: center;
+}
+.codex-build-banner strong { color: #F5B35C; font-weight: 700; }
+
 header {
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
@@ -461,11 +474,15 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 <body>
 <div class="app">
 
+  <div class="codex-build-banner">
+    <strong>CODEX BUILD</strong> · branch: codex-import-compare-debug · Import compare debugging
+  </div>
+
   <!-- HEADER -->
   <header>
     <div class="header-left">
       <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v6.6</span>
+      <span class="version-badge">v6.6-codex</span>
     </div>
     <div class="header-right">
       <span class="conn-dot" id="connDot"></span>
@@ -807,6 +824,7 @@ const SUPABASE_EMAIL = 'ncheewee@gmail.com';
 const SUPABASE_PASS  = 'Kiwi31082@';
 const GROQ_KEY_DEFAULT  = ''; // Set via Settings → Import
 const DEEPSEEK_KEY      = 'sk-a5a11d7df9e741c1ad5dd30d3357fa3b';
+const DEEPSEEK_MODEL    = 'deepseek-v4-pro';
 const EJS_SERVICE   = 'service_pkta469';
 const EJS_TEMPLATE  = 'template_ijdn4y8';
 const EJS_KEY       = 'FCXGhGYhKSY8mzokZ';
@@ -1453,12 +1471,12 @@ async function extractEntries() {
   status.textContent = '';
 
   try {
-    const extracted = await extractWithModel(
+    const { entries: extracted, meta } = await extractWithModel(
       'https://api.groq.com/openai/v1/chat/completions', groqKey, 'llama-3.3-70b-versatile', text
     );
 
     if (!Array.isArray(extracted) || extracted.length === 0) {
-      status.textContent = 'No memory-worthy entries found in this text.';
+      status.textContent = `No memory-worthy entries found in this text. (${meta.model}: ${meta.finishReason || 'unknown finish'})`;
       btn.innerHTML = '✦ Extract Entries'; btn.disabled = false;
       return;
     }
@@ -1471,7 +1489,7 @@ async function extractEntries() {
     }));
 
     renderProposals();
-    status.textContent = `${proposals.length} entr${proposals.length === 1 ? 'y' : 'ies'} extracted`;
+    status.textContent = `${proposals.length} entr${proposals.length === 1 ? 'y' : 'ies'} extracted · ${meta.model}`;
 
   } catch(e) {
     toast('Extraction failed: ' + e.message, 'error');
@@ -1482,13 +1500,13 @@ async function extractEntries() {
 }
 
 // ── SHARED EXTRACTION HELPER ──────────────────────────────
-async function extractWithModel(apiUrl, apiKey, model, text) {
+async function extractWithModel(apiUrl, apiKey, model, text, options = {}) {
   const spaceNames = spaces.map(s => s.name).join(', ');
   const systemPrompt = `You are a second brain assistant. Extract structured memory entries from the provided text.
 Available spaces: ${spaceNames}
 Available layers: domain, workflow, behavioural, artifact
 
-Return ONLY a JSON array of entry objects. No preamble, no markdown fences.
+Return ONLY valid JSON with this shape: {"entries":[...]}.
 Each object must have: title (string), body (string, full context — never truncate), space (string), layer (string), perishability (evergreen|slow|fast|single_use), tags (string[]), rationale (string — why this is worth saving).
 
 Rules:
@@ -1496,25 +1514,88 @@ Rules:
 - body must be complete and self-contained — never a summary or placeholder
 - Assign the most specific matching space
 - evergreen = timeless personal traits; slow = stable facts; fast = time-bound priorities; single_use = one-off
-- Return [] if nothing worth saving is found`;
+- If the text contains stable user preferences, project facts, workflow decisions, architecture notes, credentials setup steps, or recurring goals, extract them
+- Return {"entries":[]} only if there is truly nothing worth saving`;
+
+  const requestBody = {
+    model,
+    temperature: 0.2,
+    max_tokens: 4000,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: 'Source: ' + importSource + '\n\n' + text }
+    ]
+  };
+
+  if (options.jsonMode) requestBody.response_format = { type: 'json_object' };
+  if (options.thinking) requestBody.thinking = options.thinking;
 
   const res = await fetch(apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_tokens: 4000,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Source: ' + importSource + '\n\n' + text }
-      ]
-    })
+    body: JSON.stringify(requestBody)
   });
-  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const e = await res.json();
+      message = e.error?.message || e.message || message;
+    } catch(_) {}
+    throw new Error(`${model}: ${message}`);
+  }
   const data = await res.json();
-  const raw = data.choices?.[0]?.message?.content || '[]';
-  return JSON.parse(raw.replace(/```json|```/g, '').trim());
+  const choice = data.choices?.[0] || {};
+  const raw = choice.message?.content || '';
+  const parsed = parseExtractionPayload(raw);
+  return {
+    entries: normalizeExtractedEntries(parsed),
+    raw,
+    meta: {
+      model,
+      finishReason: choice.finish_reason,
+      usage: data.usage || null
+    }
+  };
+}
+
+function parseExtractionPayload(raw) {
+  const cleaned = String(raw || '').replace(/```json|```/g, '').trim();
+  if (!cleaned) return { entries: [] };
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {
+    const startObj = cleaned.indexOf('{');
+    const endObj = cleaned.lastIndexOf('}');
+    if (startObj !== -1 && endObj > startObj) return JSON.parse(cleaned.slice(startObj, endObj + 1));
+    const startArr = cleaned.indexOf('[');
+    const endArr = cleaned.lastIndexOf(']');
+    if (startArr !== -1 && endArr > startArr) return JSON.parse(cleaned.slice(startArr, endArr + 1));
+    throw new Error('Model returned non-JSON content: ' + cleaned.slice(0, 180));
+  }
+}
+
+function normalizeExtractedEntries(parsed) {
+  const list = Array.isArray(parsed)
+    ? parsed
+    : parsed?.entries || parsed?.memories || parsed?.proposals || [];
+
+  if (!Array.isArray(list)) return [];
+
+  const validSpaces = new Set(spaces.map(s => s.name));
+  const validLayers = new Set(LAYERS);
+  const validPerish = new Set(Object.keys(PERISH_LABELS));
+
+  return list
+    .filter(e => e && e.title && e.body)
+    .map(e => ({
+      title: String(e.title).trim(),
+      body: String(e.body).trim(),
+      space: validSpaces.has(e.space) ? e.space : 'core',
+      layer: validLayers.has(e.layer) ? e.layer : 'artifact',
+      perishability: validPerish.has(e.perishability) ? e.perishability : 'slow',
+      tags: Array.isArray(e.tags) ? e.tags.map(t => String(t).trim()).filter(Boolean) : [],
+      rationale: e.rationale ? String(e.rationale).trim() : 'Extracted as reusable context.'
+    }));
 }
 
 // ── COMPARE MODE ──────────────────────────────────────────
@@ -1531,13 +1612,16 @@ async function compareExtract() {
   status.textContent = 'Running both models in parallel…';
 
   try {
-    const [groqResults, dsResults] = await Promise.all([
+    const [groqRun, dsRun] = await Promise.all([
       extractWithModel('https://api.groq.com/openai/v1/chat/completions', groqKey, 'llama-3.3-70b-versatile', text),
-      extractWithModel('https://api.deepseek.com/chat/completions', DEEPSEEK_KEY, 'deepseek-v4-pro', text)
+      extractWithModel('https://api.deepseek.com/chat/completions', DEEPSEEK_KEY, DEEPSEEK_MODEL, text, {
+        jsonMode: true,
+        thinking: { type: 'disabled' }
+      })
     ]);
 
-    renderComparison(groqResults, dsResults);
-    status.textContent = `Groq: ${groqResults.length} entries · DeepSeek V4 Pro: ${dsResults.length} entries`;
+    renderComparison(groqRun, dsRun);
+    status.textContent = `Groq: ${groqRun.entries.length} entries · DeepSeek V4 Pro: ${dsRun.entries.length} entries`;
   } catch(e) {
     toast('Compare failed: ' + e.message, 'error');
     status.textContent = '';
@@ -1546,19 +1630,27 @@ async function compareExtract() {
   document.getElementById('extractBtn').disabled = false;
 }
 
-function renderComparison(groqEntries, dsEntries) {
+function renderComparison(groqRun, dsRun) {
+  const groqEntries = groqRun.entries || [];
+  const dsEntries = dsRun.entries || [];
   const perishColor = { evergreen: '#4caf50', slow: '#2196f3', fast: '#ff9800', single_use: '#9e9e9e' };
+  const renderMeta = (run) => {
+    const finish = run.meta?.finishReason || 'unknown';
+    const tokens = run.meta?.usage?.total_tokens ? ` · ${run.meta.usage.total_tokens} tokens` : '';
+    const rawNote = !run.raw ? ' · empty content' : '';
+    return `<div style="font-size:.72rem;color:var(--text3);margin:-6px 0 10px;">finish: ${esc(finish)}${tokens}${rawNote}</div>`;
+  };
   const renderCol = (entries, colId) => {
     if (!entries.length) return `<p style="color:var(--text3);font-size:.85rem;">No entries extracted.</p>`;
     return entries.map((e, i) => `
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
-          <strong style="font-size:.88rem;color:var(--text);line-height:1.4;">${e.title}</strong>
-          <span style="font-size:.72rem;background:${perishColor[e.perishability]||'#888'};color:#fff;border-radius:4px;padding:2px 7px;white-space:nowrap;flex-shrink:0;">${e.perishability}</span>
+          <strong style="font-size:.88rem;color:var(--text);line-height:1.4;">${esc(e.title)}</strong>
+          <span style="font-size:.72rem;background:${perishColor[e.perishability]||'#888'};color:#fff;border-radius:4px;padding:2px 7px;white-space:nowrap;flex-shrink:0;">${esc(e.perishability)}</span>
         </div>
-        <div style="font-size:.78rem;color:var(--text3);margin-bottom:6px;">[${e.space}] · ${e.layer}</div>
-        <div style="font-size:.82rem;color:var(--text2);line-height:1.5;margin-bottom:8px;">${e.body}</div>
-        <div style="font-size:.75rem;color:var(--text3);font-style:italic;margin-bottom:10px;">${e.rationale}</div>
+        <div style="font-size:.78rem;color:var(--text3);margin-bottom:6px;">[${esc(e.space)}] · ${esc(e.layer)}</div>
+        <div style="font-size:.82rem;color:var(--text2);line-height:1.5;margin-bottom:8px;">${esc(e.body)}</div>
+        <div style="font-size:.75rem;color:var(--text3);font-style:italic;margin-bottom:10px;">${esc(e.rationale)}</div>
         <button class="btn btn-accent btn-sm" onclick="saveCompareEntry('${colId}',${i})">+ Save to Brain</button>
       </div>`).join('');
   };
@@ -1572,12 +1664,14 @@ function renderComparison(groqEntries, dsEntries) {
         <div style="font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
           🟣 Groq · Llama 3.3 70B <span style="font-weight:400;color:var(--text3);">(${groqEntries.length} entries)</span>
         </div>
+        ${renderMeta(groqRun)}
         ${renderCol(groqEntries, 'groq')}
       </div>
       <div>
         <div style="font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
           🔵 DeepSeek V4 Pro <span style="font-weight:400;color:var(--text3);">(${dsEntries.length} entries)</span>
         </div>
+        ${renderMeta(dsRun)}
         ${renderCol(dsEntries, 'ds')}
       </div>
     </div>`;
@@ -1587,13 +1681,15 @@ async function saveCompareEntry(col, idx) {
   const entry = col === 'groq' ? window._compareGroq[idx] : window._compareDS[idx];
   if (!supabase || !currentUser) { toast('Not connected', 'error'); return; }
   try {
-    const spaceObj = spaces.find(s => s.name === entry.space) || spaces.find(s => s.name === 'core');
-    const { error } = await supabase.from('entries').insert({
-      space_id: spaceObj.id, title: entry.title, body: entry.body,
-      layer: entry.layer, perishability: entry.perishability,
-      tags: entry.tags || [], user_id: currentUser.id
-    });
+    const { data, error } = await supabase.from('entries').insert({
+      title: entry.title, body: entry.body,
+      space: entry.space, layer: entry.layer, perishability: entry.perishability,
+      tags: entry.tags || [], user_id: currentUser.id,
+      created_by_tool: col === 'groq' ? 'import-compare-groq' : 'import-compare-deepseek',
+      status: 'active'
+    }).select().single();
     if (error) throw error;
+    if (data?.id) generateEmbedding(data.id, `${entry.title} ${entry.body} ${(entry.tags||[]).join(' ')}`);
     toast(`Saved: ${entry.title}`, 'success');
     // Grey out the button
     event.target.textContent = '✓ Saved'; event.target.disabled = true;
