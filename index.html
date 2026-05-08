@@ -804,6 +804,10 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 const SUPABASE_URL = 'https://udajruwgcbshupsvoocn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2';
 const GROQ_KEY = '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';
+const EJS_SERVICE  = 'service_pkta469';
+const EJS_TEMPLATE = 'template_ijdn4y8';
+const EJS_KEY      = 'FCXGhGYhKSY8mzokZ';
+const EJS_EMAIL    = 'ncheewee@gmail.com';
 
 // ── STATE ─────────────────────────────────────
 let supabase = null;
@@ -1812,6 +1816,11 @@ async function loadEmailSettings() {
     .select('*')
     .eq('user_id', currentUser.id)
     .single();
+  // Pre-fill baked-in defaults so fields are never blank
+  document.getElementById('settingEjsService').value  = EJS_SERVICE;
+  document.getElementById('settingEjsTemplate').value = EJS_TEMPLATE;
+  document.getElementById('settingEjsKey').value      = EJS_KEY;
+  if (document.getElementById('settingEmail')) document.getElementById('settingEmail').value = EJS_EMAIL;
   if (!data) return;
   if (data.email)               document.getElementById('settingEmail').value = data.email;
   if (data.emailjs_service_id)  document.getElementById('settingEjsService').value = data.emailjs_service_id;
