@@ -465,7 +465,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <header>
     <div class="header-left">
       <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v6.4</span>
+      <span class="version-badge">v6.5</span>
     </div>
     <div class="header-right">
       <span class="conn-dot" id="connDot"></span>
@@ -682,6 +682,18 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
       </div>
 
       <div class="settings-section">
+        <h3>Import (Groq API Key)</h3>
+        <div class="field">
+          <label>Groq API Key <span style="font-weight:400;color:var(--text3);font-size:.78rem;">— free at console.groq.com</span></label>
+          <input type="password" id="settingGroqKey" placeholder="gsk_..." />
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-accent btn-sm" onclick="saveGroqKey()">Save</button>
+          <span id="groqKeyStatus" style="font-size:.78rem;color:var(--text3);align-self:center;"></span>
+        </div>
+      </div>
+
+      <div class="settings-section">
         <h3>Manage Spaces</h3>
         <div id="spacesList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
         <div style="display:flex;gap:8px;">
@@ -794,7 +806,7 @@ const SUPABASE_URL  = 'https://udajruwgcbshupsvoocn.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2';
 const SUPABASE_EMAIL = 'ncheewee@gmail.com';
 const SUPABASE_PASS  = 'Kiwi31082@';
-const DEEPSEEK_KEY  = 'sk-a5a11d7df9e741c1ad5dd30d3357fa3b';
+const GROQ_KEY_DEFAULT = ''; // Set via Settings → Import
 const EJS_SERVICE   = 'service_pkta469';
 const EJS_TEMPLATE  = 'template_ijdn4y8';
 const EJS_KEY       = 'FCXGhGYhKSY8mzokZ';
@@ -1382,6 +1394,9 @@ function loadSettings() {
   updateFontSize(fs, false);
   const creds = getSavedCreds();
   // email/password now baked in — no input fields to populate
+  // Pre-fill Groq key from localStorage
+  const savedGroqKey = localStorage.getItem('byoc_groq_key');
+  if (savedGroqKey) document.getElementById('settingGroqKey').value = savedGroqKey;
   // Pre-fill EmailJS fields from localStorage or baked-in defaults
   document.getElementById('settingEjsService').value  = localStorage.getItem('byoc_ejs_service')  || EJS_SERVICE;
   document.getElementById('settingEjsTemplate').value = localStorage.getItem('byoc_ejs_template') || EJS_TEMPLATE;
@@ -1429,8 +1444,9 @@ function clearImport() {
 async function extractEntries() {
   const text = document.getElementById('importText').value.trim();
   if (!text) { toast('Paste some text first', 'error'); return; }
-  if (!DEEPSEEK_KEY) {
-    toast('DeepSeek API key missing from config', 'error'); return;
+  const groqKey = localStorage.getItem('byoc_groq_key') || GROQ_KEY_DEFAULT;
+  if (!groqKey) {
+    toast('Add your Groq API key in Settings → Import', 'error'); return;
   }
 
   const btn = document.getElementById('extractBtn');
@@ -1456,14 +1472,14 @@ Rules:
 - Return [] if nothing worth saving is found`;
 
   try {
-    const res = await fetch('https://api.deepseek.com/chat/completions', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_KEY}`
+        'Authorization': `Bearer ${groqKey}`
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.2,
         max_tokens: 4000,
         messages: [
@@ -1781,6 +1797,14 @@ async function runScanNow() {
 }
 
 // ── EMAIL SETTINGS ────────────────────────────
+
+function saveGroqKey() {
+  const key = document.getElementById('settingGroqKey').value.trim();
+  if (!key) { document.getElementById('groqKeyStatus').textContent = '⚠ Enter a key first'; return; }
+  localStorage.setItem('byoc_groq_key', key);
+  document.getElementById('groqKeyStatus').textContent = '✓ Saved';
+  setTimeout(() => document.getElementById('groqKeyStatus').textContent = '', 2000);
+}
 
 async function saveEmailSettings() {
   if (!supabase) return;
