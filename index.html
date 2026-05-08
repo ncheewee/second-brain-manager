@@ -465,7 +465,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <header>
     <div class="header-left">
       <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v6.2</span>
+      <span class="version-badge">v6.3</span>
     </div>
     <div class="header-right">
       <span class="conn-dot" id="connDot"></span>
@@ -1826,9 +1826,9 @@ async function sendTestEmail() {
   const serviceId  = document.getElementById('settingEjsService').value.trim();
   const templateId = document.getElementById('settingEjsTemplate').value.trim();
   const publicKey  = document.getElementById('settingEjsKey').value.trim();
-  const toEmail    = document.getElementById('settingEmail').value.trim();
+  const toEmail = (document.getElementById('settingEmail')?.value.trim()) || EJS_EMAIL;
 
-  if (!serviceId || !templateId || !publicKey || !toEmail) {
+  if (!serviceId || !templateId || !publicKey) {
     toast('Fill in all EmailJS fields in Settings first', 'error'); return;
   }
 
@@ -1860,8 +1860,8 @@ async function sendTestEmail() {
       toast('Test email sent to ' + toEmail, 'success');
       status.textContent = 'Test email sent ✓';
     } else {
-      const e = await res.json();
-      throw new Error(e.error || res.statusText);
+      const txt = await res.text();
+      throw new Error(txt || res.statusText);
     }
   } catch(e) {
     toast('Email failed: ' + e.message, 'error');
