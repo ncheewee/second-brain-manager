@@ -465,7 +465,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <header>
     <div class="header-left">
       <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v6.5</span>
+      <span class="version-badge">v6.6</span>
     </div>
     <div class="header-right">
       <span class="conn-dot" id="connDot"></span>
@@ -592,10 +592,9 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
           style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.85rem;padding:12px;resize:vertical;line-height:1.6;"></textarea>
       </div>
 
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:24px;">
-        <button class="btn btn-accent" onclick="extractEntries()" id="extractBtn">
-          ✦ Extract Entries
-        </button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:24px;">
+        <button class="btn btn-accent" onclick="extractEntries()" id="extractBtn">✦ Extract</button>
+        <button class="btn" onclick="compareExtract()" id="compareBtn">⇄ Compare LLMs</button>
         <button class="btn btn-sm" onclick="clearImport()">Clear</button>
         <span id="extractStatus" style="font-size:.78rem;color:var(--text3);"></span>
       </div>
@@ -806,7 +805,8 @@ const SUPABASE_URL  = 'https://udajruwgcbshupsvoocn.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2';
 const SUPABASE_EMAIL = 'ncheewee@gmail.com';
 const SUPABASE_PASS  = 'Kiwi31082@';
-const GROQ_KEY_DEFAULT = ''; // Set via Settings → Import
+const GROQ_KEY_DEFAULT  = ''; // Set via Settings → Import
+const DEEPSEEK_KEY      = 'sk-a5a11d7df9e741c1ad5dd30d3357fa3b';
 const EJS_SERVICE   = 'service_pkta469';
 const EJS_TEMPLATE  = 'template_ijdn4y8';
 const EJS_KEY       = 'FCXGhGYhKSY8mzokZ';
@@ -1445,61 +1445,17 @@ async function extractEntries() {
   const text = document.getElementById('importText').value.trim();
   if (!text) { toast('Paste some text first', 'error'); return; }
   const groqKey = localStorage.getItem('byoc_groq_key') || GROQ_KEY_DEFAULT;
-  if (!groqKey) {
-    toast('Add your Groq API key in Settings → Import', 'error'); return;
-  }
+  if (!groqKey) { toast('Add your Groq API key in Settings → Import', 'error'); return; }
 
   const btn = document.getElementById('extractBtn');
   const status = document.getElementById('extractStatus');
-  btn.innerHTML = '<span class="spinner"></span> Extracting…';
-  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Extracting…'; btn.disabled = true;
   status.textContent = '';
 
-  const spaceNames = spaces.map(s => s.name).join(', ');
-
-  const systemPrompt = `You are a second brain assistant. Extract structured memory entries from the provided text.
-Available spaces: ${spaceNames}
-Available layers: domain, workflow, behavioural, artifact
-
-Return ONLY a JSON array of entry objects. No preamble, no markdown fences.
-Each object must have: title (string), body (string, full context — never truncate), space (string), layer (string), perishability (evergreen|slow|fast|single_use), tags (string[]), rationale (string — why this is worth saving).
-
-Rules:
-- Only extract genuinely reusable, durable knowledge — not temporary task outputs
-- body must be complete and self-contained — never a summary or placeholder
-- Assign the most specific matching space
-- evergreen = timeless personal traits; slow = stable facts; fast = time-bound priorities; single_use = one-off
-- Return [] if nothing worth saving is found`;
-
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${groqKey}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        temperature: 0.2,
-        max_tokens: 4000,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: 'Source: ' + importSource + '\n\n' + text }
-        ]
-      })
-    });
-
-    if (!res.ok) {
-      const e = await res.json();
-      throw new Error(e.error?.message || res.statusText);
-    }
-
-    const data = await res.json();
-    const raw = data.choices?.[0]?.message?.content || '[]';
-
-    // Strip markdown fences if present
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const extracted = JSON.parse(clean);
+    const extracted = await extractWithModel(
+      'https://api.groq.com/openai/v1/chat/completions', groqKey, 'llama-3.3-70b-versatile', text
+    );
 
     if (!Array.isArray(extracted) || extracted.length === 0) {
       status.textContent = 'No memory-worthy entries found in this text.';
@@ -1522,7 +1478,126 @@ Rules:
     status.textContent = '';
   }
 
-  btn.innerHTML = '✦ Extract Entries'; btn.disabled = false;
+  btn.innerHTML = '✦ Extract'; btn.disabled = false;
+}
+
+// ── SHARED EXTRACTION HELPER ──────────────────────────────
+async function extractWithModel(apiUrl, apiKey, model, text) {
+  const spaceNames = spaces.map(s => s.name).join(', ');
+  const systemPrompt = `You are a second brain assistant. Extract structured memory entries from the provided text.
+Available spaces: ${spaceNames}
+Available layers: domain, workflow, behavioural, artifact
+
+Return ONLY a JSON array of entry objects. No preamble, no markdown fences.
+Each object must have: title (string), body (string, full context — never truncate), space (string), layer (string), perishability (evergreen|slow|fast|single_use), tags (string[]), rationale (string — why this is worth saving).
+
+Rules:
+- Only extract genuinely reusable, durable knowledge — not temporary task outputs
+- body must be complete and self-contained — never a summary or placeholder
+- Assign the most specific matching space
+- evergreen = timeless personal traits; slow = stable facts; fast = time-bound priorities; single_use = one-off
+- Return [] if nothing worth saving is found`;
+
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      max_tokens: 4000,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: 'Source: ' + importSource + '\n\n' + text }
+      ]
+    })
+  });
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
+  const data = await res.json();
+  const raw = data.choices?.[0]?.message?.content || '[]';
+  return JSON.parse(raw.replace(/```json|```/g, '').trim());
+}
+
+// ── COMPARE MODE ──────────────────────────────────────────
+async function compareExtract() {
+  const text = document.getElementById('importText').value.trim();
+  if (!text) { toast('Paste some text first', 'error'); return; }
+  const groqKey = localStorage.getItem('byoc_groq_key') || GROQ_KEY_DEFAULT;
+  if (!groqKey) { toast('Add your Groq API key in Settings → Import', 'error'); return; }
+
+  const btn = document.getElementById('compareBtn');
+  const status = document.getElementById('extractStatus');
+  btn.innerHTML = '<span class="spinner"></span> Comparing…'; btn.disabled = true;
+  document.getElementById('extractBtn').disabled = true;
+  status.textContent = 'Running both models in parallel…';
+
+  try {
+    const [groqResults, dsResults] = await Promise.all([
+      extractWithModel('https://api.groq.com/openai/v1/chat/completions', groqKey, 'llama-3.3-70b-versatile', text),
+      extractWithModel('https://api.deepseek.com/chat/completions', DEEPSEEK_KEY, 'deepseek-v4-pro', text)
+    ]);
+
+    renderComparison(groqResults, dsResults);
+    status.textContent = `Groq: ${groqResults.length} entries · DeepSeek V4 Pro: ${dsResults.length} entries`;
+  } catch(e) {
+    toast('Compare failed: ' + e.message, 'error');
+    status.textContent = '';
+  }
+  btn.innerHTML = '⇄ Compare LLMs'; btn.disabled = false;
+  document.getElementById('extractBtn').disabled = false;
+}
+
+function renderComparison(groqEntries, dsEntries) {
+  const perishColor = { evergreen: '#4caf50', slow: '#2196f3', fast: '#ff9800', single_use: '#9e9e9e' };
+  const renderCol = (entries, colId) => {
+    if (!entries.length) return `<p style="color:var(--text3);font-size:.85rem;">No entries extracted.</p>`;
+    return entries.map((e, i) => `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+          <strong style="font-size:.88rem;color:var(--text);line-height:1.4;">${e.title}</strong>
+          <span style="font-size:.72rem;background:${perishColor[e.perishability]||'#888'};color:#fff;border-radius:4px;padding:2px 7px;white-space:nowrap;flex-shrink:0;">${e.perishability}</span>
+        </div>
+        <div style="font-size:.78rem;color:var(--text3);margin-bottom:6px;">[${e.space}] · ${e.layer}</div>
+        <div style="font-size:.82rem;color:var(--text2);line-height:1.5;margin-bottom:8px;">${e.body}</div>
+        <div style="font-size:.75rem;color:var(--text3);font-style:italic;margin-bottom:10px;">${e.rationale}</div>
+        <button class="btn btn-accent btn-sm" onclick="saveCompareEntry('${colId}',${i})">+ Save to Brain</button>
+      </div>`).join('');
+  };
+
+  window._compareGroq = groqEntries;
+  window._compareDS   = dsEntries;
+
+  document.getElementById('proposalsContainer').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div>
+        <div style="font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
+          🟣 Groq · Llama 3.3 70B <span style="font-weight:400;color:var(--text3);">(${groqEntries.length} entries)</span>
+        </div>
+        ${renderCol(groqEntries, 'groq')}
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
+          🔵 DeepSeek V4 Pro <span style="font-weight:400;color:var(--text3);">(${dsEntries.length} entries)</span>
+        </div>
+        ${renderCol(dsEntries, 'ds')}
+      </div>
+    </div>`;
+}
+
+async function saveCompareEntry(col, idx) {
+  const entry = col === 'groq' ? window._compareGroq[idx] : window._compareDS[idx];
+  if (!supabase || !currentUser) { toast('Not connected', 'error'); return; }
+  try {
+    const spaceObj = spaces.find(s => s.name === entry.space) || spaces.find(s => s.name === 'core');
+    const { error } = await supabase.from('entries').insert({
+      space_id: spaceObj.id, title: entry.title, body: entry.body,
+      layer: entry.layer, perishability: entry.perishability,
+      tags: entry.tags || [], user_id: currentUser.id
+    });
+    if (error) throw error;
+    toast(`Saved: ${entry.title}`, 'success');
+    // Grey out the button
+    event.target.textContent = '✓ Saved'; event.target.disabled = true;
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
 }
 
 function renderProposals() {
