@@ -465,7 +465,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <header>
     <div class="header-left">
       <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v06</span>
+      <span class="version-badge">v6.1</span>
     </div>
     <div class="header-right">
       <span class="conn-dot" id="connDot"></span>
@@ -631,21 +631,10 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
       <div class="section-heading">Settings</div>
 
       <div class="settings-section">
-        <h3>Supabase Connection</h3>
-        <div style="display:flex;flex-direction:column;gap:14px;">
-          <div class="field">
-            <label>Email</label>
-            <input type="email" id="sbEmail" placeholder="you@email.com" />
-          </div>
-          <div class="field">
-            <label>Password</label>
-            <input type="password" id="sbPassword" placeholder="Your Supabase password" />
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button class="btn btn-accent" onclick="saveAndConnect()">Connect</button>
-            <button class="btn btn-danger btn-sm" onclick="clearCredentials()">Clear credentials</button>
-            <span id="connectStatus" style="font-size:.78rem;color:var(--text3);"></span>
-          </div>
+        <h3>Connection</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="connectStatus" style="font-size:.82rem;color:var(--text3);"></span>
+          <button class="btn btn-danger btn-sm" onclick="clearCredentials()">Reconnect</button>
         </div>
       </div>
 
@@ -684,8 +673,9 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
             <label>Public Key</label>
             <input type="text" id="settingEjsKey" placeholder="Your EmailJS public key" />
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <button class="btn btn-accent btn-sm" onclick="saveEmailSettings()">Save</button>
+            <button class="btn btn-sm" onclick="sendTestEmail()">✉ Send test email</button>
             <span id="emailSettingStatus" style="font-size:.78rem;color:var(--text3);"></span>
           </div>
         </div>
@@ -800,14 +790,15 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 
 <script>
 // ── HARDCODED CONFIG ──────────────────────────
-// Update these once — all devices share the same URL and key
-const SUPABASE_URL = 'https://udajruwgcbshupsvoocn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2';
-const GROQ_KEY = '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';
-const EJS_SERVICE  = 'service_pkta469';
-const EJS_TEMPLATE = 'template_ijdn4y8';
-const EJS_KEY      = 'FCXGhGYhKSY8mzokZ';
-const EJS_EMAIL    = 'ncheewee@gmail.com';
+const SUPABASE_URL  = 'https://udajruwgcbshupsvoocn.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2';
+const SUPABASE_EMAIL = 'ncheewee@gmail.com';
+const SUPABASE_PASS  = 'Kiwi31082@';
+const GROQ_KEY      = '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';
+const EJS_SERVICE   = 'service_pkta469';
+const EJS_TEMPLATE  = 'template_ijdn4y8';
+const EJS_KEY       = 'FCXGhGYhKSY8mzokZ';
+const EJS_EMAIL     = 'ncheewee@gmail.com';
 
 // ── STATE ─────────────────────────────────────
 let supabase = null;
@@ -850,8 +841,8 @@ function getSavedCreds() {
   return {
     url:      SUPABASE_URL,
     key:      SUPABASE_KEY,
-    email:    localStorage.getItem('byoc_email') || '',
-    password: localStorage.getItem('byoc_password') || ''
+    email:    SUPABASE_EMAIL,
+    password: SUPABASE_PASS
   };
 }
 function clearCredentials() {
