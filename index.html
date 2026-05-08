@@ -465,7 +465,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <header>
     <div class="header-left">
       <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v05</span>
+      <span class="version-badge">v06</span>
     </div>
     <div class="header-right">
       <span class="conn-dot" id="connDot"></span>
@@ -1392,6 +1392,10 @@ function loadSettings() {
   updateFontSize(fs, false);
   const creds = getSavedCreds();
   if (creds.email) document.getElementById('sbEmail').value = creds.email;
+  // Pre-fill EmailJS fields from localStorage or baked-in defaults
+  document.getElementById('settingEjsService').value  = localStorage.getItem('byoc_ejs_service')  || EJS_SERVICE;
+  document.getElementById('settingEjsTemplate').value = localStorage.getItem('byoc_ejs_template') || EJS_TEMPLATE;
+  document.getElementById('settingEjsKey').value      = localStorage.getItem('byoc_ejs_key')      || EJS_KEY;
   renderLayerFilters();
 }
 
