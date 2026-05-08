@@ -410,6 +410,52 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 }
 .proposal-edit:focus { outline: none; border-color: var(--accent); }
 
+
+/* ── INBOX TAB ──────────────────────────────── */
+.inbox-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 12px; overflow: hidden;
+}
+.inbox-card.conflict { border-left: 3px solid var(--danger); }
+.inbox-card.decay    { border-left: 3px solid var(--accent); }
+.inbox-card.proposal { border-left: 3px solid var(--accent2); }
+.inbox-card.resolved { opacity: .5; }
+
+.inbox-card-header {
+  padding: 13px 16px; display: flex; align-items: center; gap: 10px;
+  cursor: pointer;
+}
+.inbox-card-header:hover { background: var(--bg3); }
+.inbox-type-icon { font-size: 1rem; }
+.inbox-card-title { font-family: 'Lora', serif; font-size: .88rem; font-weight: 600; flex: 1; }
+.inbox-deadline {
+  font-size: .68rem; font-family: 'IBM Plex Mono', monospace;
+  color: var(--text3); white-space: nowrap;
+}
+.inbox-deadline.urgent { color: var(--danger); font-weight: 600; }
+
+.inbox-card-body { padding: 14px 16px; border-top: 1px solid var(--border); }
+.inbox-desc { font-size: .83rem; color: var(--text2); margin-bottom: 12px; line-height: 1.5; }
+.inbox-entry-preview {
+  background: var(--bg3); border-radius: 8px; padding: 10px 12px;
+  font-size: .78rem; color: var(--text2); margin-bottom: 12px; line-height: 1.5;
+}
+.inbox-entry-preview strong { color: var(--text); display: block; margin-bottom: 2px; }
+.inbox-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.inbox-btn {
+  font-size: .75rem; font-weight: 500; padding: 5px 12px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text2); cursor: pointer;
+  transition: all .15s; font-family: inherit;
+}
+.inbox-btn:hover { background: var(--bg3); color: var(--text); }
+.inbox-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+.inbox-btn.primary:hover { filter: brightness(1.1); }
+.inbox-btn.danger { color: var(--danger); border-color: var(--danger); }
+.inbox-btn.danger:hover { background: var(--danger); color: white; }
+.inbox-btn.success { color: var(--success); border-color: var(--success); }
+.inbox-btn.success:hover { background: var(--success); color: white; }
+
 </style>
 </head>
 <body>
@@ -419,7 +465,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <header>
     <div class="header-left">
       <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v04</span>
+      <span class="version-badge">v05</span>
     </div>
     <div class="header-right">
       <span class="conn-dot" id="connDot"></span>
@@ -431,6 +477,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   <!-- TABS -->
   <nav class="tabs">
     <button class="tab-btn active" data-tab="entries">Entries</button>
+    <button class="tab-btn" data-tab="inbox">Inbox <span id="inboxBadge" style="display:none;background:var(--danger);color:white;font-size:.6rem;padding:1px 5px;border-radius:8px;margin-left:4px;"></span></button>
     <button class="tab-btn" data-tab="audit">Audit Log</button>
     <button class="tab-btn" data-tab="import">Import</button>
     <button class="tab-btn" data-tab="export">Export</button>
@@ -486,6 +533,35 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
       <div class="section-heading">Audit Log <span class="count-badge" id="auditCount">0</span></div>
       <div id="auditContainer">
         <div class="empty"><div class="empty-icon">◈</div><h3>No edits yet</h3><p>All writes appear here automatically.</p></div>
+      </div>
+    </div>
+
+    <!-- ── INBOX TAB ── -->
+    <div class="tab-panel" id="tab-inbox">
+      <div class="section-heading">
+        Review Inbox
+        <span class="count-badge" id="inboxCount">0</span>
+      </div>
+
+      <div id="inboxEmpty" class="empty" style="display:none">
+        <div class="empty-icon">✓</div>
+        <h3>Inbox clear</h3>
+        <p>No pending items. Your second brain is coherent and up to date.</p>
+      </div>
+
+      <div class="filter-group" style="margin-bottom:18px;" id="inboxFilters">
+        <button class="filter-chip active" onclick="setInboxFilter('all')">All</button>
+        <button class="filter-chip" onclick="setInboxFilter('coherence_conflict')">🔴 Conflicts</button>
+        <button class="filter-chip" onclick="setInboxFilter('decay_review')">🟡 Decay</button>
+        <button class="filter-chip" onclick="setInboxFilter('memory_proposal')">🔵 Proposals</button>
+      </div>
+
+      <div id="inboxContainer"></div>
+
+      <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="runScanNow()">⟳ Run scan now</button>
+        <button class="btn btn-sm" onclick="sendTestEmail()">✉ Send test email</button>
+        <span id="scanStatus" style="font-size:.78rem;color:var(--text3);align-self:center;"></span>
       </div>
     </div>
 
@@ -580,6 +656,38 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
           <input type="range" id="fontSlider" min="13" max="19" value="15" oninput="updateFontSize(this.value)">
           <span style="font-size:1rem;color:var(--text3)">A</span>
           <span id="fontPreview" style="font-size:.82rem;color:var(--text3);">15px</span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Notifications (EmailJS)</h3>
+        <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px;line-height:1.5;">
+          Weekly digest email when you have pending inbox items. Set up at
+          <a href="https://emailjs.com" target="_blank">emailjs.com</a> — free tier is sufficient.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="field">
+            <label>Your Email</label>
+            <input type="email" id="settingEmail" placeholder="you@email.com" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Service ID</label>
+              <input type="text" id="settingEjsService" placeholder="service_..." />
+            </div>
+            <div class="field">
+              <label>Template ID</label>
+              <input type="text" id="settingEjsTemplate" placeholder="template_..." />
+            </div>
+          </div>
+          <div class="field">
+            <label>Public Key</label>
+            <input type="text" id="settingEjsKey" placeholder="Your EmailJS public key" />
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-accent btn-sm" onclick="saveEmailSettings()">Save</button>
+            <span id="emailSettingStatus" style="font-size:.78rem;color:var(--text3);"></span>
+          </div>
         </div>
       </div>
 
@@ -694,8 +802,8 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 // ── HARDCODED CONFIG ──────────────────────────
 // Update these once — all devices share the same URL and key
 const SUPABASE_URL = 'https://udajruwgcbshupsvoocn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2'; // ← paste your current key from Supabase → Settings → API Keys
-const GROQ_KEY = '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'; // ← paste from console.groq.com → API Keys → Create API Key (free, no credit card)
+const SUPABASE_KEY = 'YOUR_PUBLISHABLE_KEY_HERE'; // ← paste your current key from Supabase → Settings → API Keys
+const GROQ_KEY = 'YOUR_GROQ_KEY_HERE'; // ← paste from console.groq.com → API Keys → Create API Key (free, no credit card)
 
 // ── STATE ─────────────────────────────────────
 let supabase = null;
@@ -760,7 +868,7 @@ async function initSupabase(url, key, email, password) {
     userJwt = data.session.access_token;
     setConnStatus(true);
     showSetupBanner(false);
-    await Promise.all([loadSpaces(), loadEntries(), loadAudit()]);
+    await Promise.all([loadSpaces(), loadEntries(), loadAudit(), loadInbox(), loadEmailSettings()]);
   } catch(e) {
     setConnStatus(false); showSetupBanner(true);
     toast('Connection failed: ' + e.message, 'error');
@@ -1096,7 +1204,7 @@ async function saveEntry() {
 
   toast(editingId ? 'Entry updated' : 'Entry saved', 'success');
   closeModal('entryModal');
-  await Promise.all([loadEntries(), loadAudit()]);
+  await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
 
   // Fire-and-forget embedding generation
   if (savedId) generateEmbedding(savedId, `${payload.title} ${payload.body} ${payload.tags.join(' ')}`);
@@ -1154,7 +1262,7 @@ async function archiveEntry() {
   if (error) { toast('Archive failed', 'error'); return; }
   toast('Entry archived');
   closeModal('entryModal');
-  await Promise.all([loadEntries(), loadAudit()]);
+  await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
 }
 
 // ── ROLLBACK ──────────────────────────────────
@@ -1180,7 +1288,7 @@ async function confirmRollback() {
   if (error) { toast('Rollback failed: ' + error.message, 'error'); return; }
   toast('Entry restored', 'success');
   closeModal('rollbackModal');
-  await Promise.all([loadEntries(), loadAudit()]);
+  await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
   // Re-embed after rollback
   generateEmbedding(rollbackTarget.entry_id, `${before.title} ${before.body}`);
 }
@@ -1248,6 +1356,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   if (name === 'entries') renderLayerFilters();
+  if (name === 'inbox') renderInbox();
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -1514,12 +1623,248 @@ async function saveApproved() {
 
   if (saved) {
     toast(`${saved} entr${saved===1?'y':'ies'} saved to second brain`, 'success');
-    await Promise.all([loadEntries(), loadAudit()]);
+    await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
     renderProposals();
     document.getElementById('batchBar').style.display = 'none';
   }
 }
 
+
+
+// ── INBOX ─────────────────────────────────────
+
+let inboxItems = [];
+let inboxFilter = 'all';
+
+async function loadInbox() {
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from('review_inbox')
+    .select('*')
+    .eq('status', 'pending')
+    .order('deadline', { ascending: true });
+  if (error) return;
+  inboxItems = data || [];
+  updateInboxBadge();
+  if (document.getElementById('tab-inbox').classList.contains('active')) renderInbox();
+}
+
+function updateInboxBadge() {
+  const count = inboxItems.length;
+  const badge = document.getElementById('inboxBadge');
+  const countEl = document.getElementById('inboxCount');
+  badge.style.display = count > 0 ? '' : 'none';
+  badge.textContent = count;
+  if (countEl) countEl.textContent = count;
+}
+
+function setInboxFilter(f) {
+  inboxFilter = f;
+  document.querySelectorAll('#inboxFilters .filter-chip').forEach((b, i) => {
+    const filters = ['all','coherence_conflict','decay_review','memory_proposal'];
+    b.classList.toggle('active', filters[i] === f);
+  });
+  renderInbox();
+}
+
+function renderInbox() {
+  const filtered = inboxFilter === 'all'
+    ? inboxItems
+    : inboxItems.filter(i => i.type === inboxFilter);
+
+  const container = document.getElementById('inboxContainer');
+  const empty = document.getElementById('inboxEmpty');
+
+  if (!filtered.length) {
+    container.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  container.innerHTML = filtered.map(inboxCard).join('');
+}
+
+function inboxCard(item) {
+  const icon = item.type === 'coherence_conflict' ? '🔴'
+             : item.type === 'decay_review' ? '🟡' : '🔵';
+  const typeClass = item.type === 'coherence_conflict' ? 'conflict'
+                  : item.type === 'decay_review' ? 'decay' : 'proposal';
+
+  const deadline = new Date(item.deadline);
+  const daysLeft = Math.ceil((deadline - Date.now()) / 86400000);
+  const deadlineStr = deadline.toLocaleDateString('en-SG', { day:'numeric', month:'short' });
+  const urgent = daysLeft <= 3;
+
+  let actionsHtml = '';
+  let previewHtml = '';
+
+  if (item.payload) {
+    const p = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
+    if (item.type === 'coherence_conflict' && p.entry_a && p.entry_b) {
+      previewHtml = `
+        <div class="inbox-entry-preview"><strong>${esc(p.entry_a.title)}</strong>${esc(p.entry_a.body?.slice(0,120))}…</div>
+        <div class="inbox-entry-preview"><strong>${esc(p.entry_b.title)}</strong>${esc(p.entry_b.body?.slice(0,120))}…</div>`;
+      actionsHtml = `
+        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_a')">Keep A, delete B</button>
+        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_b')">Keep B, delete A</button>
+        <button class="inbox-btn success" onclick="resolveInbox('${item.id}','coexist')">Both valid</button>
+        <button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`;
+    } else if (item.type === 'decay_review' && p.title) {
+      previewHtml = `<div class="inbox-entry-preview"><strong>${esc(p.title)}</strong>${esc(p.body?.slice(0,160))}…</div>`;
+      actionsHtml = `
+        <button class="inbox-btn success" onclick="resolveInbox('${item.id}','still_relevant')">Still relevant</button>
+        <button class="inbox-btn" onclick="openEditEntry('${item.entry_id_a}');resolveInbox('${item.id}','update')">Update entry</button>
+        <button class="inbox-btn danger" onclick="archiveDecayEntry('${item.id}','${item.entry_id_a}')">Archive entry</button>`;
+    }
+  }
+  if (!actionsHtml) {
+    actionsHtml = `<button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`;
+  }
+
+  return `
+<div class="inbox-card ${typeClass}" id="icard_${item.id}">
+  <div class="inbox-card-header" onclick="toggleInboxCard('${item.id}')">
+    <span class="inbox-type-icon">${icon}</span>
+    <span class="inbox-card-title">${esc(item.title)}</span>
+    <span class="chip chip-space" style="font-size:.6rem">${item.space||''}</span>
+    <span class="inbox-deadline ${urgent?'urgent':''}">${daysLeft}d · ${deadlineStr}</span>
+  </div>
+  <div class="inbox-card-body" id="ibody_${item.id}" style="display:none">
+    <p class="inbox-desc">${esc(item.description)}</p>
+    ${previewHtml}
+    <div class="inbox-actions">${actionsHtml}</div>
+  </div>
+</div>`;
+}
+
+function toggleInboxCard(id) {
+  const body = document.getElementById('ibody_' + id);
+  if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+}
+
+async function resolveInbox(id, resolution) {
+  const { error } = await supabase
+    .from('review_inbox')
+    .update({ status: 'resolved', resolution, resolved_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) { toast('Failed to resolve', 'error'); return; }
+  toast('Resolved');
+  inboxItems = inboxItems.filter(i => i.id !== id);
+  updateInboxBadge();
+  renderInbox();
+}
+
+async function archiveDecayEntry(inboxId, entryId) {
+  await supabase.from('entries').update({ status: 'archived' }).eq('id', entryId);
+  await resolveInbox(inboxId, 'archived');
+  await loadEntries();
+}
+
+async function runScanNow() {
+  const status = document.getElementById('scanStatus');
+  status.textContent = 'Running scan…';
+  try {
+    const sbUrl = SUPABASE_URL;
+    const sbKey = SUPABASE_KEY;
+    const res = await fetch(`${sbUrl}/functions/v1/weekly-scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': sbKey,
+        'Authorization': `Bearer ${userJwt}`
+      }
+    });
+    const data = await res.json();
+    status.textContent = `Done — ${data.decay_flagged||0} decay, ${data.coherence_flagged||0} conflicts, ${data.total_pending||0} pending`;
+    await loadInbox();
+  } catch(e) {
+    status.textContent = 'Scan failed: ' + e.message;
+  }
+}
+
+// ── EMAIL SETTINGS ────────────────────────────
+
+async function saveEmailSettings() {
+  if (!supabase) return;
+  const payload = {
+    user_id:             currentUser.id,
+    email:               document.getElementById('settingEmail').value.trim(),
+    emailjs_service_id:  document.getElementById('settingEjsService').value.trim(),
+    emailjs_template_id: document.getElementById('settingEjsTemplate').value.trim(),
+    emailjs_public_key:  document.getElementById('settingEjsKey').value.trim(),
+    updated_at:          new Date().toISOString()
+  };
+  const { error } = await supabase.from('user_settings').upsert(payload);
+  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  // Cache in localStorage for sendTestEmail
+  localStorage.setItem('byoc_ejs_service', payload.emailjs_service_id);
+  localStorage.setItem('byoc_ejs_template', payload.emailjs_template_id);
+  localStorage.setItem('byoc_ejs_key', payload.emailjs_public_key);
+  localStorage.setItem('byoc_email', payload.email);
+  toast('Email settings saved', 'success');
+  document.getElementById('emailSettingStatus').textContent = '✓ Saved';
+}
+
+async function loadEmailSettings() {
+  if (!supabase || !currentUser) return;
+  const { data } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .single();
+  if (!data) return;
+  if (data.email)               document.getElementById('settingEmail').value = data.email;
+  if (data.emailjs_service_id)  document.getElementById('settingEjsService').value = data.emailjs_service_id;
+  if (data.emailjs_template_id) document.getElementById('settingEjsTemplate').value = data.emailjs_template_id;
+  if (data.emailjs_public_key)  document.getElementById('settingEjsKey').value = data.emailjs_public_key;
+}
+
+async function sendTestEmail() {
+  const serviceId  = document.getElementById('settingEjsService').value.trim();
+  const templateId = document.getElementById('settingEjsTemplate').value.trim();
+  const publicKey  = document.getElementById('settingEjsKey').value.trim();
+  const toEmail    = document.getElementById('settingEmail').value.trim();
+
+  if (!serviceId || !templateId || !publicKey || !toEmail) {
+    toast('Fill in all EmailJS fields in Settings first', 'error'); return;
+  }
+
+  const status = document.getElementById('scanStatus');
+  status.textContent = 'Sending test email…';
+
+  try {
+    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id:  serviceId,
+        template_id: templateId,
+        user_id:     publicKey,
+        template_params: {
+          to_email:      toEmail,
+          pending_count: inboxItems.length,
+          new_decay:     0,
+          new_conflicts: 0,
+          expired_count: 0,
+          inbox_summary: inboxItems.length
+            ? inboxItems.slice(0,5).map(i => `• ${i.title}`).join('\n')
+            : 'No pending items — inbox is clear.',
+          app_url: window.location.href
+        }
+      })
+    });
+    if (res.ok) {
+      toast('Test email sent to ' + toEmail, 'success');
+      status.textContent = 'Test email sent ✓';
+    } else {
+      const e = await res.json();
+      throw new Error(e.error || res.statusText);
+    }
+  } catch(e) {
+    toast('Email failed: ' + e.message, 'error');
+    status.textContent = '';
+  }
+}
 
 </script>
 </body>
