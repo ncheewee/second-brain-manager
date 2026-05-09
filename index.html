@@ -2031,9 +2031,11 @@ async function runScanNow(sendEmail = false) {
     const reflectionBit = data.reflection_items != null ? `, ${data.reflection_items} reflection signals` : '';
     status.textContent = `Done — ${data.decay_flagged||0} decay, ${data.coherence_flagged||0} conflicts, ${data.total_pending||0} pending${reflectionBit}${emailBit}`;
     if (sendEmail && !data.email_sent) {
-      const reason = data.email_skipped_reason === 'no_reflection_or_inbox_activity'
-        ? 'Weekly digest not sent because there is no new reflection or inbox activity'
-        : 'Digest not sent; check EmailJS settings';
+      const reason = data.email_error
+        ? 'Email send failed: ' + data.email_error
+        : data.email_skipped_reason === 'no_reflection_or_inbox_activity'
+          ? 'Weekly digest not sent because there is no new reflection or inbox activity'
+          : 'Digest not sent; check EmailJS settings';
       status.textContent += ` · ${reason}`;
       toast(reason, 'error');
     }
