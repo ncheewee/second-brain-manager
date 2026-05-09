@@ -2033,6 +2033,13 @@ async function runScanNow(sendEmail = false) {
     if (!res.ok) throw new Error(data.error || res.statusText);
     const emailBit = data.email_sent ? ' · digest sent' : '';
     status.textContent = `Done — ${data.decay_flagged||0} decay, ${data.coherence_flagged||0} conflicts, ${data.total_pending||0} pending${emailBit}`;
+    if (sendEmail && !data.email_sent) {
+      const reason = (data.total_pending || 0) === 0
+        ? 'No pending inbox items, so no digest was sent'
+        : 'Digest not sent; check EmailJS settings';
+      status.textContent += ` · ${reason}`;
+      toast(reason, 'error');
+    }
     await loadInbox();
   } catch(e) {
     status.textContent = 'Scan failed: ' + e.message;
