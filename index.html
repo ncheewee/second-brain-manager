@@ -660,10 +660,9 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
       </div>
 
       <div class="settings-section">
-        <h3>Notifications (EmailJS)</h3>
+        <h3>Notifications</h3>
         <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px;line-height:1.5;">
-          Weekly digest email when you have pending inbox items. Set up at
-          <a href="https://emailjs.com" target="_blank">emailjs.com</a> — free tier is sufficient.
+          Weekly digest emails are sent by Resend from the backend. EmailJS below is kept for browser-side test emails only.
         </p>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div class="field">
@@ -672,16 +671,16 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
           </div>
           <div class="field-row">
             <div class="field">
-              <label>Service ID</label>
+              <label>EmailJS Service ID</label>
               <input type="text" id="settingEjsService" placeholder="service_..." />
             </div>
             <div class="field">
-              <label>Template ID</label>
+              <label>EmailJS Template ID</label>
               <input type="text" id="settingEjsTemplate" placeholder="template_..." />
             </div>
           </div>
           <div class="field">
-            <label>Public Key</label>
+            <label>EmailJS Public Key</label>
             <input type="text" id="settingEjsKey" placeholder="Your EmailJS public key" />
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -2035,7 +2034,9 @@ async function runScanNow(sendEmail = false) {
         ? 'Email send failed: ' + data.email_error
         : data.email_skipped_reason === 'no_reflection_or_inbox_activity'
           ? 'Weekly digest not sent because there is no new reflection or inbox activity'
-          : 'Digest not sent; check EmailJS settings';
+          : data.email_skipped_reason === 'missing_resend_api_key'
+            ? 'Digest not sent; Resend API key is not set in Supabase secrets'
+            : 'Digest not sent; check notification settings';
       status.textContent += ` · ${reason}`;
       toast(reason, 'error');
     }
