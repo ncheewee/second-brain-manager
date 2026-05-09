@@ -1903,8 +1903,8 @@ function inboxCard(item) {
         <div class="inbox-entry-preview"><strong>${esc(p.entry_a.title)}</strong>${esc(p.entry_a.body?.slice(0,120))}…</div>
         <div class="inbox-entry-preview"><strong>${esc(p.entry_b.title)}</strong>${esc(p.entry_b.body?.slice(0,120))}…</div>`;
       actionsHtml = `
-        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_a')">Keep A, delete B</button>
-        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_b')">Keep B, delete A</button>
+        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_a')">Keep A, archive B</button>
+        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_b')">Keep B, archive A</button>
         <button class="inbox-btn success" onclick="resolveInbox('${item.id}','coexist')">Both valid</button>
         <button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`;
     } else if (item.type === 'decay_review' && p.title) {
@@ -1941,15 +1941,48 @@ function toggleInboxCard(id) {
 }
 
 async function resolveInbox(id, resolution) {
+  const item = inboxItems.find(i => i.id === id);
+  const resolvedAt = new Date().toISOString();
+
+  if (item?.type === 'coherence_conflict') {
+    const archiveId = resolution === 'supersede_a'
+      ? item.entry_id_b
+      : resolution === 'supersede_b'
+        ? item.entry_id_a
+        : null;
+    if (archiveId) {
+      const { error: archiveError } = await supabase
+        .from('entries')
+        .update({ status: 'archived' })
+        .eq('id', archiveId);
+      if (archiveError) { toast('Failed to archive superseded entry', 'error'); return; }
+    }
+  }
+
+  if (item?.type === 'decay_review' && resolution === 'still_relevant' && item.entry_id_a) {
+    const { error: reviewError } = await supabase
+      .from('entries')
+      .update({ last_reviewed_at: resolvedAt })
+      .eq('id', item.entry_id_a);
+    if (reviewError) { toast('Failed to update review timestamp', 'error'); return; }
+  }
+
+  const nextStatus = resolution === 'dismiss' ? 'dismissed' : 'resolved';
   const { error } = await supabase
     .from('review_inbox')
-    .update({ status: 'resolved', resolution, resolved_at: new Date().toISOString() })
+    .update({ status: nextStatus, resolution, resolved_at: resolvedAt })
     .eq('id', id);
   if (error) { toast('Failed to resolve', 'error'); return; }
-  toast('Resolved');
+  const message = resolution === 'supersede_a' ? 'Resolved — archived B'
+    : resolution === 'supersede_b' ? 'Resolved — archived A'
+    : resolution === 'still_relevant' ? 'Marked still relevant'
+    : resolution === 'dismiss' ? 'Dismissed'
+    : 'Resolved';
+  toast(message);
   inboxItems = inboxItems.filter(i => i.id !== id);
   updateInboxBadge();
   renderInbox();
+  await loadEntries();
 }
 
 async function archiveDecayEntry(inboxId, entryId) {
