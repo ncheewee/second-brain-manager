@@ -2076,7 +2076,7 @@ async function sendTestEmail() {
     toast('Fill in all EmailJS fields in Settings first', 'error'); return;
   }
 
-  const status = document.getElementById('scanStatus');
+  const status = document.getElementById('scanStatus') || document.getElementById('emailSettingStatus');
   status.textContent = 'Sending test email…';
 
   try {
