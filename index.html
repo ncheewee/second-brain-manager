@@ -577,6 +577,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 
       <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-sm" onclick="runScanNow()">⟳ Run scan now</button>
+        <button class="btn btn-sm" onclick="sendDigestNow()">✉ Send digest now</button>
         <button class="btn btn-sm" onclick="sendTestEmail()">✉ Send test email</button>
         <span id="scanStatus" style="font-size:.78rem;color:var(--text3);align-self:center;"></span>
       </div>
@@ -2013,9 +2014,9 @@ async function archiveDecayEntry(inboxId, entryId) {
   await loadEntries();
 }
 
-async function runScanNow() {
+async function runScanNow(sendEmail = false) {
   const status = document.getElementById('scanStatus');
-  status.textContent = 'Running scan…';
+  status.textContent = sendEmail ? 'Running scan and sending digest…' : 'Running scan…';
   try {
     const sbUrl = SUPABASE_URL;
     const sbKey = SUPABASE_KEY;
@@ -2025,14 +2026,21 @@ async function runScanNow() {
         'Content-Type': 'application/json',
         'apikey': sbKey,
         'Authorization': `Bearer ${userJwt}`
-      }
+      },
+      body: JSON.stringify({ send_email: sendEmail })
     });
     const data = await res.json();
-    status.textContent = `Done — ${data.decay_flagged||0} decay, ${data.coherence_flagged||0} conflicts, ${data.total_pending||0} pending`;
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    const emailBit = data.email_sent ? ' · digest sent' : '';
+    status.textContent = `Done — ${data.decay_flagged||0} decay, ${data.coherence_flagged||0} conflicts, ${data.total_pending||0} pending${emailBit}`;
     await loadInbox();
   } catch(e) {
     status.textContent = 'Scan failed: ' + e.message;
   }
+}
+
+async function sendDigestNow() {
+  await runScanNow(true);
 }
 
 // ── EMAIL SETTINGS ────────────────────────────
