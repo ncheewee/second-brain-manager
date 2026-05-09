@@ -850,15 +850,18 @@ let searchTimeout = null;
 
 const LAYERS = ['domain','workflow','behavioural','artifact'];
 const PERISH_LABELS = { evergreen:'Evergreen', slow:'Slow', fast:'Fast', single_use:'Single-use' };
+const VALID_TABS = ['entries','inbox','audit','import','export','settings'];
 
 // ── INIT ──────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
+  const initialTab = getRequestedTab();
   const creds = getSavedCreds();
   if (creds.url && creds.key && creds.email && creds.password) {
-    initSupabase(creds.url, creds.key, creds.email, creds.password);
+    initSupabase(creds.url, creds.key, creds.email, creds.password, initialTab);
   } else {
     showSetupBanner(true);
+    if (initialTab !== 'entries') switchTab(initialTab, false);
   }
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -886,7 +889,7 @@ function clearCredentials() {
 }
 
 // ── SUPABASE ──────────────────────────────────
-async function initSupabase(url, key, email, password) {
+async function initSupabase(url, key, email, password, initialTab = 'entries') {
   try {
     const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
     supabase = createClient(url, key);
@@ -897,6 +900,7 @@ async function initSupabase(url, key, email, password) {
     setConnStatus(true);
     showSetupBanner(false);
     await Promise.all([loadSpaces(), loadEntries(), loadAudit(), loadInbox(), loadEmailSettings()]);
+    if (initialTab !== 'entries') switchTab(initialTab, false);
   } catch(e) {
     setConnStatus(false); showSetupBanner(true);
     toast('Connection failed: ' + e.message, 'error');
@@ -1379,11 +1383,29 @@ function downloadFile(name, content, type) {
 }
 
 // ── UI HELPERS ────────────────────────────────
-function switchTab(name) {
+function getRequestedTab() {
+  const fromQuery = new URLSearchParams(window.location.search).get('tab');
+  const fromHash = window.location.hash.replace('#', '');
+  const requested = fromQuery || fromHash || 'entries';
+  return VALID_TABS.includes(requested) ? requested : 'entries';
+}
+
+function switchTab(name, updateUrl = true) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   if (name === 'entries') renderLayerFilters();
   if (name === 'inbox') renderInbox();
+  if (updateUrl) {
+    const url = new URL(window.location.href);
+    if (name === 'entries') {
+      url.searchParams.delete('tab');
+      url.hash = '';
+    } else {
+      url.searchParams.set('tab', name);
+      url.hash = '';
+    }
+    history.replaceState(null, '', url);
+  }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -2096,7 +2118,7 @@ async function sendTestEmail() {
           inbox_summary: inboxItems.length
             ? inboxItems.slice(0,5).map(i => `• ${i.title}`).join('\n')
             : 'No pending items — inbox is clear.',
-          app_url: window.location.href
+          app_url: `${window.location.origin}${window.location.pathname}?tab=inbox`
         }
       })
     });
