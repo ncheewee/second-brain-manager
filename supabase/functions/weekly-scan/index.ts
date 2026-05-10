@@ -15,6 +15,40 @@ const corsHeaders = {
 
 const appInboxUrl = 'https://ncheewee.github.io/second-brain-manager/?tab=inbox'
 
+type DigestEntry = {
+  title?: string
+  body?: string
+  space?: string
+  layer?: string
+  perishability?: string
+  tags?: string[]
+  updated_at?: string
+  created_by_tool?: string
+  status?: string
+}
+
+type InboxItem = {
+  type?: string
+  title?: string
+  deadline?: string
+  space?: string
+}
+
+type DigestCard = {
+  kicker: string
+  title: string
+  body: string
+}
+
+type ReflectionDigest = {
+  headline: string
+  subhead: string
+  opener: string
+  cards: DigestCard[]
+  questions: string[]
+  footer_note: string
+}
+
 function escapeHtml(value: unknown) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -23,11 +57,368 @@ function escapeHtml(value: unknown) {
     .replace(/"/g, '&quot;')
 }
 
-function textToHtml(value: string) {
-  return escapeHtml(value)
-    .split('\n\n')
-    .map(paragraph => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
-    .join('')
+function clampText(value: unknown, max = 220) {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim()
+  return text.length > max ? `${text.slice(0, max - 1).trim()}...` : text
+}
+
+function countBy(values: string[]) {
+  return values.reduce((acc, value) => {
+    if (!value) return acc
+    acc[value] = (acc[value] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+}
+
+function topItems(counts: Record<string, number>, limit = 4) {
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+}
+
+function niceList(items: string[]) {
+  if (!items.length) return ''
+  if (items.length === 1) return items[0]
+  if (items.length === 2) return `${items[0]} and ${items[1]}`
+  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`
+}
+
+function labelize(value: string) {
+  return value
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+function buildDeterministicDigest(entries: DigestEntry[], inboxItems: InboxItem[]): ReflectionDigest {
+  if (!entries.length) {
+    return {
+      headline: 'A quiet week in the second brain',
+      subhead: 'No major new memory movement was captured in the last 7 days.',
+      opener: 'Quiet is still information. It may mean the system is stable, or simply that fewer second-brain-worthy decisions were captured.',
+      cards: [
+        {
+          kicker: 'Signal',
+          title: 'Nothing urgent is trying to reorganize the picture',
+          body: 'There were no active memory updates this week, so the useful check is whether that reflects genuine steadiness or a gap in capture.',
+        },
+      ],
+      questions: [
+        'Was this week actually quiet, or did the important thinking happen outside the system?',
+        'Is there one decision, preference, or recurring pattern worth saving before it fades?',
+      ],
+      footer_note: inboxItems.length ? 'There are still inbox items waiting for review.' : 'Your review inbox is clear.',
+    }
+  }
+
+  const spaces = topItems(countBy(entries.map(e => e.space || 'unknown')))
+  const layers = topItems(countBy(entries.map(e => e.layer || 'unknown')))
+  const tags = topItems(countBy(entries.flatMap(e => e.tags || [])), 6)
+  const topSpaceNames = spaces.map(([name]) => labelize(name))
+  const topLayerNames = layers.map(([name]) => labelize(name))
+  const topTagNames = tags.map(([name]) => labelize(name))
+  const recentTitles = entries.slice(0, 4).map(e => e.title || 'Untitled memory')
+  const financeOrTransport = topTagNames.some(tag =>
+    ['finance', 'cost of living', 'transport', 'motorcycle', 'ev', 'car ownership', 'singapore'].includes(tag)
+  )
+  const buildOrWorkflow = topTagNames.some(tag =>
+    ['ai agents', 'vibe coding', 'development methodology', 'prototyping', 'github pages'].includes(tag)
+  )
+
+  const primaryTheme = topTagNames.length
+    ? niceList(topTagNames.slice(0, 3))
+    : niceList(topSpaceNames)
+  const headline = primaryTheme
+    ? `This week is clustering around ${primaryTheme}`
+    : 'This week has a few useful signals'
+  const subhead = `${entries.length} recent memor${entries.length === 1 ? 'y' : 'ies'} across ${niceList(topSpaceNames)}.`
+
+  const cards: DigestCard[] = [
+    {
+      kicker: 'Current Shape',
+      title: 'The system is showing where attention is settling',
+      body: `Most updates sit in ${niceList(topSpaceNames)} and lean toward ${niceList(topLayerNames)} memory. The useful signal is not the count, but the repeated pull toward ${primaryTheme || 'the same few concerns'}.`,
+    },
+    {
+      kicker: 'Pattern',
+      title: financeOrTransport
+        ? 'You are comparing choices through optionality and total cost'
+        : buildOrWorkflow
+          ? 'You are turning fuzzy workflows into reusable operating models'
+          : 'The recent notes are becoming a map of decision style',
+      body: financeOrTransport
+        ? 'The captures read less like shopping notes and more like a practical model for trade-offs: cash flow, convenience, resilience, and what stays useful over time.'
+        : buildOrWorkflow
+          ? 'The through-line is increasingly about making AI development repeatable: clear defaults, local keys, visible UAT, and versioned handovers.'
+          : 'The latest memories are less about isolated facts and more about how you decide, what you keep returning to, and which contexts deserve follow-through.',
+    },
+    {
+      kicker: 'Notable Notes',
+      title: 'A few memories are now anchors',
+      body: niceList(recentTitles.map(title => `"${clampText(title, 72)}"`)) + '.',
+    },
+  ]
+
+  if (inboxItems.length) {
+    cards.push({
+      kicker: 'Inbox',
+      title: `${inboxItems.length} item${inboxItems.length === 1 ? '' : 's'} still need a decision`,
+      body: 'The digest can stay reflective, but these are the few places where the system is asking you to choose, archive, or confirm relevance.',
+    })
+  }
+
+  return {
+    headline,
+    subhead,
+    opener: 'Here is the higher-level read, not a raw changelog: what seems to be moving, what pattern is emerging, and what might be worth noticing before the week resets.',
+    cards,
+    questions: [
+      `Is ${primaryTheme || 'this cluster'} genuinely important, or just recently noisy?`,
+      'What would be useful to decide once, so future-you does not have to re-think it from scratch?',
+      'Is any memory here becoming outdated because your actual preference has shifted?',
+    ],
+    footer_note: inboxItems.length ? 'There are inbox items waiting for review.' : 'No inbox maintenance is waiting right now.',
+  }
+}
+
+function normalizeDigest(value: Partial<ReflectionDigest> | null, fallback: ReflectionDigest): ReflectionDigest {
+  if (!value) return fallback
+  const cards = Array.isArray(value.cards)
+    ? value.cards
+        .filter(card => card?.title && card?.body)
+        .slice(0, 4)
+        .map(card => ({
+          kicker: clampText(card.kicker || 'Signal', 28),
+          title: clampText(card.title, 90),
+          body: clampText(card.body, 420),
+        }))
+    : fallback.cards
+  const questions = Array.isArray(value.questions)
+    ? value.questions.filter(Boolean).slice(0, 3).map(q => clampText(q, 160))
+    : fallback.questions
+  return {
+    headline: clampText(value.headline || fallback.headline, 90),
+    subhead: clampText(value.subhead || fallback.subhead, 150),
+    opener: clampText(value.opener || fallback.opener, 380),
+    cards: cards.length ? cards : fallback.cards,
+    questions: questions.length ? questions : fallback.questions,
+    footer_note: clampText(value.footer_note || fallback.footer_note, 180),
+  }
+}
+
+async function buildAiDigest(entries: DigestEntry[], inboxItems: InboxItem[], fallback: ReflectionDigest) {
+  const apiKey = Deno.env.get('DEEPSEEK_API_KEY')
+  if (!apiKey || !entries.length) {
+    return { digest: fallback, aiUsed: false, aiError: null as string | null }
+  }
+
+  const payload = {
+    entries: entries.slice(0, 12).map(entry => ({
+      title: entry.title,
+      body: clampText(entry.body, 700),
+      space: entry.space,
+      layer: entry.layer,
+      perishability: entry.perishability,
+      tags: entry.tags || [],
+      updated_at: entry.updated_at,
+    })),
+    inbox: inboxItems.slice(0, 8).map(item => ({
+      type: item.type,
+      title: item.title,
+      space: item.space,
+      deadline: item.deadline,
+    })),
+  }
+
+  try {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: Deno.env.get('DEEPSEEK_MODEL') || 'deepseek-chat',
+        temperature: 0.45,
+        max_tokens: 1100,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: [
+              'You write a weekly reflective digest for one person from their personal second brain.',
+              'Be specific, thoughtful, warm, and concise. Do not sound corporate. Do not list every entry.',
+              'Infer trends carefully. If evidence is thin, say so gently. No hype, no action list unless inbox items need review.',
+              'Return only valid JSON with keys: headline, subhead, opener, cards, questions, footer_note.',
+              'cards must be 3 or 4 objects with kicker, title, body. Each body max 60 words.',
+              'questions must be 2 or 3 reflective questions.',
+            ].join(' '),
+          },
+          {
+            role: 'user',
+            content: JSON.stringify(payload),
+          },
+        ],
+      }),
+    })
+
+    if (!response.ok) {
+      return { digest: fallback, aiUsed: false, aiError: await response.text() }
+    }
+    const data = await response.json()
+    const content = data?.choices?.[0]?.message?.content
+    const parsed = JSON.parse(content)
+    return { digest: normalizeDigest(parsed, fallback), aiUsed: true, aiError: null as string | null }
+  } catch (err) {
+    return { digest: fallback, aiUsed: false, aiError: String(err) }
+  }
+}
+
+function renderCard(card: DigestCard) {
+  return `
+        <tr>
+          <td style="padding:0 0 12px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fffaf2;border:1px solid #eadfce;border-radius:14px;">
+              <tr>
+                <td style="padding:16px 16px 15px;">
+                  <div style="font-size:11px;line-height:1.25;letter-spacing:.08em;text-transform:uppercase;color:#9a6a26;font-weight:800;margin-bottom:7px;">${escapeHtml(card.kicker)}</div>
+                  <div style="font-size:18px;line-height:1.25;color:#241f1a;font-weight:800;margin-bottom:8px;">${escapeHtml(card.title)}</div>
+                  <div style="font-size:15px;line-height:1.55;color:#51483f;">${escapeHtml(card.body)}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`
+}
+
+function renderInboxHtml(inboxItems: InboxItem[]) {
+  if (!inboxItems.length) {
+    return '<div style="font-size:15px;line-height:1.55;color:#5f554b;">Clear. Nothing needs a decision right now.</div>'
+  }
+
+  return inboxItems.slice(0, 6).map(item => {
+    const deadline = item.deadline
+      ? new Date(item.deadline).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })
+      : 'No deadline'
+    const type = item.type === 'coherence_conflict' ? 'Coherence'
+      : item.type === 'decay_review' ? 'Decay'
+      : 'Review'
+    return `
+      <div style="padding:12px 0;border-top:1px solid #eee5d8;">
+        <div style="font-size:14px;line-height:1.35;color:#2b251f;font-weight:800;">${escapeHtml(item.title || 'Untitled review')}</div>
+        <div style="font-size:12px;line-height:1.4;color:#7a6c5e;margin-top:3px;">${escapeHtml(type)} · ${escapeHtml(item.space || 'unknown')} · due ${escapeHtml(deadline)}</div>
+      </div>`
+  }).join('')
+}
+
+function buildDigestEmail(input: {
+  digest: ReflectionDigest
+  inboxItems: InboxItem[]
+  periodLabel: string
+  generatedLabel: string
+  aiUsed: boolean
+}) {
+  const { digest, inboxItems, periodLabel, generatedLabel, aiUsed } = input
+  const questionsHtml = digest.questions.map(question => `
+        <tr>
+          <td style="padding:0 0 10px;">
+            <div style="font-size:15px;line-height:1.5;color:#3c352e;background:#ffffff;border-left:3px solid #2f7d50;padding:11px 13px;border-radius:8px;">${escapeHtml(question)}</div>
+          </td>
+        </tr>`).join('')
+
+  const text = [
+    'Second Brain weekly reflection',
+    periodLabel,
+    '',
+    digest.headline,
+    digest.subhead,
+    '',
+    digest.opener,
+    '',
+    ...digest.cards.flatMap(card => [`${card.kicker}: ${card.title}`, card.body, '']),
+    'Questions to keep warm:',
+    ...digest.questions.map(q => `- ${q}`),
+    '',
+    'Inbox maintenance:',
+    inboxItems.length ? inboxItems.map(i => `- ${i.title}`).join('\n') : 'Clear. Nothing needs a decision right now.',
+    '',
+    `Open inbox: ${appInboxUrl}`,
+  ].join('\n')
+
+  const html = `<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>Second Brain weekly reflection</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4efe7;color:#241f1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+    <div style="display:none;max-height:0;overflow:hidden;color:transparent;opacity:0;">${escapeHtml(digest.subhead)}</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4efe7;">
+      <tr>
+        <td align="center" style="padding:18px 10px 28px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;width:100%;">
+            <tr>
+              <td style="padding:4px 2px 13px;">
+                <div style="font-size:12px;line-height:1.35;letter-spacing:.11em;text-transform:uppercase;color:#2f7d50;font-weight:900;">Second Brain</div>
+                <div style="font-size:12px;line-height:1.4;color:#7b6e61;margin-top:3px;">${escapeHtml(periodLabel)} · ${escapeHtml(generatedLabel)} · ${aiUsed ? 'AI reflection' : 'Pattern reflection'}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#173b31;border-radius:18px;padding:23px 20px 22px;">
+                <div style="font-size:30px;line-height:1.12;color:#fff8ed;font-weight:850;letter-spacing:0;margin:0 0 10px;">${escapeHtml(digest.headline)}</div>
+                <div style="font-size:16px;line-height:1.5;color:#d9eadc;">${escapeHtml(digest.subhead)}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:17px 2px 14px;">
+                <div style="font-size:17px;line-height:1.55;color:#362f28;">${escapeHtml(digest.opener)}</div>
+              </td>
+            </tr>
+            ${digest.cards.map(renderCard).join('')}
+            <tr>
+              <td style="padding:4px 0 12px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eaf3ec;border:1px solid #d2e4d7;border-radius:14px;">
+                  <tr>
+                    <td style="padding:16px;">
+                      <div style="font-size:11px;line-height:1.25;letter-spacing:.08em;text-transform:uppercase;color:#2f7d50;font-weight:900;margin-bottom:9px;">Questions to keep warm</div>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">${questionsHtml}</table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 0 16px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #eadfce;border-radius:14px;">
+                  <tr>
+                    <td style="padding:16px;">
+                      <div style="font-size:11px;line-height:1.25;letter-spacing:.08em;text-transform:uppercase;color:#817163;font-weight:900;margin-bottom:5px;">Inbox maintenance</div>
+                      ${renderInboxHtml(inboxItems)}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:2px 0 19px;">
+                <a href="${appInboxUrl}" style="display:block;text-align:center;background:#2f7d50;color:#ffffff;text-decoration:none;border-radius:12px;padding:15px 16px;font-size:16px;line-height:1.2;font-weight:850;">Open Second Brain</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 2px;">
+                <div style="font-size:12px;line-height:1.55;color:#85776a;">${escapeHtml(digest.footer_note)}</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`
+
+  return { html, text }
 }
 
 async function sendResendEmail(input: {
@@ -151,50 +542,8 @@ serve(async (req) => {
       .order('timestamp', { ascending: false })
       .limit(20)
 
-    const recentList = recentEntries || []
+    const recentList: DigestEntry[] = recentEntries || []
     const editList = recentEdits || []
-    const spaceCounts = recentList.reduce((acc, entry) => {
-      acc[entry.space] = (acc[entry.space] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-    const layerCounts = recentList.reduce((acc, entry) => {
-      acc[entry.layer] = (acc[entry.layer] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-    const tagCounts = recentList.flatMap(e => e.tags || []).reduce((acc, tag) => {
-      acc[tag] = (acc[tag] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-
-    const top = (counts: Record<string, number>) => Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, count]) => `${name} (${count})`)
-      .join(', ')
-
-    const recentEntryLines = recentList.slice(0, 8).map(entry => {
-      const preview = (entry.body || '').replace(/\s+/g, ' ').slice(0, 180)
-      return `• ${entry.title} [${entry.space} · ${entry.layer}]: ${preview}${preview.length >= 180 ? '…' : ''}`
-    }).join('\n')
-
-    const reflectionSummary = recentList.length
-      ? [
-          `Current signal: ${recentList.length} active memor${recentList.length === 1 ? 'y' : 'ies'} changed in the last 7 days.`,
-          top(spaceCounts) ? `Most active spaces: ${top(spaceCounts)}.` : '',
-          top(layerCounts) ? `Most active layers: ${top(layerCounts)}.` : '',
-          top(tagCounts) ? `Recurring tags: ${top(tagCounts)}.` : '',
-          '',
-          'Recent memory signals:',
-          recentEntryLines
-        ].filter(Boolean).join('\n')
-      : 'No active memories changed in the last 7 days. The system looks quiet this week.'
-
-    const reflectionPrompt = [
-      'For perspective:',
-      recentList.length
-        ? 'Look for whether these recent memories suggest a shift in focus, a recurring theme, or a decision pattern worth noticing.'
-        : 'Quiet weeks are also signal: fewer memory changes may mean stability, low capture, or fewer second-brain-worthy conversations.'
-    ].join('\n')
 
     const hasReflectionActivity = recentList.length > 0 || editList.length > 0
 
@@ -207,19 +556,12 @@ serve(async (req) => {
       .order('deadline', { ascending: true })
       .limit(10)
 
-    const breakdown = (inboxItems || [])
-      .map(item => {
-        const icon = item.type === 'coherence_conflict' ? '🔴' :
-                     item.type === 'decay_review' ? '🟡' : '🔵'
-        const deadline = new Date(item.deadline).toLocaleDateString('en-SG', {
-          day: 'numeric', month: 'short'
-        })
-        return `${icon} ${item.title} — due ${deadline}`
-      })
-      .join('\n')
+    const inboxList: InboxItem[] = inboxItems || []
 
     let emailSent = false
     let emailError: string | null = null
+    let aiUsed = false
+    let aiError: string | null = null
 
     // Send weekly digest if Resend is configured and there is reflection or inbox activity.
     const shouldSendEmail = !!(
@@ -229,43 +571,33 @@ serve(async (req) => {
     )
 
     if (shouldSendEmail) {
+      const now = new Date()
+      const periodStart = new Date(Date.now() - 7 * 86400000)
+      const periodLabel = `${periodStart.toLocaleDateString('en-SG', {
+        day: 'numeric',
+        month: 'short',
+      })} to ${now.toLocaleDateString('en-SG', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })}`
       const subject = `Second Brain weekly reflection — ${new Date().toLocaleDateString('en-SG', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
       })}`
-      const inboxSummary = breakdown || 'No pending inbox items.'
-      const text = [
-        'Second Brain weekly reflection',
-        '',
-        reflectionSummary,
-        '',
-        reflectionPrompt,
-        '',
-        'Inbox maintenance:',
-        inboxSummary,
-        '',
-        `Open inbox: ${appInboxUrl}`,
-      ].join('\n')
-      const html = `<!doctype html>
-<html>
-  <body style="margin:0;background:#f6f3ee;color:#2a2520;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.55;">
-    <div style="max-width:680px;margin:0 auto;padding:28px 18px;">
-      <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#2f7d50;font-weight:700;margin-bottom:8px;">Second Brain</div>
-      <h1 style="font-size:26px;line-height:1.2;margin:0 0 18px;">Weekly reflection</h1>
-      <section style="background:#ffffff;border:1px solid #e5ddd1;border-radius:8px;padding:18px;margin-bottom:14px;">
-        <h2 style="font-size:17px;margin:0 0 12px;">Perspective</h2>
-        ${textToHtml(reflectionSummary)}
-        <div style="margin-top:14px;color:#685f54;">${textToHtml(reflectionPrompt)}</div>
-      </section>
-      <section style="background:#ffffff;border:1px solid #e5ddd1;border-radius:8px;padding:18px;margin-bottom:18px;">
-        <h2 style="font-size:17px;margin:0 0 12px;">Inbox maintenance</h2>
-        ${textToHtml(inboxSummary)}
-      </section>
-      <a href="${appInboxUrl}" style="display:inline-block;background:#2f7d50;color:#fff;text-decoration:none;border-radius:7px;padding:11px 15px;font-weight:700;">Open Second Brain inbox</a>
-    </div>
-  </body>
-</html>`
+      const fallbackDigest = buildDeterministicDigest(recentList, inboxList)
+      const aiDigest = await buildAiDigest(recentList, inboxList, fallbackDigest)
+      const digest = aiDigest.digest
+      aiUsed = aiDigest.aiUsed
+      aiError = aiDigest.aiError
+      const { html, text } = buildDigestEmail({
+        digest,
+        inboxItems: inboxList,
+        periodLabel,
+        generatedLabel: now.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short' }),
+        aiUsed,
+      })
 
       const result = await sendResendEmail({
         to: settings.email,
@@ -292,6 +624,8 @@ serve(async (req) => {
       total_pending:       pendingCount ?? 0,
       expired:             expiredCount ?? 0,
       reflection_items:    recentList.length,
+      ai_reflection_used:  aiUsed,
+      ai_reflection_error: aiError,
       email_sent:          emailSent,
       email_skipped_reason: emailSkippedReason,
       email_error:         emailError
