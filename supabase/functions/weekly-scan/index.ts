@@ -241,7 +241,7 @@ async function buildAiDigest(entries: DigestEntry[], inboxItems: InboxItem[], fa
       body: JSON.stringify({
         model: Deno.env.get('DEEPSEEK_MODEL') || 'deepseek-chat',
         temperature: 0.45,
-        max_tokens: 1100,
+        max_tokens: 3000,
         response_format: { type: 'json_object' },
         messages: [
           {
@@ -268,6 +268,9 @@ async function buildAiDigest(entries: DigestEntry[], inboxItems: InboxItem[], fa
     }
     const data = await response.json()
     const content = data?.choices?.[0]?.message?.content
+    if (!content?.trim()) {
+      return { digest: fallback, aiUsed: false, aiError: 'DeepSeek returned an empty JSON response' }
+    }
     const parsed = JSON.parse(content)
     return { digest: normalizeDigest(parsed, fallback), aiUsed: true, aiError: null as string | null }
   } catch (err) {
@@ -470,6 +473,7 @@ serve(async (req) => {
     ? await req.json().catch(() => ({}))
     : {}
   const sendEmail = options.send_email !== false
+  const previewDigest = options.preview_digest === true
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -562,15 +566,16 @@ serve(async (req) => {
     let emailError: string | null = null
     let aiUsed = false
     let aiError: string | null = null
+    let digestPreview: ReflectionDigest | null = null
 
     // Send weekly digest if Resend is configured and there is reflection or inbox activity.
-    const shouldSendEmail = !!(
+    const shouldBuildDigest = !!(
       settings?.email &&
-      sendEmail &&
+      (sendEmail || previewDigest) &&
       (hasReflectionActivity || (pendingCount ?? 0) > 0)
     )
 
-    if (shouldSendEmail) {
+    if (shouldBuildDigest) {
       const now = new Date()
       const periodStart = new Date(Date.now() - 7 * 86400000)
       const periodLabel = `${periodStart.toLocaleDateString('en-SG', {
@@ -591,6 +596,7 @@ serve(async (req) => {
       const digest = aiDigest.digest
       aiUsed = aiDigest.aiUsed
       aiError = aiDigest.aiError
+      digestPreview = previewDigest ? digest : null
       const { html, text } = buildDigestEmail({
         digest,
         inboxItems: inboxList,
@@ -599,14 +605,16 @@ serve(async (req) => {
         aiUsed,
       })
 
-      const result = await sendResendEmail({
-        to: settings.email,
-        subject,
-        html,
-        text,
-      })
-      emailSent = result.sent
-      emailError = result.error
+      if (sendEmail) {
+        const result = await sendResendEmail({
+          to: settings.email,
+          subject,
+          html,
+          text,
+        })
+        emailSent = result.sent
+        emailError = result.error
+      }
     }
 
     const emailSkippedReason = emailSent ? null
@@ -626,6 +634,7 @@ serve(async (req) => {
       reflection_items:    recentList.length,
       ai_reflection_used:  aiUsed,
       ai_reflection_error: aiError,
+      digest_preview:      digestPreview,
       email_sent:          emailSent,
       email_skipped_reason: emailSkippedReason,
       email_error:         emailError
