@@ -454,6 +454,29 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
   font-size: .78rem; color: var(--text2); margin-bottom: 12px; line-height: 1.5;
 }
 .inbox-entry-preview strong { color: var(--text); display: block; margin-bottom: 2px; }
+.coherence-meta {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+}
+.coherence-pill {
+  font-size: .64rem; font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase; letter-spacing: .03em;
+  color: var(--text2); background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px 7px;
+}
+.merge-proposal {
+  background: var(--bg2); border: 1px solid var(--accent);
+  border-radius: 8px; padding: 11px 12px; margin: 12px 0;
+}
+.merge-proposal-title {
+  font-size: .72rem; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px;
+}
+.merge-field {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: .8rem;
+  padding: 8px 9px; margin-bottom: 8px; font-family: inherit;
+}
+.merge-field.body { min-height: 126px; resize: vertical; line-height: 1.5; }
 .inbox-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .inbox-btn {
   font-size: .75rem; font-weight: 500; padding: 5px 12px;
@@ -1852,6 +1875,20 @@ async function saveApproved() {
 let inboxItems = [];
 let inboxFilter = 'all';
 
+function parseInboxPayload(item) {
+  if (!item?.payload) return {};
+  return typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
+}
+
+function truncateText(text, max = 160) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  return clean.length > max ? clean.slice(0, max - 1).trim() + '…' : clean;
+}
+
+function coherenceLabel(value) {
+  return String(value || 'review').replace(/_/g, ' ');
+}
+
 async function loadInbox() {
   if (!supabase) return;
   const { data, error } = await supabase
@@ -1915,12 +1952,41 @@ function inboxCard(item) {
   let previewHtml = '';
 
   if (item.payload) {
-    const p = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
+    const p = parseInboxPayload(item);
     if (item.type === 'coherence_conflict' && p.entry_a && p.entry_b) {
+      const isV2 = p.version === 2;
+      const similarity = p.similarity != null ? Math.round(p.similarity * 100) + '% match' : '';
+      const merge = p.merge_candidate || {};
+      const recommendation = coherenceLabel(p.recommendation || 'review');
+      const classification = coherenceLabel(p.classification || 'possible overlap');
+      const confidence = coherenceLabel(p.confidence || 'unknown confidence');
       previewHtml = `
-        <div class="inbox-entry-preview"><strong>${esc(p.entry_a.title)}</strong>${esc(p.entry_a.body?.slice(0,120))}…</div>
-        <div class="inbox-entry-preview"><strong>${esc(p.entry_b.title)}</strong>${esc(p.entry_b.body?.slice(0,120))}…</div>`;
-      actionsHtml = `
+        ${isV2 ? `
+          <div class="coherence-meta">
+            <span class="coherence-pill">${esc(classification)}</span>
+            <span class="coherence-pill">${esc(confidence)}</span>
+            ${similarity ? `<span class="coherence-pill">${esc(similarity)}</span>` : ''}
+            <span class="coherence-pill">${esc(recommendation)}</span>
+          </div>
+          <p class="inbox-desc">${esc(p.rationale || '')}</p>
+        ` : ''}
+        <div class="inbox-entry-preview"><strong>A · ${esc(p.entry_a.title)}</strong>${esc(truncateText(p.entry_a.body, 180))}</div>
+        <div class="inbox-entry-preview"><strong>B · ${esc(p.entry_b.title)}</strong>${esc(truncateText(p.entry_b.body, 180))}</div>
+        ${isV2 && merge.title ? `
+          <div class="merge-proposal">
+            <div class="merge-proposal-title">Proposed merged memory</div>
+            <input class="merge-field" id="mergeTitle_${item.id}" value="${esc(merge.title || '')}" />
+            <textarea class="merge-field body" id="mergeBody_${item.id}">${esc(merge.body || '')}</textarea>
+            <input class="merge-field" id="mergeTags_${item.id}" value="${esc((merge.tags || []).join(', '))}" placeholder="tags" />
+          </div>
+        ` : ''}`;
+      actionsHtml = isV2 ? `
+        ${merge.title ? `<button class="inbox-btn primary" onclick="applyMergeProposal('${item.id}')">Create merged memory</button>` : ''}
+        <button class="inbox-btn" onclick="resolveInbox('${item.id}','supersede_a')">Keep A</button>
+        <button class="inbox-btn" onclick="resolveInbox('${item.id}','supersede_b')">Keep B</button>
+        <button class="inbox-btn success" onclick="resolveInbox('${item.id}','coexist')">Keep both distinct</button>
+        <button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`
+      : `
         <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_a')">Keep A, archive B</button>
         <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_b')">Keep B, archive A</button>
         <button class="inbox-btn success" onclick="resolveInbox('${item.id}','coexist')">Both valid</button>
@@ -2001,6 +2067,46 @@ async function resolveInbox(id, resolution) {
   updateInboxBadge();
   renderInbox();
   await loadEntries();
+}
+
+async function applyMergeProposal(id) {
+  const item = inboxItems.find(i => i.id === id);
+  if (!item) return;
+  const p = parseInboxPayload(item);
+  const merge = p.merge_candidate || {};
+  const title = document.getElementById('mergeTitle_' + id)?.value.trim() || merge.title;
+  const body = document.getElementById('mergeBody_' + id)?.value.trim() || merge.body;
+  const tags = (document.getElementById('mergeTags_' + id)?.value || (merge.tags || []).join(','))
+    .split(',').map(t => t.trim()).filter(Boolean);
+
+  if (!title || !body) { toast('Merged title and body are required', 'error'); return; }
+
+  const payload = {
+    title,
+    body,
+    space: merge.space || item.space || p.entry_a?.space,
+    layer: merge.layer || item.layer || p.entry_a?.layer,
+    perishability: merge.perishability || p.entry_a?.perishability || 'slow',
+    tags,
+    created_by_tool: 'coherence-v2-merge',
+    user_id: currentUser.id
+  };
+
+  const { data, error } = await supabase.from('entries').insert(payload).select().single();
+  if (error) { toast('Merge failed: ' + error.message, 'error'); return; }
+
+  const originalIds = [item.entry_id_a, item.entry_id_b].filter(Boolean);
+  if (originalIds.length) {
+    const { error: archiveError } = await supabase
+      .from('entries')
+      .update({ status: 'archived' })
+      .in('id', originalIds);
+    if (archiveError) { toast('Merged, but failed to archive originals', 'error'); return; }
+  }
+
+  await resolveInbox(id, 'merge');
+  if (data?.id) generateEmbedding(data.id, `${payload.title} ${payload.body} ${payload.tags.join(' ')}`);
+  toast('Merged memory created');
 }
 
 async function archiveDecayEntry(inboxId, entryId) {
