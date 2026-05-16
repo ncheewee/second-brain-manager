@@ -666,9 +666,26 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 
       <div class="settings-section">
         <h3>Connection</h3>
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div class="field">
+          <label>Supabase URL</label>
+          <input type="text" id="settingSupabaseUrl" placeholder="https://your-project.supabase.co" />
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Supabase publishable key</label>
+          <input type="password" id="settingSupabaseKey" placeholder="sb_publishable_..." />
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Supabase email</label>
+          <input type="email" id="settingSupabaseEmail" placeholder="you@example.com" />
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Supabase password</label>
+          <input type="password" id="settingSupabasePassword" placeholder="Password" />
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn btn-accent btn-sm" onclick="saveAndConnect()">Save & connect</button>
           <span id="connectStatus" style="font-size:.82rem;color:var(--text3);"></span>
-          <button class="btn btn-danger btn-sm" onclick="clearCredentials()">Reconnect</button>
+          <button class="btn btn-danger btn-sm" onclick="clearCredentials()">Clear</button>
         </div>
       </div>
 
@@ -841,21 +858,19 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 
 <script>
 // ── HARDCODED CONFIG ──────────────────────────
-const SUPABASE_URL  = 'https://udajruwgcbshupsvoocn.supabase.co';
-const SUPABASE_KEY  = 'sb_publishable_8XaJxJGZPLXfbfUGH68E9Q_yWyQzcN2';
-const SUPABASE_EMAIL = 'ncheewee@gmail.com';
-const SUPABASE_PASS  = 'Kiwi31082@';
 const GROQ_KEY_DEFAULT  = ''; // Set via Settings → Import
 const DEEPSEEK_MODEL    = 'deepseek-v4-pro';
 const EJS_SERVICE   = 'service_pkta469';
 const EJS_TEMPLATE  = 'template_ijdn4y8';
 const EJS_KEY       = 'FCXGhGYhKSY8mzokZ';
-const EJS_EMAIL     = 'ncheewee@gmail.com';
+const EJS_EMAIL     = '';
 
 // ── STATE ─────────────────────────────────────
 let supabase = null;
 let currentUser = null;
 let userJwt = null;
+let currentSupabaseUrl = '';
+let currentSupabaseKey = '';
 let entries = [];
 let spaces = [];
 let auditLog = [];
@@ -894,16 +909,23 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── CREDENTIALS ──────────────────────────────
 function getSavedCreds() {
   return {
-    url:      SUPABASE_URL,
-    key:      SUPABASE_KEY,
-    email:    SUPABASE_EMAIL,
-    password: SUPABASE_PASS
+    url:      localStorage.getItem('byoc_supabase_url') || '',
+    key:      localStorage.getItem('byoc_supabase_key') || '',
+    email:    localStorage.getItem('byoc_supabase_email') || '',
+    password: localStorage.getItem('byoc_supabase_password') || ''
   };
 }
 function clearCredentials() {
   if (!confirm('Clear all saved credentials?')) return;
-  ['byoc_email','byoc_password'].forEach(k => localStorage.removeItem(k));
-  supabase = null; currentUser = null; userJwt = null;
+  [
+    'byoc_supabase_url',
+    'byoc_supabase_key',
+    'byoc_supabase_email',
+    'byoc_supabase_password',
+    'byoc_password'
+  ].forEach(k => localStorage.removeItem(k));
+  populateCredentialFields();
+  supabase = null; currentUser = null; userJwt = null; currentSupabaseUrl = ''; currentSupabaseKey = '';
   setConnStatus(false); showSetupBanner(true); toast('Credentials cleared');
 }
 
@@ -916,6 +938,8 @@ async function initSupabase(url, key, email, password, initialTab = 'entries') {
     if (error) throw error;
     currentUser = data.user;
     userJwt = data.session.access_token;
+    currentSupabaseUrl = url;
+    currentSupabaseKey = key;
     setConnStatus(true);
     showSetupBanner(false);
     await Promise.all([loadSpaces(), loadEntries(), loadAudit(), loadInbox(), loadEmailSettings()]);
@@ -928,12 +952,22 @@ async function initSupabase(url, key, email, password, initialTab = 'entries') {
 }
 
 async function saveAndConnect() {
-  const email = SUPABASE_EMAIL;
-  const pw    = SUPABASE_PASS;
-  localStorage.setItem('byoc_email', email);
-  localStorage.setItem('byoc_password', pw);
+  const url = document.getElementById('settingSupabaseUrl').value.trim();
+  const key = document.getElementById('settingSupabaseKey').value.trim();
+  const email = document.getElementById('settingSupabaseEmail').value.trim();
+  const pw = document.getElementById('settingSupabasePassword').value;
+
+  if (!url || !key || !email || !pw) {
+    toast('Enter all Supabase connection fields', 'error');
+    return;
+  }
+
+  localStorage.setItem('byoc_supabase_url', url);
+  localStorage.setItem('byoc_supabase_key', key);
+  localStorage.setItem('byoc_supabase_email', email);
+  localStorage.setItem('byoc_supabase_password', pw);
   document.getElementById('connectStatus').textContent = 'Connecting…';
-  await initSupabase(SUPABASE_URL, SUPABASE_KEY, email, pw);
+  await initSupabase(url, key, email, pw);
 }
 
 // ── DATA LOADERS ──────────────────────────────
@@ -984,8 +1018,8 @@ async function runSemanticSearch(query) {
   document.getElementById('searchModeBadge').className = 'search-mode-badge';
 
   try {
-    const sbUrl = SUPABASE_URL;
-    const sbKey = SUPABASE_KEY;
+    const sbUrl = currentSupabaseUrl;
+    const sbKey = currentSupabaseKey;
 
     const resp = await fetch(`${sbUrl}/functions/v1/search-entries`, {
       method: 'POST',
@@ -1263,8 +1297,8 @@ async function saveEntry() {
 // ── EMBEDDING GENERATION ──────────────────────
 async function generateEmbedding(entry_id, text) {
   try {
-    const sbUrl = SUPABASE_URL;
-    const sbKey = SUPABASE_KEY;
+    const sbUrl = currentSupabaseUrl;
+    const sbKey = currentSupabaseKey;
     await fetch(`${sbUrl}/functions/v1/embed-entry`, {
       method: 'POST',
       headers: {
@@ -1454,8 +1488,7 @@ function loadSettings() {
   const fs = localStorage.getItem('byoc_fontsize') || '15';
   document.getElementById('fontSlider').value = fs;
   updateFontSize(fs, false);
-  const creds = getSavedCreds();
-  // email/password now baked in — no input fields to populate
+  populateCredentialFields();
   // Pre-fill import keys from localStorage
   const savedDeepSeekKey = localStorage.getItem('byoc_deepseek_key');
   if (savedDeepSeekKey) document.getElementById('settingDeepSeekKey').value = savedDeepSeekKey;
@@ -1466,6 +1499,19 @@ function loadSettings() {
   document.getElementById('settingEjsTemplate').value = localStorage.getItem('byoc_ejs_template') || EJS_TEMPLATE;
   document.getElementById('settingEjsKey').value      = localStorage.getItem('byoc_ejs_key')      || EJS_KEY;
   renderLayerFilters();
+}
+
+function populateCredentialFields() {
+  const creds = getSavedCreds();
+  const urlField = document.getElementById('settingSupabaseUrl');
+  const keyField = document.getElementById('settingSupabaseKey');
+  const emailField = document.getElementById('settingSupabaseEmail');
+  const passwordField = document.getElementById('settingSupabasePassword');
+  if (!urlField || !keyField || !emailField || !passwordField) return;
+  urlField.value = creds.url;
+  keyField.value = creds.key;
+  emailField.value = creds.email;
+  passwordField.value = creds.password;
 }
 
 function updateFontSize(val, save=true) {
@@ -2119,8 +2165,8 @@ async function runScanNow(sendEmail = false) {
   const status = document.getElementById('scanStatus') || document.getElementById('emailSettingStatus');
   status.textContent = sendEmail ? 'Running scan and sending weekly digest…' : 'Running scan…';
   try {
-    const sbUrl = SUPABASE_URL;
-    const sbKey = SUPABASE_KEY;
+    const sbUrl = currentSupabaseUrl;
+    const sbKey = currentSupabaseKey;
     const res = await fetch(`${sbUrl}/functions/v1/weekly-scan`, {
       method: 'POST',
       headers: {
