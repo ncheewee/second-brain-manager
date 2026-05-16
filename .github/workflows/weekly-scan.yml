@@ -1,0 +1,20 @@
+name: Weekly Second Brain Scan
+
+on:
+  schedule:
+    # GitHub Actions cron is UTC. This is Monday 08:00 Asia/Singapore.
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+jobs:
+  invoke-weekly-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke weekly scan and digest
+        run: |
+          curl --fail-with-body \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --data '{"send_email":true}' \
+            "https://udajruwgcbshupsvoocn.supabase.co/functions/v1/weekly-scan"
+
