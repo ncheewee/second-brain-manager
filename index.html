@@ -522,6 +522,7 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
     <button class="tab-btn" data-tab="import">Import</button>
     <button class="tab-btn" data-tab="export">Export</button>
     <button class="tab-btn" data-tab="settings">Settings</button>
+    <button class="tab-btn" data-tab="brainstate">Brain State</button>
   </nav>
 
   <main>
@@ -769,6 +770,136 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
         <button class="btn btn-sm" onclick="reembedAll()">Re-embed all entries</button>
         <span id="reembedStatus" style="font-size:.78rem;color:var(--text3);margin-left:10px;"></span>
       </div>
+    </div>
+
+    <!-- ── BRAIN STATE TAB ── -->
+    <div class="tab-panel" id="tab-brainstate">
+
+      <style>
+        .bs-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:22px; }
+        .bs-metric { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+        .bs-metric-label { font-size:.72rem; color:var(--text3); margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em; }
+        .bs-metric-value { font-size:1.5rem; font-weight:600; color:var(--text); }
+        .bs-metric-sub { font-size:.72rem; color:var(--text3); margin-top:2px; }
+        .bs-two { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+        .bs-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+        .bs-card-title { font-size:.78rem; font-weight:600; color:var(--text2); margin-bottom:12px; text-transform:uppercase; letter-spacing:.04em; }
+        .bs-space-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+        .bs-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .bs-space-name { font-size:.82rem; color:var(--text); width:62px; flex-shrink:0; }
+        .bs-bar-track { flex:1; background:var(--bg3); border-radius:4px; height:5px; overflow:hidden; }
+        .bs-bar-fill { height:100%; border-radius:4px; }
+        .bs-count { font-size:.78rem; color:var(--text3); min-width:24px; text-align:right; }
+        .bs-entry-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); }
+        .bs-entry-row:last-child { border-bottom:none; }
+        .bs-entry-name { font-size:.82rem; color:var(--text); flex:1; }
+        .bs-space-pill { font-size:.68rem; padding:2px 7px; border-radius:4px; flex-shrink:0; }
+        .bs-dots { font-size:.8rem; min-width:32px; text-align:right; }
+        .bs-status-row { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); }
+        .bs-status-row:last-child { border-bottom:none; }
+        .bs-status-name { font-size:.82rem; color:var(--text); flex:1; }
+        .bs-badge { font-size:.68rem; padding:2px 8px; border-radius:4px; }
+        .bs-decay-row { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; }
+        .bs-decay-label { font-size:.78rem; color:var(--text3); width:68px; flex-shrink:0; padding-top:2px; }
+        .bs-pills { display:flex; gap:4px; flex-wrap:wrap; flex:1; }
+        .bs-pill { font-size:.68rem; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+        .bs-heat { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+        .bs-heat-cell { aspect-ratio:1; border-radius:3px; }
+        .bs-full { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; }
+        .bs-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+        .bs-link { font-size:.78rem; color:var(--accent2); background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:5px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; }
+        .bs-link:hover { background:var(--border); }
+        .heat-legend { display:flex; align-items:center; gap:12px; margin-top:10px; }
+        .heat-legend-item { display:flex; align-items:center; gap:4px; font-size:.7rem; color:var(--text3); }
+        .heat-legend-swatch { width:10px; height:10px; border-radius:2px; }
+      </style>
+
+      <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;">
+        Brain State
+        <a href="brain3d.html" class="bs-link" target="_blank">🧠 3D view ↗</a>
+      </div>
+
+      <div class="bs-metrics">
+        <div class="bs-metric">
+          <div class="bs-metric-label">Active entries</div>
+          <div class="bs-metric-value">37</div>
+          <div class="bs-metric-sub">↓8 pruned 24 May</div>
+        </div>
+        <div class="bs-metric">
+          <div class="bs-metric-label">Cited this week</div>
+          <div class="bs-metric-value">12</div>
+          <div class="bs-metric-sub">tier1 loads</div>
+        </div>
+        <div class="bs-metric">
+          <div class="bs-metric-label">Never cited 30d</div>
+          <div class="bs-metric-value">9</div>
+          <div class="bs-metric-sub">candidates to prune</div>
+        </div>
+        <div class="bs-metric">
+          <div class="bs-metric-label">Inbox</div>
+          <div class="bs-metric-value">0</div>
+          <div class="bs-metric-sub">pending items</div>
+        </div>
+      </div>
+
+      <div class="bs-two">
+        <div class="bs-card">
+          <div class="bs-card-title">Entries by space</div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#534AB7"></div><div class="bs-space-name">work</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:100%;background:#534AB7"></div></div><div class="bs-count">12</div></div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#1D9E75"></div><div class="bs-space-name">personal</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:83%;background:#1D9E75"></div></div><div class="bs-count">10</div></div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#D85A30"></div><div class="bs-space-name">family</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:42%;background:#D85A30"></div></div><div class="bs-count">5</div></div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#378ADD"></div><div class="bs-space-name">leisure</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:42%;background:#378ADD"></div></div><div class="bs-count">5</div></div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#888780"></div><div class="bs-space-name">core</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:25%;background:#888780"></div></div><div class="bs-count">3</div></div>
+        </div>
+
+        <div class="bs-card">
+          <div class="bs-card-title">Top activated entries</div>
+          <div class="bs-entry-row"><div class="bs-entry-name">Career Arc</div><span class="bs-space-pill" style="background:#EEEDFE;color:#3C3489">core</span><div class="bs-dots" style="color:#534AB7">●●●</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">Core Values</div><span class="bs-space-pill" style="background:#EEEDFE;color:#3C3489">core</span><div class="bs-dots" style="color:#534AB7">●●●</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">Personal Working Style</div><span class="bs-space-pill" style="background:#EEEDFE;color:#3C3489">core</span><div class="bs-dots" style="color:#534AB7">●●○</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">How I Build</div><span class="bs-space-pill" style="background:#F1EFE8;color:#444441">work</span><div class="bs-dots" style="color:#5F5E5A">●●○</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">Career Transition Target</div><span class="bs-space-pill" style="background:#F1EFE8;color:#444441">work</span><div class="bs-dots" style="color:#5F5E5A">●○○</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">100 Ideas Portfolio</div><span class="bs-space-pill" style="background:#F1EFE8;color:#444441">work</span><div class="bs-dots" style="color:#5F5E5A">●○○</div></div>
+        </div>
+      </div>
+
+      <div class="bs-two">
+        <div class="bs-card">
+          <div class="bs-card-title">Decay profile</div>
+          <div class="bs-decay-row"><div class="bs-decay-label">evergreen</div><div class="bs-pills"><span class="bs-pill" style="background:#EAF3DE;color:#27500A">Career Arc</span><span class="bs-pill" style="background:#EAF3DE;color:#27500A">Core Values</span><span class="bs-pill" style="background:#EAF3DE;color:#27500A">Inner Circle</span></div></div>
+          <div class="bs-decay-row"><div class="bs-decay-label">slow</div><div class="bs-pills"><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">InspectPro</span><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">MetrIQ</span><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">SplitLah</span><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">+9 more</span></div></div>
+          <div class="bs-decay-row"><div class="bs-decay-label">fast 90d</div><div class="bs-pills"><span class="bs-pill" style="background:#FAEEDA;color:#633806">BMW COE</span><span class="bs-pill" style="background:#FAEEDA;color:#633806">Motorcycle</span><span class="bs-pill" style="background:#FAEEDA;color:#633806">Cost of Living</span></div></div>
+          <div class="bs-decay-row"><div class="bs-decay-label">single use</div><div class="bs-pills"><span class="bs-pill" style="background:#FCEBEB;color:#791F1F">JB Trip ↓ Jun 10</span><span class="bs-pill" style="background:#FCEBEB;color:#791F1F">Shanghai ↓ Oct 20</span></div></div>
+        </div>
+
+        <div class="bs-card">
+          <div class="bs-card-title">Engine status</div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">Activation telemetry</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">live</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">Weekly decay scan</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">running</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">Coherence scan (0.85)</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">running</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">cite_entries tool</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">live</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#D4922E"></div><div class="bs-status-name">Phase C — synthesis</div><span class="bs-badge" style="background:#FDF3E3;color:#7A5020">not started</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#9A9A8E"></div><div class="bs-status-name">3D visualisation</div><span class="bs-badge" style="background:#F2F2ED;color:#5A5A50">deferred Jun</span></div>
+        </div>
+      </div>
+
+      <div class="bs-full">
+        <div class="bs-card-title">Activation heatmap — last 30 days</div>
+        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 1</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div></div></div>
+          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 2</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#534AB7"></div></div></div>
+          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 3</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#7F77DD"></div></div></div>
+          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 4 (live)</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:var(--bg3)"></div><div class="bs-heat-cell" style="background:var(--bg3)"></div><div class="bs-heat-cell" style="background:var(--bg3)"></div></div></div>
+          <div style="margin-left:auto;padding-top:18px"><div class="heat-legend"><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:#534AB7"></div>high</div><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:#AFA9EC"></div>mid</div><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:#EEEDFE"></div>low</div><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:var(--bg3)"></div>none</div></div></div>
+        </div>
+        <p style="font-size:.72rem;color:var(--text3);margin-top:10px">Wires to live <code>entry_activation_stats</code> data ~7 June once 2wk telemetry matures.</p>
+      </div>
+
+      <div class="bs-actions">
+        <a class="bs-link" href="../brain3d.html" target="_blank">🧠 Open 3D Brain View</a>
+        <a class="bs-link" href="../activation_dashboard.html" target="_blank">📊 Activation Dashboard</a>
+      </div>
+
     </div>
 
   </main>
