@@ -1,347 +1,548 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
 <title>Second Brain — 3D View</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #06060c; }
-#c { display: block; width: 100%; height: 100%; }
-#hud { position: fixed; inset: 0; pointer-events: none; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
-#header { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; }
-#title { font-size: .95rem; font-weight: 500; color: rgba(255,255,255,.75); letter-spacing: -.01em; }
-#subtitle { font-size: .68rem; color: rgba(255,255,255,.3); margin-top: 2px; }
-#filters { pointer-events: all; display: flex; gap: 6px; flex-wrap: wrap; }
-.f-btn { background: rgba(255,255,255,.06); border: .5px solid rgba(255,255,255,.14); color: rgba(255,255,255,.45); font-size: .7rem; font-family: inherit; padding: 4px 11px; border-radius: 5px; cursor: pointer; transition: all .15s; }
-.f-btn:hover { background: rgba(255,255,255,.1); color: rgba(255,255,255,.7); }
-.f-btn.active { color: #fff; border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.12); }
-#legend { position: fixed; bottom: 22px; left: 22px; display: flex; flex-direction: column; gap: 5px; }
-.lr { display: flex; align-items: center; gap: 7px; font-size: .68rem; color: rgba(255,255,255,.38); }
-.ld { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-#stats { position: fixed; bottom: 22px; right: 22px; text-align: right; }
-.stat { font-size: .68rem; color: rgba(255,255,255,.3); line-height: 1.8; }
-.stat span { color: rgba(255,255,255,.55); }
-#tip { position: fixed; pointer-events: none; background: rgba(10,10,22,.92); border: .5px solid rgba(255,255,255,.14); border-radius: 8px; padding: 9px 13px; max-width: 210px; opacity: 0; transition: opacity .12s; }
-#tip-title { font-size: .8rem; font-weight: 500; color: #e8e8f4; margin-bottom: 3px; }
-#tip-meta { font-size: .68rem; color: rgba(255,255,255,.42); line-height: 1.6; }
-#hint { position: fixed; bottom: 65px; right: 22px; font-size: .62rem; color: rgba(255,255,255,.2); text-align: right; line-height: 1.9; }
-#back { position: fixed; top: 16px; right: 22px; pointer-events: all; }
-#back a { font-size: .7rem; color: rgba(255,255,255,.38); background: rgba(255,255,255,.06); border: .5px solid rgba(255,255,255,.12); border-radius: 5px; padding: 4px 10px; text-decoration: none; transition: all .15s; }
-#back a:hover { color: rgba(255,255,255,.7); background: rgba(255,255,255,.1); }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#07070f;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;}
+#c{display:block;width:100vw;height:100vh;}
+#ui{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;}
+#topbar{position:absolute;top:0;left:0;right:0;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;}
+#topbar h1{font-size:12px;font-weight:600;color:#666;letter-spacing:.14em;text-transform:uppercase;}
+#topbar a{color:#444;text-decoration:none;font-size:12px;pointer-events:all;transition:color .2s;}
+#topbar a:hover{color:#aaa;}
+#filters{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:all;}
+.fbtn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:5px 14px;font-size:11px;color:#777;cursor:pointer;transition:all .2s;letter-spacing:.06em;font-family:inherit;}
+.fbtn:hover{background:rgba(255,255,255,.10);color:#ccc;}
+.fbtn.active{color:#fff;border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.12);}
+#panel{position:absolute;top:50%;right:24px;transform:translateY(-50%);width:220px;background:rgba(8,8,18,.94);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:18px 18px 16px;backdrop-filter:blur(16px);opacity:0;transition:opacity .25s;pointer-events:none;}
+#panel.show{opacity:1;pointer-events:all;}
+#panel .p-close{position:absolute;top:10px;right:14px;font-size:18px;color:#444;cursor:pointer;line-height:1;}
+#panel .p-close:hover{color:#aaa;}
+#panel .p-lobe{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:6px;}
+#panel .p-title{font-size:15px;font-weight:600;color:#e4e4ff;margin-bottom:5px;line-height:1.3;}
+#panel .p-meta{font-size:11px;color:#555;margin-bottom:10px;}
+#panel .p-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;}
+#panel .p-tag{font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid #222;color:#777;}
+#panel .p-link{font-size:11px;color:#7866d4;cursor:pointer;}
+#panel .p-link:hover{color:#aa99ff;}
+#hint{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);font-size:10px;color:#333;letter-spacing:.08em;white-space:nowrap;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hud">
-  <div id="header">
-    <div>
-      <div id="title">Second Brain</div>
-      <div id="subtitle">3D view &middot; 37 entries &middot; depth = recency</div>
-    </div>
-    <div id="filters">
-      <button class="f-btn active" data-space="all">All</button>
-      <button class="f-btn" data-space="work">Work</button>
-      <button class="f-btn" data-space="personal">Personal</button>
-      <button class="f-btn" data-space="family">Family</button>
-      <button class="f-btn" data-space="leisure">Leisure</button>
-      <button class="f-btn" data-space="core">Core</button>
-    </div>
+<div id="ui">
+  <div id="topbar">
+    <h1>Second Brain · 3D</h1>
+    <a href="index.html">← Manager</a>
   </div>
-  <div id="back"><a href="index.html">&#8592; Manager</a></div>
+  <div id="panel">
+    <span class="p-close" id="panelClose">×</span>
+    <div class="p-lobe" id="pLobe"></div>
+    <div class="p-title" id="pTitle"></div>
+    <div class="p-meta" id="pMeta"></div>
+    <div class="p-tags" id="pTags"></div>
+    <div class="p-link">↗ open in manager</div>
+  </div>
+  <div id="filters">
+    <button class="fbtn active" data-lobe="all">All</button>
+    <button class="fbtn" data-lobe="work">Work</button>
+    <button class="fbtn" data-lobe="personal">Personal</button>
+    <button class="fbtn" data-lobe="family">Family</button>
+    <button class="fbtn" data-lobe="leisure">Leisure</button>
+    <button class="fbtn" data-lobe="core">Core</button>
+  </div>
+  <div id="hint">drag to orbit · scroll to zoom · click nodes</div>
 </div>
-<div id="legend">
-  <div class="lr"><div class="ld" style="background:#7866d4"></div>work</div>
-  <div class="lr"><div class="ld" style="background:#2fba8a"></div>personal</div>
-  <div class="lr"><div class="ld" style="background:#e0704a"></div>family</div>
-  <div class="lr"><div class="ld" style="background:#4a9fe0"></div>leisure</div>
-  <div class="lr"><div class="ld" style="background:#b0a8ff"></div>core</div>
-  <div class="lr" style="margin-top:5px;color:rgba(255,255,255,.22)"><div class="ld" style="background:#fff"></div>evergreen &middot; brightest</div>
-  <div class="lr" style="color:rgba(255,255,255,.22)"><div class="ld" style="background:#444"></div>single_use &middot; dimmest</div>
-</div>
-<div id="stats">
-  <div class="stat">Active <span>37</span></div>
-  <div class="stat">Spaces <span>5</span></div>
-  <div class="stat">Telemetry <span style="color:#2fba8a">live</span></div>
-</div>
-<div id="hint">drag &middot; scroll to dive &middot; hover nodes</div>
-<div id="tip"><div id="tip-title"></div><div id="tip-meta"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
+// ─────────────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────────────
 const BR = 10;
 
-const RINGS = [
+const LOBES = {
+  work:    {color:0x7866d4,rgb:[120,102,212],activation:.85,phase:0.0,
+             seeds:[[.70,.20,.50],[.50,-.20,.80],[.80,.50,.10],[.30,.40,.70]]},
+  personal:{color:0x2fba8a,rgb:[47,186,138], activation:.55,phase:1.1,
+             seeds:[[-.60,.30,.50],[-.50,.50,.40],[-.70,.00,.45]]},
+  family:  {color:0xe0704a,rgb:[224,112,74],  activation:.38,phase:2.3,
+             seeds:[[.40,-.60,.40],[.65,-.38,-.22]]},
+  leisure: {color:0x4a9fe0,rgb:[74,159,224],  activation:.32,phase:3.7,
+             seeds:[[-.40,-.58,.32],[-.52,-.42,-.32]]},
+  core:    {color:0xb0a8ff,rgb:[176,168,255], activation:.72,phase:0.8,
+             seeds:[[-.08,.55,-.72]]}
+};
+const LOBE_NAMES = Object.keys(LOBES);
+
+function norm(v){const l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];}
+function avgNorm(seeds){const s=[0,0,0];seeds.forEach(v=>{s[0]+=v[0];s[1]+=v[1];s[2]+=v[2];});return norm([s[0]/seeds.length,s[1]/seeds.length,s[2]/seeds.length]);}
+
+for(const n of LOBE_NAMES){
+  LOBES[n].seedsNorm = LOBES[n].seeds.map(norm);
+  LOBES[n].centroid  = avgNorm(LOBES[n].seeds);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ENTRIES
+// ─────────────────────────────────────────────────────────────────
+const RINGS=[
   {label:'2d',r:.965},{label:'1w',r:.905},{label:'3w',r:.840},
   {label:'2mo',r:.755},{label:'4mo',r:.650},{label:'8mo',r:.525},
   {label:'1.5yr',r:.390},{label:'4yr',r:.250},{label:'10yr+',r:.115}
 ];
-
-function noise3(x,y,z){
-  return Math.sin(x*1.37+y*0.91+z*1.73+1.10)*0.50
-        +Math.sin(x*0.83-y*1.49+z*0.61+2.73)*0.30
-        +Math.sin(x*2.11+y*1.13-z*1.29+0.43)*0.20;
-}
-function norm(v){const l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);return[v[0]/l,v[1]/l,v[2]/l];}
-
-const LOBES={
-  work:    {hex:0x7866d4,rgb:[120,102,212],activation:.85,seeds:[norm([.70,.20,.50]),norm([.50,-.20,.80]),norm([.80,.50,.10]),norm([.30,.40,.70])]},
-  personal:{hex:0x2fba8a,rgb:[47,186,138], activation:.55,seeds:[norm([-.60,.30,.50]),norm([-.50,.50,.40]),norm([-.70,.00,.45])]},
-  family:  {hex:0xe0704a,rgb:[224,112,74],  activation:.38,seeds:[norm([.40,-.60,.40]),norm([.65,-.38,-.22])]},
-  leisure: {hex:0x4a9fe0,rgb:[74,159,224],  activation:.32,seeds:[norm([-.40,-.58,.32]),norm([-.52,-.42,-.32])]},
-  core:    {hex:0xb0a8ff,rgb:[176,168,255], activation:.72,seeds:[norm([-.08,.55,-.72])]}
-};
-const LOBE_NAMES=Object.keys(LOBES);
-
-function getLobe(x,y,z){
-  const l=Math.sqrt(x*x+y*y+z*z)||1;
-  const ux=x/l,uy=y/l,uz=z/l;
-  const n=noise3(ux*2.8,uy*2.8,uz*2.8)*0.28;
-  const nx=ux+n,ny=uy+n*.82,nz=uz+n*1.10;
-  let best='work',minD=Infinity;
-  for(const name of LOBE_NAMES){
-    for(const s of LOBES[name].seeds){
-      const d=(nx-s[0])*(nx-s[0])+(ny-s[1])*(ny-s[1])+(nz-s[2])*(nz-s[2]);
-      if(d<minD){minD=d;best=name;}
-    }
-  }
-  return best;
-}
+const PALPHA={evergreen:1.0,slow:.72,fast:.42,single_use:.22};
+const PSIZE ={evergreen:.26,slow:.20,fast:.16,single_use:.13};
 
 const ENTRIES=[
-  {title:'Career Arc',            space:'core',    perishability:'evergreen',ring:8},
-  {title:'Core Values',           space:'core',    perishability:'evergreen',ring:8},
-  {title:'Personal Working Style',space:'core',    perishability:'evergreen',ring:5},
-  {title:'How I Build',           space:'work',    perishability:'slow',     ring:5},
-  {title:'Career Transition',     space:'work',    perishability:'fast',     ring:2},
-  {title:'100 Ideas Portfolio',   space:'work',    perishability:'slow',     ring:3},
-  {title:'InspectPro',            space:'work',    perishability:'slow',     ring:4},
-  {title:'MetrIQ',                space:'work',    perishability:'slow',     ring:5},
-  {title:'SplitLah',              space:'work',    perishability:'slow',     ring:4},
-  {title:'Mapletree VP',          space:'work',    perishability:'slow',     ring:6},
-  {title:'Coca-Cola Outcome',     space:'work',    perishability:'fast',     ring:1},
-  {title:'FM Industry Focus',     space:'work',    perishability:'slow',     ring:5},
-  {title:'Technical Environment', space:'work',    perishability:'slow',     ring:3},
-  {title:'Local LLM',             space:'work',    perishability:'slow',     ring:3},
-  {title:'Second Brain Security', space:'work',    perishability:'slow',     ring:2},
-  {title:'Weekly Codex Scan',     space:'work',    perishability:'slow',     ring:2},
-  {title:'CV Design Framework',   space:'work',    perishability:'slow',     ring:4},
-  {title:'EnigmaPrint',           space:'work',    perishability:'slow',     ring:4},
-  {title:'On investments',        space:'personal',perishability:'slow',     ring:5},
-  {title:'Motorcycle Choice',     space:'personal',perishability:'fast',     ring:1},
-  {title:'Mount Kinabalu',        space:'personal',perishability:'evergreen',ring:6},
-  {title:'BMW COE Renewal',       space:'personal',perishability:'fast',     ring:2},
-  {title:'Anniversary Trip',      space:'personal',perishability:'single_use',ring:0},
-  {title:'How I roll',            space:'personal',perishability:'slow',     ring:5},
-  {title:'Evenings Out',          space:'personal',perishability:'slow',     ring:4},
-  {title:'Cost of Living 2026',   space:'personal',perishability:'fast',     ring:2},
-  {title:'Shanghai Masters',      space:'personal',perishability:'single_use',ring:0},
-  {title:'Inner Circle',          space:'family',  perishability:'evergreen',ring:5},
-  {title:'Inner Circle Full',     space:'family',  perishability:'evergreen',ring:5},
-  {title:'Cheryl',                space:'family',  perishability:'slow',     ring:3},
-  {title:'Ryan',                  space:'family',  perishability:'slow',     ring:3},
-  {title:'Jake',                  space:'family',  perishability:'slow',     ring:3},
-  {title:'Motorcycle Touring',    space:'leisure', perishability:'slow',     ring:4},
-  {title:'Travel',                space:'leisure', perishability:'slow',     ring:5},
-  {title:'South Korea Dec',       space:'leisure', perishability:'fast',     ring:2},
-  {title:'Music / Evenings',      space:'leisure', perishability:'slow',     ring:4},
-  {title:'Health & Exercise',     space:'personal',perishability:'slow',     ring:4}
+  {name:'Anniversary Trip',      space:'leisure', ring:0,type:'single_use'},
+  {name:'Shanghai Masters',      space:'leisure', ring:0,type:'single_use'},
+  {name:'Coca-Cola Outcome',     space:'work',    ring:1,type:'fast'},
+  {name:'Motorcycle Choice',     space:'personal',ring:1,type:'slow'},
+  {name:'BMW COE',               space:'personal',ring:2,type:'fast'},
+  {name:'Cost of Living',        space:'personal',ring:2,type:'slow'},
+  {name:'South Korea',           space:'leisure', ring:2,type:'fast'},
+  {name:'Career Transition',     space:'work',    ring:2,type:'slow'},
+  {name:'Second Brain Security', space:'core',    ring:2,type:'slow'},
+  {name:'Weekly Codex Scan',     space:'core',    ring:2,type:'fast'},
+  {name:'100 Ideas',             space:'personal',ring:3,type:'slow'},
+  {name:'Technical Environment', space:'work',    ring:3,type:'slow'},
+  {name:'Local LLM',             space:'work',    ring:3,type:'slow'},
+  {name:'Cheryl',                space:'personal',ring:3,type:'evergreen'},
+  {name:'Ryan',                  space:'family',  ring:3,type:'slow'},
+  {name:'Jake',                  space:'family',  ring:3,type:'slow'},
+  {name:'InspectPro',            space:'work',    ring:4,type:'slow'},
+  {name:'SplitLah',              space:'work',    ring:4,type:'slow'},
+  {name:'CV Design',             space:'work',    ring:4,type:'fast'},
+  {name:'Evenings Out',          space:'leisure', ring:4,type:'fast'},
+  {name:'Motorcycle Touring',    space:'leisure', ring:4,type:'slow'},
+  {name:'Music',                 space:'leisure', ring:4,type:'slow'},
+  {name:'EnigmaPrint',           space:'work',    ring:4,type:'slow'},
+  {name:'Health',                space:'personal',ring:4,type:'evergreen'},
+  {name:'How I Build',           space:'work',    ring:5,type:'evergreen'},
+  {name:'MetrIQ',                space:'work',    ring:5,type:'slow'},
+  {name:'FM Industry',           space:'work',    ring:5,type:'slow'},
+  {name:'On Investments',        space:'personal',ring:5,type:'slow'},
+  {name:'How I Roll',            space:'personal',ring:5,type:'evergreen'},
+  {name:'Travel',                space:'leisure', ring:5,type:'slow'},
+  {name:'Inner Circle A',        space:'personal',ring:5,type:'evergreen'},
+  {name:'Inner Circle B',        space:'personal',ring:5,type:'evergreen'},
+  {name:'Personal Working Style',space:'work',    ring:5,type:'evergreen'},
+  {name:'Mapletree VP',          space:'work',    ring:6,type:'slow'},
+  {name:'Mount Kinabalu',        space:'leisure', ring:6,type:'slow'},
+  {name:'Career Arc',            space:'core',    ring:8,type:'evergreen'},
+  {name:'Core Values',           space:'core',    ring:8,type:'evergreen'}
 ];
 
-const PALPHA={evergreen:1.0,slow:.68,fast:.38,single_use:.18};
-const PSIZE ={evergreen:.28,slow:.20,fast:.16,single_use:.13};
+// ─────────────────────────────────────────────────────────────────
+// RENDERER + SCENE + CAMERA
+// ─────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x07070f, 1);
 
-const canvas=document.getElementById('c');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-renderer.setSize(window.innerWidth,window.innerHeight);
-renderer.setClearColor(0x06060c,1);
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, .1, 300);
+camera.position.set(0, 0, 28);
 
-const scene=new THREE.Scene();
-scene.fog=new THREE.FogExp2(0x06060c,0.026);
+scene.add(new THREE.AmbientLight(0xffffff, .5));
+const pt = new THREE.PointLight(0x8866ff, .6, 80);
+pt.position.set(10, 10, 15);
+scene.add(pt);
 
-const camera=new THREE.PerspectiveCamera(52,window.innerWidth/window.innerHeight,0.1,200);
-camera.position.set(0,0,26);
-
-scene.add(new THREE.AmbientLight(0x9090cc,0.35));
-const pl1=new THREE.PointLight(0x8877ff,1.4,50);pl1.position.set(8,10,6);scene.add(pl1);
-const pl2=new THREE.PointLight(0x2fba8a,1.0,40);pl2.position.set(-8,-6,-3);scene.add(pl2);
-const pl3=new THREE.PointLight(0xe0704a,0.6,30);pl3.position.set(4,-8,4);scene.add(pl3);
-
-const brain=new THREE.Group();
-scene.add(brain);
-
-// Vertex-coloured sphere shell
-const sphGeo=new THREE.SphereGeometry(BR,96,48);
-const vCount=sphGeo.attributes.position.count;
-const vColors=new Float32Array(vCount*3);
-const lobeAtV=new Uint8Array(vCount);
-for(let i=0;i<vCount;i++){
-  const x=sphGeo.attributes.position.getX(i);
-  const y=sphGeo.attributes.position.getY(i);
-  const z=sphGeo.attributes.position.getZ(i);
-  const ln=getLobe(x,y,z);
-  const li=LOBE_NAMES.indexOf(ln);
-  lobeAtV[i]=li;
-  const c=LOBES[ln].rgb;
-  vColors[i*3]=c[0]/255;vColors[i*3+1]=c[1]/255;vColors[i*3+2]=c[2]/255;
-}
-sphGeo.setAttribute('color',new THREE.Float32BufferAttribute(vColors,3));
-const shellMat=new THREE.MeshPhongMaterial({vertexColors:true,transparent:true,opacity:0.10,side:THREE.DoubleSide,depthWrite:false,shininess:60});
-brain.add(new THREE.Mesh(sphGeo,shellMat));
-
-// Seam lines
-{
-  const idx=sphGeo.index,pos=sphGeo.attributes.position,pts=[];
-  for(let f=0;f<idx.count;f+=3){
-    const a=idx.getX(f),b=idx.getX(f+1),c=idx.getX(f+2);
-    const la=lobeAtV[a],lb=lobeAtV[b],lc=lobeAtV[c];
-    if(la!==lb)pts.push(pos.getX(a),pos.getY(a),pos.getZ(a),pos.getX(b),pos.getY(b),pos.getZ(b));
-    if(lb!==lc)pts.push(pos.getX(b),pos.getY(b),pos.getZ(b),pos.getX(c),pos.getY(c),pos.getZ(c));
-    if(lc!==la)pts.push(pos.getX(c),pos.getY(c),pos.getZ(c),pos.getX(a),pos.getY(a),pos.getZ(a));
+// ─────────────────────────────────────────────────────────────────
+// SMOOTH LOBE SHELL — custom shader with soft Voronoi blending
+// ─────────────────────────────────────────────────────────────────
+// Build flat seed + color arrays for the shader
+const allSeeds  = [];
+const allColors = [];
+for(const name of LOBE_NAMES){
+  const L = LOBES[name];
+  const c = new THREE.Color(L.color);
+  for(const s of L.seedsNorm){
+    allSeeds.push(new THREE.Vector3(s[0], s[1], s[2]));
+    allColors.push(new THREE.Vector3(c.r, c.g, c.b));
   }
-  const sg=new THREE.BufferGeometry();
-  sg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
-  brain.add(new THREE.LineSegments(sg,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.20,blending:THREE.AdditiveBlending,depthWrite:false})));
 }
+const NS = allSeeds.length; // 12
 
-// Depth rings
-RINGS.forEach(ring=>{
-  const wg=new THREE.SphereGeometry(BR*ring.r,48,24);
-  brain.add(new THREE.Mesh(wg,new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,transparent:true,opacity:0.013+(1-ring.r)*0.008,depthWrite:false})));
+const shellMat = new THREE.ShaderMaterial({
+  uniforms:{
+    seeds:     {value: allSeeds},
+    seedColors:{value: allColors},
+    filterOpacity:{value: 1.0}
+  },
+  vertexShader:`
+    varying vec3 vPos;
+    varying vec3 vNorm;
+    void main(){
+      vPos  = normalize(position);
+      vNorm = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+  fragmentShader:`
+    #define NS ${NS}
+    uniform vec3  seeds[NS];
+    uniform vec3  seedColors[NS];
+    uniform float filterOpacity;
+    varying vec3 vPos;
+    varying vec3 vNorm;
+    void main(){
+      vec3  dir    = normalize(vPos);
+      float wts[NS];
+      float total  = 0.0;
+      for(int i=0;i<NS;i++){
+        float d = 1.0 - clamp(dot(dir, normalize(seeds[i])), -1.0, 1.0);
+        float w = exp(-8.0 * d * d);
+        wts[i]  = w;
+        total  += w;
+      }
+      vec3 col = vec3(0.0);
+      for(int i=0;i<NS;i++) col += (wts[i]/total) * seedColors[i];
+
+      // rim lighting: brighter near silhouette edge
+      vec3  viewDir = normalize(vec3(0.0,0.0,1.0));
+      float rim     = 1.0 - abs(dot(vNorm, viewDir));
+      float alpha   = (0.05 + rim * 0.12) * filterOpacity;
+      gl_FragColor  = vec4(col * (0.5 + rim * 0.8), alpha);
+    }
+  `,
+  transparent:true,
+  side:THREE.DoubleSide,
+  depthWrite:false,
 });
 
-// Glow texture
-const gc2=document.createElement('canvas');gc2.width=gc2.height=64;
-const gctx=gc2.getContext('2d');
-const gg=gctx.createRadialGradient(32,32,0,32,32,32);
-gg.addColorStop(0,'rgba(255,255,255,1)');gg.addColorStop(.3,'rgba(255,255,255,.55)');
-gg.addColorStop(.7,'rgba(255,255,255,.12)');gg.addColorStop(1,'rgba(255,255,255,0)');
-gctx.fillStyle=gg;gctx.fillRect(0,0,64,64);
-const glowTex=new THREE.CanvasTexture(gc2);
+const shell = new THREE.Mesh(new THREE.SphereGeometry(BR, 128, 64), shellMat);
+scene.add(shell);
 
-function coneDir(seed,maxDeg,hash){
-  const mr=maxDeg*Math.PI/180;
-  const phi=(((Math.sin(hash*127.1)*43758.5)%1+1)%1)*Math.PI*2;
-  const theta=(((Math.sin(hash*311.7)*28946.3)%1+1)%1)*mr;
-  const sv=new THREE.Vector3(seed[0],seed[1],seed[2]);
-  let perp=new THREE.Vector3(0,1,0);
-  if(Math.abs(sv.dot(perp))>.9)perp=new THREE.Vector3(1,0,0);
-  const ax1=new THREE.Vector3().crossVectors(sv,perp).normalize();
-  const ax2=new THREE.Vector3().crossVectors(sv,ax1).normalize();
-  return sv.clone().addScaledVector(ax1,Math.sin(theta)*Math.cos(phi)).addScaledVector(ax2,Math.sin(theta)*Math.sin(phi)).normalize();
+// Faint outer glow ring
+const edgeMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(BR * 1.018, 64, 32),
+  new THREE.MeshBasicMaterial({color:0x3333aa, transparent:true, opacity:.12, side:THREE.BackSide})
+);
+scene.add(edgeMesh);
+
+// ─────────────────────────────────────────────────────────────────
+// LOBE GLOW VOLUMES — large additive sprites that breathe
+// ─────────────────────────────────────────────────────────────────
+function makeGlowTex(r,g,b){
+  const sz=256, cv=document.createElement('canvas');
+  cv.width=sz; cv.height=sz;
+  const ctx=cv.getContext('2d');
+  const gr=ctx.createRadialGradient(sz/2,sz/2,0,sz/2,sz/2,sz/2);
+  gr.addColorStop(0,  `rgba(${r},${g},${b},0.90)`);
+  gr.addColorStop(.35,`rgba(${r},${g},${b},0.40)`);
+  gr.addColorStop(.65,`rgba(${r},${g},${b},0.12)`);
+  gr.addColorStop(1,  `rgba(${r},${g},${b},0.00)`);
+  ctx.fillStyle=gr; ctx.fillRect(0,0,sz,sz);
+  return new THREE.CanvasTexture(cv);
 }
 
-const nodeMeshes=[];
-ENTRIES.forEach((entry,ei)=>{
-  const lobe=LOBES[entry.space];
-  const ring=RINGS[Math.min(entry.ring,RINGS.length-1)];
-  const r=ring.r*BR;
-  const seedIdx=ei%lobe.seeds.length;
-  const dir=coneDir(lobe.seeds[seedIdx],30,ei*7.3+seedIdx*3.7);
-  const pos=dir.clone().multiplyScalar(r);
-  const alpha=PALPHA[entry.perishability];
-  const dotSize=PSIZE[entry.perishability];
-  const color=new THREE.Color(lobe.hex);
+const lobeSprites = {};
+for(const name of LOBE_NAMES){
+  const L = LOBES[name];
+  const mat = new THREE.SpriteMaterial({
+    map:       makeGlowTex(...L.rgb),
+    transparent:true,
+    blending:  THREE.AdditiveBlending,
+    depthWrite:false,
+    opacity:   0.50 + L.activation * .22
+  });
+  const sp = new THREE.Sprite(mat);
+  const c  = L.centroid;
+  const r  = BR * (0.42 + L.activation * .14);
+  sp.position.set(c[0]*r, c[1]*r, c[2]*r);
+  const sz = BR * (1.5 + L.activation * .5);
+  sp.scale.setScalar(sz);
+  sp._baseSize    = sz;
+  sp._baseOpacity = 0.50 + L.activation * .22;
+  sp._speed       = 2*Math.PI / (2.5 + (1-L.activation) * 5.5); // 2.5–8s
+  sp._phase       = L.phase;
+  lobeSprites[name] = sp;
+  scene.add(sp);
+}
 
-  const glowMat=new THREE.SpriteMaterial({map:glowTex,color,transparent:true,opacity:alpha*.55,blending:THREE.AdditiveBlending,depthWrite:false});
-  const glow=new THREE.Sprite(glowMat);
-  const gs=dotSize*5.5;glow.scale.set(gs,gs,1);
-  glow.position.copy(pos);brain.add(glow);
+// ─────────────────────────────────────────────────────────────────
+// DEPTH RINGS
+// ─────────────────────────────────────────────────────────────────
+for(let i=0;i<RINGS.length;i++){
+  const mat = new THREE.MeshBasicMaterial({
+    wireframe:true, transparent:true, depthWrite:false, color:0xffffff,
+    opacity: i===0?.055 : i<3?.035 : .018
+  });
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(RINGS[i].r*BR,48,24), mat));
+}
 
-  const dotMat=new THREE.MeshPhongMaterial({color,emissive:color,emissiveIntensity:.5,transparent:true,opacity:alpha});
-  const dot=new THREE.Mesh(new THREE.SphereGeometry(dotSize,8,8),dotMat);
-  dot.position.copy(pos);
-  dot.userData={entry,glow,glowMat,dotMat,baseAlpha:alpha,phase:Math.random()*Math.PI*2};
-  brain.add(dot);nodeMeshes.push(dot);
+// ─────────────────────────────────────────────────────────────────
+// NODE SPRITES + RAYCASTING MESHES
+// ─────────────────────────────────────────────────────────────────
+function makeNodeTex(r,g,b){
+  const sz=64, cv=document.createElement('canvas');
+  cv.width=sz; cv.height=sz;
+  const ctx=cv.getContext('2d');
+  const gr=ctx.createRadialGradient(sz/2,sz/2,0,sz/2,sz/2,sz/2);
+  gr.addColorStop(0,  `rgba(${r},${g},${b},1.0)`);
+  gr.addColorStop(.25,`rgba(${r},${g},${b},0.7)`);
+  gr.addColorStop(.6, `rgba(${r},${g},${b},0.2)`);
+  gr.addColorStop(1,  `rgba(${r},${g},${b},0.0)`);
+  ctx.fillStyle=gr; ctx.fillRect(0,0,sz,sz);
+  return new THREE.CanvasTexture(cv);
+}
+
+function hash(n){let x=n^(n>>>16);x=Math.imul(x,0x45d9f3b);x^=x>>>16;return(x>>>0)/4294967295;}
+function coneDir(seed,deg,idx){
+  const th=Math.acos(1-hash(idx*7+1)*(1-Math.cos(deg*Math.PI/180)));
+  const ph=hash(idx*13+3)*2*Math.PI;
+  const st=Math.sin(th),ct=Math.cos(th),sp2=Math.sin(ph),cp=Math.cos(ph);
+  const[sx,sy,sz]=seed;
+  const ax=Math.abs(sx)<.9?0:1, ay=Math.abs(sx)<.9?1:0;
+  const tx=sy*0-sz*ay, ty=sz*ax-sx*0, tz=sx*ay-sy*ax;
+  const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1;
+  const ttx=tx/tl,tty=ty/tl,ttz=tz/tl;
+  const bx=sy*ttz-sz*tty, by=sz*ttx-sx*ttz, bz=sx*tty-sy*ttx;
+  return norm([ttx*st*cp+bx*st*sp2+sx*ct, tty*st*cp+by*st*sp2+sy*ct, ttz*st*cp+bz*st*sp2+sz*ct]);
+}
+
+const nodeMeshes = [];
+const nodeTex = {};
+for(const n of LOBE_NAMES) nodeTex[n] = makeNodeTex(...LOBES[n].rgb);
+
+let globalIdx = 0;
+for(const name of LOBE_NAMES){
+  const L = LOBES[name];
+  ENTRIES.filter(e=>e.space===name).forEach((e, i)=>{
+    const seed  = L.seedsNorm[i % L.seedsNorm.length];
+    const dir   = coneDir(seed, 28, globalIdx++);
+    const r     = RINGS[e.ring].r * BR;
+    const alpha = PALPHA[e.type];
+    const sz    = PSIZE[e.type];
+
+    // Glow sprite
+    const gMat = new THREE.SpriteMaterial({
+      map: nodeTex[name], transparent:true,
+      blending:THREE.AdditiveBlending, depthWrite:false, opacity:alpha
+    });
+    const gSp = new THREE.Sprite(gMat);
+    gSp.position.set(dir[0]*r, dir[1]*r, dir[2]*r);
+    gSp.scale.setScalar(sz * BR);
+    scene.add(gSp);
+
+    // Invisible hit mesh
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(sz*.35*BR, 6, 4),
+      new THREE.MeshBasicMaterial({visible:false})
+    );
+    mesh.position.copy(gSp.position);
+    mesh.userData = {entry:e, glowMat:gMat, alpha, baseSz:sz*BR, sprite:gSp};
+    scene.add(mesh);
+    nodeMeshes.push(mesh);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LOBE NAME LABELS (always-on sprites)
+// ─────────────────────────────────────────────────────────────────
+function makeLabelTex(text, hexColor){
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=48;
+  const ctx=cv.getContext('2d');
+  ctx.font='700 11px system-ui';
+  ctx.fillStyle=hexColor;
+  ctx.globalAlpha=0.82;
+  ctx.fillText(text.toUpperCase(), 4, 16);
+  return new THREE.CanvasTexture(cv);
+}
+for(const name of LOBE_NAMES){
+  const L=LOBES[name];
+  const c=L.centroid;
+  const r=BR*0.90;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:makeLabelTex(name,'#'+new THREE.Color(L.color).getHexString()),
+    transparent:true, depthWrite:false
+  }));
+  sp.position.set(c[0]*r, c[1]*r+.6, c[2]*r);
+  sp.scale.set(3.8, .72, 1);
+  scene.add(sp);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// HOVER LABEL
+// ─────────────────────────────────────────────────────────────────
+const hoverMat = new THREE.SpriteMaterial({transparent:true, depthWrite:false, opacity:0});
+const hoverSp  = new THREE.Sprite(hoverMat);
+hoverSp.scale.set(5.5, 1.0, 1);
+scene.add(hoverSp);
+
+function updateHoverLabel(mesh){
+  const e=mesh.userData.entry;
+  const cv=document.createElement('canvas'); cv.width=320; cv.height=52;
+  const ctx=cv.getContext('2d');
+  ctx.font='500 13px system-ui';
+  ctx.fillStyle='rgba(210,210,255,0.92)';
+  ctx.fillText(e.name, 4, 18);
+  ctx.font='10px system-ui';
+  ctx.fillStyle='rgba(130,130,165,0.70)';
+  ctx.fillText(RINGS[e.ring].label+' ago · '+e.type, 4, 36);
+  const tex=new THREE.CanvasTexture(cv);
+  if(hoverMat.map) hoverMat.map.dispose();
+  hoverMat.map=tex; hoverMat.needsUpdate=true; hoverMat.opacity=1;
+  hoverSp.position.copy(mesh.position);
+  hoverSp.position.y += 1.6;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ORBIT CONTROLS (manual)
+// ─────────────────────────────────────────────────────────────────
+let isDragging=false, lastX=0, lastY=0;
+let rotX=.18, rotY=.0;
+let targetZ=28, camZ=28;
+let didDrag=false;
+
+canvas.addEventListener('mousedown', e=>{
+  isDragging=true; lastX=e.clientX; lastY=e.clientY; didDrag=false;
 });
-
-// Stars
-{
-  const sp=[];for(let i=0;i<800;i++)sp.push((Math.random()-.5)*160,(Math.random()-.5)*160,(Math.random()-.5)*160);
-  const sg=new THREE.BufferGeometry();
-  sg.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));
-  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x334455,size:.08})));
-}
-
-let rotX=.18,rotY=0,isDrag=false,last={x:0,y:0};
-let camZ=26,targetCamZ=26,activeFilter='all';
-
-canvas.addEventListener('mousedown',e=>{isDrag=true;last={x:e.clientX,y:e.clientY};});
-window.addEventListener('mouseup',()=>isDrag=false);
-
-const raycaster=new THREE.Raycaster();
-const mouse=new THREE.Vector2();
-const tip=document.getElementById('tip');
-
-window.addEventListener('mousemove',e=>{
-  if(isDrag){
-    rotY+=(e.clientX-last.x)*.0045;
-    rotX=Math.max(-1.3,Math.min(1.3,rotX+(e.clientY-last.y)*.0045));
-    last={x:e.clientX,y:e.clientY};
+window.addEventListener('mousemove', e=>{
+  if(isDragging){
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    if(Math.abs(dx)+Math.abs(dy)>2) didDrag=true;
+    rotY+=dx*.005; rotX+=dy*.005;
+    rotX=Math.max(-1.4, Math.min(1.4, rotX));
+    lastX=e.clientX; lastY=e.clientY;
+  } else {
+    // Hover raycasting
+    const rect=canvas.getBoundingClientRect();
+    const mouse=new THREE.Vector2(
+      ((e.clientX-rect.left)/rect.width)*2-1,
+      -((e.clientY-rect.top)/rect.height)*2+1
+    );
+    const ray=new THREE.Raycaster();
+    ray.setFromCamera(mouse,camera);
+    const hits=ray.intersectObjects(nodeMeshes);
+    if(hits.length>0){
+      canvas.style.cursor='pointer';
+      updateHoverLabel(hits[0].object);
+    } else {
+      canvas.style.cursor='default';
+      hoverMat.opacity=0;
+    }
   }
-  mouse.x=(e.clientX/window.innerWidth)*2-1;
-  mouse.y=-(e.clientY/window.innerHeight)*2+1;
-  raycaster.setFromCamera(mouse,camera);
-  const hits=raycaster.intersectObjects(nodeMeshes);
-  if(hits.length>0){
-    const {entry}=hits[0].object.userData;
-    document.getElementById('tip-title').textContent=entry.title;
-    document.getElementById('tip-meta').innerHTML=`space: ${entry.space}<br>decay: ${entry.perishability}<br>depth: ${RINGS[entry.ring].label} ago`;
-    tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-8)+'px';tip.style.opacity='1';
-  } else tip.style.opacity='0';
 });
-
-canvas.addEventListener('wheel',e=>{
-  targetCamZ=Math.max(1.5,Math.min(38,targetCamZ+e.deltaY*.035));
-  e.preventDefault();
-},{passive:false});
-
-let lt=null;
-canvas.addEventListener('touchstart',e=>{lt={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
-canvas.addEventListener('touchmove',e=>{
-  if(!lt)return;const t=e.touches[0];
-  rotY+=(t.clientX-lt.x)*.0055;rotX=Math.max(-1.3,Math.min(1.3,rotX+(t.clientY-lt.y)*.0055));
-  lt={x:t.clientX,y:t.clientY};
+window.addEventListener('mouseup', e=>{
+  if(isDragging && !didDrag){
+    // treat as click
+    const rect=canvas.getBoundingClientRect();
+    const mouse=new THREE.Vector2(
+      ((e.clientX-rect.left)/rect.width)*2-1,
+      -((e.clientY-rect.top)/rect.height)*2+1
+    );
+    const ray=new THREE.Raycaster();
+    ray.setFromCamera(mouse,camera);
+    const hits=ray.intersectObjects(nodeMeshes);
+    if(hits.length>0) openPanel(hits[0].object);
+    else closePanel();
+  }
+  isDragging=false;
+});
+canvas.addEventListener('wheel', e=>{
+  targetZ=Math.max(14,Math.min(50,targetZ+e.deltaY*.04));
 },{passive:true});
 
-document.querySelectorAll('.f-btn').forEach(btn=>{
+// Touch support
+let lastTouchX=0, lastTouchY=0;
+canvas.addEventListener('touchstart', e=>{lastTouchX=e.touches[0].clientX;lastTouchY=e.touches[0].clientY;},{passive:true});
+canvas.addEventListener('touchmove', e=>{
+  const dx=e.touches[0].clientX-lastTouchX, dy=e.touches[0].clientY-lastTouchY;
+  rotY+=dx*.004; rotX+=dy*.004;
+  rotX=Math.max(-1.4,Math.min(1.4,rotX));
+  lastTouchX=e.touches[0].clientX; lastTouchY=e.touches[0].clientY;
+},{passive:true});
+
+// ─────────────────────────────────────────────────────────────────
+// PANEL
+// ─────────────────────────────────────────────────────────────────
+function openPanel(mesh){
+  const e=mesh.userData.entry;
+  const L=LOBES[e.space];
+  document.getElementById('pLobe').textContent=e.space;
+  document.getElementById('pLobe').style.color='#'+new THREE.Color(L.color).getHexString();
+  document.getElementById('pTitle').textContent=e.name;
+  document.getElementById('pMeta').textContent=RINGS[e.ring].label+' ago · '+e.type+' decay';
+  document.getElementById('pTags').innerHTML=
+    '<span class="p-tag">'+e.type+'</span><span class="p-tag">'+e.space+'</span><span class="p-tag">'+RINGS[e.ring].label+'</span>';
+  document.getElementById('panel').classList.add('show');
+}
+function closePanel(){
+  document.getElementById('panel').classList.remove('show');
+}
+document.getElementById('panelClose').addEventListener('click', closePanel);
+
+// ─────────────────────────────────────────────────────────────────
+// FILTERS
+// ─────────────────────────────────────────────────────────────────
+let activeFilter='all';
+document.querySelectorAll('.fbtn').forEach(btn=>{
   btn.addEventListener('click',()=>{
-    activeFilter=btn.dataset.space;
-    document.querySelectorAll('.f-btn').forEach(b=>b.classList.toggle('active',b===btn));
-    nodeMeshes.forEach(m=>{
-      const vis=activeFilter==='all'||m.userData.entry.space===activeFilter;
-      m.userData.dotMat.opacity=vis?m.userData.baseAlpha:m.userData.baseAlpha*.05;
-      m.userData.glowMat.opacity=vis?m.userData.baseAlpha*.55:m.userData.baseAlpha*.02;
-    });
-    shellMat.opacity=activeFilter==='all'?.10:.05;
+    activeFilter=btn.dataset.lobe;
+    document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    for(const mesh of nodeMeshes){
+      const match=activeFilter==='all'||mesh.userData.entry.space===activeFilter;
+      mesh.userData.glowMat.opacity = match ? mesh.userData.alpha : mesh.userData.alpha*.08;
+    }
+    for(const name of LOBE_NAMES){
+      const match=activeFilter==='all'||name===activeFilter;
+      lobeSprites[name].material.opacity = match ? lobeSprites[name]._baseOpacity : lobeSprites[name]._baseOpacity*.08;
+    }
+    shellMat.uniforms.filterOpacity.value = 1.0;
   });
 });
 
+// ─────────────────────────────────────────────────────────────────
+// RESIZE
+// ─────────────────────────────────────────────────────────────────
 window.addEventListener('resize',()=>{
-  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.aspect=innerWidth/innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth,window.innerHeight);
+  renderer.setSize(innerWidth,innerHeight);
 });
 
-let t=0;
+// ─────────────────────────────────────────────────────────────────
+// RENDER LOOP
+// ─────────────────────────────────────────────────────────────────
 function animate(){
-  requestAnimationFrame(animate);t+=.014;
-  camZ+=(targetCamZ-camZ)*.06;
-  camera.position.z=camZ;
-  brain.rotation.y=rotY;brain.rotation.x=rotX;
-  pl1.intensity=1.2+Math.sin(t*.55)*.35;
-  pl2.intensity=.8+Math.sin(t*.40+2)*.28;
-  nodeMeshes.forEach(m=>{
-    const {entry,glowMat,dotMat,baseAlpha,phase}=m.userData;
-    const p=entry.perishability;
-    let am=1;
-    if(p==='single_use')am=.5+.5*Math.abs(Math.sin(t*1.8+phase));
-    else if(p==='evergreen')am=.85+.15*Math.sin(t*.4+phase);
-    const vis=activeFilter==='all'||entry.space===activeFilter?1:.05;
-    dotMat.opacity=baseAlpha*am*vis;
-    glowMat.opacity=baseAlpha*.55*am*(vis===1?1:.04);
-  });
+  requestAnimationFrame(animate);
+  const t=Date.now()*.001;
+
+  // Smooth zoom
+  camZ += (targetZ-camZ)*.065;
+
+  // Camera orbit from rotX/rotY
+  camera.position.x = Math.sin(rotY)*Math.cos(rotX)*camZ;
+  camera.position.y = Math.sin(rotX)*camZ;
+  camera.position.z = Math.cos(rotY)*Math.cos(rotX)*camZ;
+  camera.lookAt(0,0,0);
+
+  // Lobe breathing
+  for(const name of LOBE_NAMES){
+    const sp=lobeSprites[name];
+    const b=Math.sin(t*sp._speed+sp._phase);
+    sp.scale.setScalar(sp._baseSize*(1+b*.065));
+    sp.material.opacity=Math.min(.98, sp._baseOpacity*(1+b*.18));
+  }
+
+  // Node pulse (single_use and fast decay glow erratically)
+  for(const mesh of nodeMeshes){
+    const {entry,glowMat,alpha}=mesh.userData;
+    let p=1;
+    if(entry.type==='single_use') p=.75+Math.sin(t*2.3+mesh.id*.7)*.25;
+    else if(entry.type==='fast')  p=.88+Math.sin(t*1.2+mesh.id*.4)*.12;
+    glowMat.opacity=Math.min(1, alpha*p);
+  }
+
   renderer.render(scene,camera);
 }
 animate();
