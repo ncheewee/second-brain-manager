@@ -10,95 +10,87 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 
 /* topbar */
 #topbar{position:fixed;top:0;left:0;right:0;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;z-index:20;pointer-events:none;}
-#topbar h1{font-size:11px;font-weight:600;color:#383858;letter-spacing:.16em;text-transform:uppercase;}
-#topbar a{pointer-events:all;color:#383858;text-decoration:none;font-size:11px;transition:color .2s;}
+#topbar h1{font-size:11px;font-weight:600;color:#323250;letter-spacing:.16em;text-transform:uppercase;}
+#topbar a{pointer-events:all;color:#323250;text-decoration:none;font-size:11px;transition:color .2s;}
 #topbar a:hover{color:#888;}
 
-/* HTML label overlay */
+/* label overlay */
 #labels{position:fixed;inset:0;pointer-events:none;z-index:15;}
-.lobe-lbl{position:absolute;transform:translate(-50%,-50%);font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;opacity:0;transition:opacity .5s;white-space:nowrap;text-shadow:0 0 12px currentColor;}
-.lobe-lbl.on{opacity:.85;}
-.node-lbl{position:absolute;transform:translate(-50%,-145%);font-size:13px;font-weight:500;color:rgba(215,215,255,.92);background:rgba(5,5,18,.90);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:5px 12px 6px;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .15s;line-height:1.4;}
-.node-lbl .nl-sub{display:block;font-size:10px;color:#555;font-weight:400;margin-top:1px;}
+.lobe-lbl{position:absolute;transform:translate(-50%,-50%);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:0;transition:opacity .5s;white-space:nowrap;text-shadow:0 0 10px currentColor;}
+.lobe-lbl.on{opacity:.80;}
+.node-lbl{position:absolute;transform:translate(-50%,-145%);font-size:13px;font-weight:500;color:rgba(210,210,255,.92);background:rgba(5,5,18,.90);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:5px 12px 6px;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .15s;line-height:1.4;}
+.node-lbl .nl-sub{display:block;font-size:10px;color:#505068;font-weight:400;margin-top:1px;}
 .node-lbl.on{opacity:1;}
 
 /* insights panel */
-#insights{position:fixed;top:0;left:0;width:276px;height:100vh;padding:54px 17px 17px;display:flex;flex-direction:column;gap:11px;z-index:18;pointer-events:none;background:linear-gradient(to right,rgba(5,5,15,.94) 68%,transparent 100%);}
-.ins-head{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#2e2e4a;margin-bottom:1px;}
-.ins-card{background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.055);border-radius:10px;padding:10px 12px;}
-.ins-card .lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#3a3a58;margin-bottom:5px;}
-.ins-card .big{font-size:20px;font-weight:700;line-height:1;margin-bottom:3px;}
-.ins-card .sub{font-size:11px;color:#484868;}
+#insights{position:fixed;top:0;left:0;width:272px;height:100vh;padding:52px 16px 16px;display:flex;flex-direction:column;gap:10px;z-index:18;pointer-events:none;background:linear-gradient(to right,rgba(5,5,14,.95) 66%,transparent 100%);}
+.ins-head{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#28284a;margin-bottom:1px;}
+.ins-card{background:rgba(255,255,255,.020);border:1px solid rgba(255,255,255,.050);border-radius:9px;padding:9px 11px;}
+.ins-card .lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#363658;margin-bottom:5px;}
+.ins-card .big{font-size:19px;font-weight:700;line-height:1;margin-bottom:3px;}
+.ins-card .sub{font-size:11px;color:#424262;}
 .bar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
-.bar-name{font-size:10px;width:56px;text-transform:capitalize;}
-.bar-track{flex:1;height:3px;background:#0e0e1e;border-radius:2px;overflow:hidden;}
+.bar-name{font-size:10px;width:54px;text-transform:capitalize;}
+.bar-track{flex:1;height:3px;background:#0d0d1c;border-radius:2px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:2px;}
-.bar-n{font-size:10px;color:#383858;width:16px;text-align:right;}
-.risk-item{font-size:11px;color:#a07060;margin-bottom:3px;display:flex;align-items:baseline;gap:6px;}
-.risk-item span{font-size:10px;color:#484868;}
+.bar-n{font-size:10px;color:#363658;width:16px;text-align:right;}
+.risk-item{font-size:11px;color:#9a6858;margin-bottom:3px;display:flex;align-items:baseline;gap:6px;}
+.risk-item span{font-size:10px;color:#424262;}
+.act-note{font-size:10px;color:#424262;line-height:1.5;}
 
-/* entry detail panel */
-#panel{position:fixed;top:50%;right:22px;transform:translateY(-50%);width:228px;background:rgba(6,6,18,.96);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;}
+/* entry panel */
+#panel{position:fixed;top:50%;right:20px;transform:translateY(-50%);width:248px;max-height:88vh;background:rgba(6,6,18,.97);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;}
 #panel.on{opacity:1;pointer-events:all;}
-#panel .p-head{padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.06);}
-#panel .p-close{float:right;color:#383858;cursor:pointer;font-size:16px;line-height:1;margin-top:1px;}
+#panel .p-head{padding:13px 14px 10px;border-bottom:1px solid rgba(255,255,255,.055);flex-shrink:0;}
+#panel .p-close{float:right;color:#363658;cursor:pointer;font-size:16px;line-height:1;margin-top:1px;}
 #panel .p-close:hover{color:#888;}
-#panel .p-sp{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:5px;}
+#panel .p-sp{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:4px;}
 #panel .p-ti{font-size:15px;font-weight:600;color:#dde;line-height:1.3;}
-#panel .p-body{padding:10px 14px 12px;display:flex;flex-direction:column;gap:7px;}
-#panel .p-row{display:flex;justify-content:space-between;align-items:baseline;}
-#panel .p-key{font-size:10px;color:#3a3a58;text-transform:uppercase;letter-spacing:.08em;}
-#panel .p-val{font-size:11px;color:#8888aa;}
-#panel .p-foot{padding:10px 14px;border-top:1px solid rgba(255,255,255,.05);}
-#panel .p-link{font-size:11px;color:#6655bb;cursor:pointer;text-decoration:none;}
-#panel .p-link:hover{color:#9988ee;}
-#panel .p-bar{width:100%;height:2px;background:#0e0e1e;border-radius:2px;margin-bottom:10px;overflow:hidden;}
-#panel .p-bar-fill{height:100%;border-radius:2px;}
+#panel .p-body{padding:10px 14px;overflow-y:auto;flex:1;}
+#panel .p-summary{font-size:12px;color:#7070a0;line-height:1.65;margin-bottom:12px;}
+#panel .p-divider{height:1px;background:rgba(255,255,255,.05);margin:10px 0;}
+#panel .p-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+#panel .p-key{font-size:9px;color:#363658;text-transform:uppercase;letter-spacing:.08em;}
+#panel .p-val{font-size:11px;color:#7878a8;}
+#panel .p-act-wrap{margin-bottom:12px;}
+#panel .p-act-lbl{font-size:9px;color:#363658;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+#panel .p-act-track{height:4px;background:#0d0d1c;border-radius:2px;overflow:hidden;}
+#panel .p-act-fill{height:100%;border-radius:2px;transition:width .4s;}
+#panel .p-depth-track{height:3px;background:#0d0d1c;border-radius:2px;overflow:hidden;margin-bottom:10px;}
+#panel .p-depth-fill{height:100%;border-radius:2px;}
+#panel .p-foot{padding:9px 14px;border-top:1px solid rgba(255,255,255,.05);flex-shrink:0;}
+#panel .p-link{font-size:11px;color:#5548aa;text-decoration:none;}
+#panel .p-link:hover{color:#8877cc;}
 
-/* bottom controls */
-#bottom{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;z-index:20;}
-.fbtn{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:4px 12px;font-size:11px;color:#55556a;cursor:pointer;transition:all .2s;letter-spacing:.05em;font-family:inherit;}
+/* bottom */
+#bottom{position:fixed;bottom:17px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;z-index:20;}
+.fbtn{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:4px 11px;font-size:11px;color:#4a4a6a;cursor:pointer;transition:all .2s;letter-spacing:.05em;font-family:inherit;}
 .fbtn:hover{background:rgba(255,255,255,.09);color:#aaa;}
-.fbtn.on{color:#ccd;border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.10);}
-#resumeBtn{display:none;background:rgba(80,70,160,.12);border:1px solid rgba(100,90,190,.28);color:#7766bb;padding:4px 14px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;}
-#resumeBtn:hover{background:rgba(80,70,160,.22);color:#aa99dd;}
+.fbtn.on{color:#ccd;border-color:rgba(255,255,255,.26);background:rgba(255,255,255,.09);}
+#resumeBtn{display:none;background:rgba(70,60,140,.11);border:1px solid rgba(90,80,170,.26);color:#6658aa;padding:4px 13px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;}
+#resumeBtn:hover{background:rgba(70,60,140,.20);color:#9988cc;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="labels"></div>
-
-<div id="topbar">
-  <h1>Second Brain · 3D</h1>
-  <a href="index.html">← Manager</a>
-</div>
-
+<div id="topbar"><h1>Second Brain · 3D</h1><a href="index.html">← Manager</a></div>
 <div id="insights">
   <div class="ins-head">Brain State</div>
   <div class="ins-card" id="ic-active"></div>
   <div class="ins-card" id="ic-density"></div>
   <div class="ins-card" id="ic-risk"></div>
-  <div class="ins-card" id="ic-ever"></div>
+  <div class="ins-card" id="ic-act-note"></div>
 </div>
-
 <div id="panel">
   <div class="p-head">
     <span class="p-close" id="pClose">×</span>
     <div class="p-sp" id="pSp"></div>
     <div class="p-ti" id="pTi"></div>
   </div>
-  <div class="p-body">
-    <div class="p-bar"><div class="p-bar-fill" id="pDepthBar"></div></div>
-    <div class="p-row"><span class="p-key">Age</span><span class="p-val" id="pAge"></span></div>
-    <div class="p-row"><span class="p-key">Decay</span><span class="p-val" id="pDecay"></span></div>
-    <div class="p-row"><span class="p-key">Depth</span><span class="p-val" id="pDepth"></span></div>
-    <div class="p-row"><span class="p-key">Perishability</span><span class="p-val" id="pPerish"></span></div>
-  </div>
-  <div class="p-foot">
-    <a class="p-link" id="pLink">Open in Manager ↗</a>
-  </div>
+  <div class="p-body" id="pBody"></div>
+  <div class="p-foot"><a class="p-link" id="pLink">Open in Manager ↗</a></div>
 </div>
-
 <div id="bottom">
   <button id="resumeBtn">↺ Resume</button>
   <button class="fbtn on" data-f="all">All</button>
@@ -111,9 +103,9 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // DATA
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 const BR = 10;
 
 const LOBES = {
@@ -126,7 +118,7 @@ const LOBES = {
 const LOBE_NAMES = Object.keys(LOBES);
 
 function vN(v){const l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];}
-function vAN(arr){const s=[0,0,0];arr.forEach(v=>{s[0]+=v[0];s[1]+=v[1];s[2]+=v[2];});return vN([s[0]/arr.length,s[1]/arr.length,s[2]/arr.length]);}
+function vAN(a){const s=[0,0,0];a.forEach(v=>{s[0]+=v[0];s[1]+=v[1];s[2]+=v[2];});return vN([s[0]/a.length,s[1]/a.length,s[2]/a.length]);}
 
 for(const n of LOBE_NAMES){
   LOBES[n].seedsN   = LOBES[n].seeds.map(vN);
@@ -135,69 +127,66 @@ for(const n of LOBE_NAMES){
 }
 
 const RINGS=[
-  {label:'2 days',  r:.965},{label:'1 week', r:.905},{label:'3 weeks',r:.840},
-  {label:'2 months',r:.755},{label:'4 months',r:.650},{label:'8 months',r:.525},
-  {label:'1.5 yrs', r:.390},{label:'4 years', r:.250},{label:'10+ yrs', r:.115}
+  {label:'2 days',   r:.965},{label:'1 week',   r:.905},{label:'3 weeks',  r:.840},
+  {label:'2 months', r:.755},{label:'4 months', r:.650},{label:'8 months', r:.525},
+  {label:'1.5 yrs',  r:.390},{label:'4 years',  r:.250},{label:'10+ yrs',  r:.115}
 ];
-const PALPHA={evergreen:0.88,slow:0.60,fast:0.38,single_use:0.22};
-const PSIZE ={evergreen:0.22,slow:0.17,fast:0.14,single_use:0.11};
+const PALPHA={evergreen:.82,slow:.56,fast:.36,single_use:.20};
+const PSIZE ={evergreen:.23,slow:.17,fast:.14,single_use:.11};
 const DECAY_LABEL={evergreen:'Never decays',slow:'Slow decay',fast:'Fast decay',single_use:'One-time use'};
 
+// activation: estimated 0–1 per entry based on recent access patterns
+// summary: brief description of what this entry holds
 const ENTRIES=[
-  {name:'Anniversary Trip',      space:'leisure', ring:0,type:'single_use'},
-  {name:'Shanghai Masters',      space:'leisure', ring:0,type:'single_use'},
-  {name:'Coca-Cola Outcome',     space:'work',    ring:1,type:'fast'},
-  {name:'Motorcycle Choice',     space:'personal',ring:1,type:'slow'},
-  {name:'BMW COE',               space:'personal',ring:2,type:'fast'},
-  {name:'Cost of Living',        space:'personal',ring:2,type:'slow'},
-  {name:'South Korea',           space:'leisure', ring:2,type:'fast'},
-  {name:'Career Transition',     space:'work',    ring:2,type:'slow'},
-  {name:'Second Brain Security', space:'core',    ring:2,type:'slow'},
-  {name:'Weekly Codex Scan',     space:'core',    ring:2,type:'fast'},
-  {name:'100 Ideas',             space:'personal',ring:3,type:'slow'},
-  {name:'Technical Environment', space:'work',    ring:3,type:'slow'},
-  {name:'Local LLM',             space:'work',    ring:3,type:'slow'},
-  {name:'Cheryl',                space:'personal',ring:3,type:'evergreen'},
-  {name:'Ryan',                  space:'family',  ring:3,type:'slow'},
-  {name:'Jake',                  space:'family',  ring:3,type:'slow'},
-  {name:'InspectPro',            space:'work',    ring:4,type:'slow'},
-  {name:'SplitLah',              space:'work',    ring:4,type:'slow'},
-  {name:'CV Design',             space:'work',    ring:4,type:'fast'},
-  {name:'Evenings Out',          space:'leisure', ring:4,type:'fast'},
-  {name:'Motorcycle Touring',    space:'leisure', ring:4,type:'slow'},
-  {name:'Music',                 space:'leisure', ring:4,type:'slow'},
-  {name:'EnigmaPrint',           space:'work',    ring:4,type:'slow'},
-  {name:'Health',                space:'personal',ring:4,type:'evergreen'},
-  {name:'How I Build',           space:'work',    ring:5,type:'evergreen'},
-  {name:'MetrIQ',                space:'work',    ring:5,type:'slow'},
-  {name:'FM Industry',           space:'work',    ring:5,type:'slow'},
-  {name:'On Investments',        space:'personal',ring:5,type:'slow'},
-  {name:'How I Roll',            space:'personal',ring:5,type:'evergreen'},
-  {name:'Travel',                space:'leisure', ring:5,type:'slow'},
-  {name:'Inner Circle A',        space:'personal',ring:5,type:'evergreen'},
-  {name:'Inner Circle B',        space:'personal',ring:5,type:'evergreen'},
-  {name:'Personal Working Style',space:'work',    ring:5,type:'evergreen'},
-  {name:'Mapletree VP',          space:'work',    ring:6,type:'slow'},
-  {name:'Mount Kinabalu',        space:'leisure', ring:6,type:'slow'},
-  {name:'Career Arc',            space:'core',    ring:8,type:'evergreen'},
-  {name:'Core Values',           space:'core',    ring:8,type:'evergreen'}
+  {name:'Anniversary Trip',      space:'leisure', ring:0,type:'single_use',activation:.90,summary:'Planning notes and itinerary for upcoming trip with Cheryl. Restaurants, flights, logistics.'},
+  {name:'Shanghai Masters',      space:'leisure', ring:0,type:'single_use',activation:.85,summary:'Tennis tournament attendance notes. Schedule, tickets, and venue logistics.'},
+  {name:'Coca-Cola Outcome',     space:'work',    ring:1,type:'fast',activation:.75,summary:'Outcome and debrief from the Coca-Cola application. Key learnings for future job hunts.'},
+  {name:'Motorcycle Choice',     space:'personal',ring:1,type:'slow',activation:.65,summary:'Decision framework comparing bikes. COE timing, model shortlist, budget constraints.'},
+  {name:'BMW COE',               space:'personal',ring:2,type:'fast',activation:.50,summary:'COE bidding status and timeline for BMW. Key deadlines and fallback options.'},
+  {name:'Cost of Living',        space:'personal',ring:2,type:'slow',activation:.55,summary:'2026 personal budget and spending breakdown. Monthly targets, actuals, and adjustments.'},
+  {name:'South Korea',           space:'leisure', ring:2,type:'fast',activation:.60,summary:'Trip research — Seoul, Busan. Food list, accommodation, transport, visa notes.'},
+  {name:'Career Transition',     space:'work',    ring:2,type:'slow',activation:.80,summary:'Thinking through the pivot options. FM industry vs tech-adjacent. Timeline and risk.'},
+  {name:'Second Brain Security', space:'core',    ring:2,type:'slow',activation:.70,summary:'Access controls, backup strategy, and incident response for the Second Brain system.'},
+  {name:'Weekly Codex Scan',     space:'core',    ring:2,type:'fast',activation:.88,summary:'Weekly ritual: review inbox, promote entries, trigger strategy synthesis pass.'},
+  {name:'100 Ideas',             space:'personal',ring:3,type:'slow',activation:.45,summary:'Running list of ideas across products, systems, and life. Raw, unfiltered, revisited monthly.'},
+  {name:'Technical Environment', space:'work',    ring:3,type:'slow',activation:.55,summary:'Dev tooling, hardware setup, shell config, preferred stack. Updated as environment evolves.'},
+  {name:'Local LLM',             space:'work',    ring:3,type:'slow',activation:.50,summary:'Notes on running models locally. Ollama, hardware limits, use cases vs. API.'},
+  {name:'Cheryl',                space:'personal',ring:3,type:'evergreen',activation:.72,summary:'Evergreen profile: background, interests, relationship context, inner circle notes.'},
+  {name:'Ryan',                  space:'family',  ring:3,type:'slow',activation:.35,summary:'Context on Ryan — shared history, current chapter, things that matter to him.'},
+  {name:'Jake',                  space:'family',  ring:3,type:'slow',activation:.30,summary:'Context on Jake — background, interests, how to stay connected meaningfully.'},
+  {name:'InspectPro',            space:'work',    ring:4,type:'slow',activation:.42,summary:'Property inspection app concept. Problem space, MVP scope, target market in Singapore.'},
+  {name:'SplitLah',              space:'work',    ring:4,type:'slow',activation:.40,summary:'Bill-splitting app for SG context. Core loop, differentiation from Splitwise.'},
+  {name:'CV Design',             space:'work',    ring:4,type:'fast',activation:.55,summary:'CV structure and design decisions. Format, narrative arc, which roles to emphasise.'},
+  {name:'Evenings Out',          space:'leisure', ring:4,type:'fast',activation:.38,summary:'Log of social evenings — venues, who, vibes. Used to notice patterns in social energy.'},
+  {name:'Motorcycle Touring',    space:'leisure', ring:4,type:'slow',activation:.35,summary:'Route research for multi-day touring. Peninsula routes, gear checklist, packing strategy.'},
+  {name:'Music',                 space:'leisure', ring:4,type:'slow',activation:.28,summary:'Listening patterns, albums of note, occasional guitar practice log.'},
+  {name:'EnigmaPrint',           space:'work',    ring:4,type:'slow',activation:.48,summary:'Daily mystery print side project. Concept, fulfilment model, current subscriber count.'},
+  {name:'Health',                space:'personal',ring:4,type:'evergreen',activation:.60,summary:'Evergreen health principles: sleep, training, nutrition baselines. Tracks deviations.'},
+  {name:'How I Build',           space:'work',    ring:5,type:'evergreen',activation:.65,summary:'Personal product philosophy — how I scope, validate, ship. Principles distilled from past projects.'},
+  {name:'MetrIQ',                space:'work',    ring:5,type:'slow',activation:.45,summary:'Analytics app for facilities managers. Core metrics, target persona, current build status.'},
+  {name:'FM Industry',           space:'work',    ring:5,type:'slow',activation:.40,summary:'Facilities management landscape — key players, pain points, macro trends. Career context.'},
+  {name:'On Investments',        space:'personal',ring:5,type:'slow',activation:.38,summary:'Personal investment philosophy. Asset classes, risk tolerance, SG-specific constraints.'},
+  {name:'How I Roll',            space:'personal',ring:5,type:'evergreen',activation:.55,summary:'Evergreen operating principles — how I work, make decisions, manage energy.'},
+  {name:'Travel',                space:'leisure', ring:5,type:'slow',activation:.30,summary:'General travel philosophy, packing system, and wishlist destinations.'},
+  {name:'Inner Circle A',        space:'personal',ring:5,type:'evergreen',activation:.50,summary:'First-tier relationship context. How to show up for the people who matter most.'},
+  {name:'Inner Circle B',        space:'personal',ring:5,type:'evergreen',activation:.48,summary:'Second-tier relationship context. Warm contacts, cadence of staying in touch.'},
+  {name:'Personal Working Style',space:'work',    ring:5,type:'evergreen',activation:.58,summary:'Deep work patterns, peak hours, collaboration preferences, context-switching cost.'},
+  {name:'Mapletree VP',          space:'work',    ring:6,type:'slow',activation:.35,summary:'VP-level role at Mapletree. Application status, key contacts, strategic fit analysis.'},
+  {name:'Mount Kinabalu',        space:'leisure', ring:6,type:'slow',activation:.25,summary:'Climb completed. Route notes, gear list, fitness prep, what to do differently next time.'},
+  {name:'Career Arc',            space:'core',    ring:8,type:'evergreen',activation:.68,summary:'Long arc career vision — where I am, where I want to be, what I\'m optimising for at each stage.'},
+  {name:'Core Values',           space:'core',    ring:8,type:'evergreen',activation:.75,summary:'Foundational values: what I stand for, what I won\'t compromise, and how they show up day to day.'}
 ];
 
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // INSIGHTS
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 (function(){
   const cnt={};
   for(const n of LOBE_NAMES) cnt[n]={total:0,recent:0,sumRing:0};
-  for(const e of ENTRIES){
-    cnt[e.space].total++;
-    cnt[e.space].sumRing+=e.ring;
-    if(e.ring<=2) cnt[e.space].recent++;
-  }
+  for(const e of ENTRIES){cnt[e.space].total++;cnt[e.space].sumRing+=e.ring;if(e.ring<=2)cnt[e.space].recent++;}
   const maxT=Math.max(...LOBE_NAMES.map(n=>cnt[n].total));
   const most=[...LOBE_NAMES].sort((a,b)=>cnt[b].recent-cnt[a].recent)[0];
   const atRisk=ENTRIES.filter(e=>(e.type==='single_use'||e.type==='fast')&&e.ring>=4);
-  const evTotal=ENTRIES.filter(e=>e.type==='evergreen').length;
   const deepest=[...LOBE_NAMES].sort((a,b)=>(cnt[b].sumRing/cnt[b].total)-(cnt[a].sumRing/cnt[a].total))[0];
 
   document.getElementById('ic-active').innerHTML=`<div class="lbl">Most Active Space</div>
@@ -217,17 +206,17 @@ const ENTRIES=[
   if(!atRisk.length) riskHTML+=`<div class="sub">None at risk ✓</div>`;
   else {
     atRisk.slice(0,3).forEach(e=>{riskHTML+=`<div class="risk-item">${e.name}<span>${RINGS[e.ring].label}</span></div>`;});
-    if(atRisk.length>3) riskHTML+=`<div class="sub">+${atRisk.length-3} more</div>`;
+    if(atRisk.length>3)riskHTML+=`<div class="sub">+${atRisk.length-3} more</div>`;
   }
   document.getElementById('ic-risk').innerHTML=riskHTML;
-  document.getElementById('ic-ever').innerHTML=`<div class="lbl">Evergreen Knowledge</div>
-    <div class="big">${evTotal}</div>
-    <div class="sub">Deepest: <span style="color:${LOBES[deepest].hex}">${deepest}</span></div>`;
+
+  document.getElementById('ic-act-note').innerHTML=`<div class="lbl">Activation</div>
+    <div class="act-note">Node <strong style="color:#6655aa">brightness</strong> = how recently cited. <strong style="color:#6655aa">Size</strong> = perishability tier. Activation data matures ~7 June once 2 weeks of telemetry accrue.</div>`;
 })();
 
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // THREE.JS
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -239,43 +228,64 @@ const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,300);
 camera.position.set(0,0,28);
 
 scene.add(new THREE.AmbientLight(0xffffff,.35));
-const pt=new THREE.PointLight(0x8877ee,.45,90);
-pt.position.set(10,10,14); scene.add(pt);
+const pt=new THREE.PointLight(0x8877ee,.42,90);
+pt.position.set(10,10,14);scene.add(pt);
 
-// Faint sphere wireframe only — no BackSide halo
-const wireMat=new THREE.MeshBasicMaterial({wireframe:true,transparent:true,depthWrite:false,color:0x222266,opacity:.045});
-scene.add(new THREE.Mesh(new THREE.SphereGeometry(BR,20,12),wireMat));
+// ── Smooth Voronoi sphere shell (no BackSide — just the surface) ──
+const allSeeds=[], allColors=[];
+for(const name of LOBE_NAMES){
+  const L=LOBES[name], c=new THREE.Color(L.color);
+  for(const s of L.seedsN){
+    allSeeds.push(new THREE.Vector3(s[0],s[1],s[2]));
+    allColors.push(new THREE.Vector3(c.r,c.g,c.b));
+  }
+}
+const NS=allSeeds.length; // 12
 
-// ── Lobe glow volumes ──────────────────────────────────────
+const shellMat=new THREE.ShaderMaterial({
+  uniforms:{seeds:{value:allSeeds},seedColors:{value:allColors}},
+  vertexShader:`varying vec3 vPos,vNorm;
+    void main(){vPos=normalize(position);vNorm=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`#define NS ${NS}
+    uniform vec3 seeds[NS],seedColors[NS];
+    varying vec3 vPos,vNorm;
+    void main(){
+      vec3 d=normalize(vPos);
+      float wts[NS];float tot=0.;
+      for(int i=0;i<NS;i++){float dd=1.-clamp(dot(d,normalize(seeds[i])),-1.,1.);float w=exp(-9.*dd*dd);wts[i]=w;tot+=w;}
+      vec3 col=vec3(0.);
+      for(int i=0;i<NS;i++)col+=(wts[i]/tot)*seedColors[i];
+      float rim=1.-abs(dot(normalize(vNorm),vec3(0.,0.,1.)));
+      gl_FragColor=vec4(col*(0.35+rim*.55),(0.04+rim*.07));
+    }`,
+  transparent:true,side:THREE.FrontSide,depthWrite:false
+});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(BR,96,48),shellMat));
+
+// Faint wireframe on top of shader (gives structural edges without halo)
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(BR,20,12),
+  new THREE.MeshBasicMaterial({wireframe:true,transparent:true,depthWrite:false,color:0x222266,opacity:.04})));
+
+// ── Lobe glow volumes ─────────────────────────────────────
 function makeGlowTex(r,g,b){
   const S=256,cv=document.createElement('canvas');cv.width=S;cv.height=S;
   const ctx=cv.getContext('2d');
   const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
-  gr.addColorStop(0,  `rgba(${r},${g},${b},.80)`);
-  gr.addColorStop(.30,`rgba(${r},${g},${b},.36)`);
-  gr.addColorStop(.62,`rgba(${r},${g},${b},.08)`);
-  gr.addColorStop(1,  `rgba(${r},${g},${b},.00)`);
-  ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);
-  return new THREE.CanvasTexture(cv);
+  gr.addColorStop(0,`rgba(${r},${g},${b},.78)`);gr.addColorStop(.30,`rgba(${r},${g},${b},.34)`);
+  gr.addColorStop(.62,`rgba(${r},${g},${b},.07)`);gr.addColorStop(1,`rgba(${r},${g},${b},.00)`);
+  ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);
 }
-
 const lobeGlow={};
 for(const name of LOBE_NAMES){
   const L=LOBES[name];
-  const mat=new THREE.SpriteMaterial({
-    map:makeGlowTex(...L.rgb),transparent:true,
-    blending:THREE.AdditiveBlending,depthWrite:false,
-    opacity:.32+L.activation*.18
-  });
+  const mat=new THREE.SpriteMaterial({map:makeGlowTex(...L.rgb),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.28+L.activation*.16});
   const sp=new THREE.Sprite(mat);
-  const c=L.centroid, rr=BR*(.36+L.activation*.13);
+  const c=L.centroid,rr=BR*(.35+L.activation*.12);
   sp.position.set(c[0]*rr,c[1]*rr,c[2]*rr);
-  const sz=BR*(1.45+L.activation*.48);
-  sp.scale.setScalar(sz);
-  sp._base={op:.32+L.activation*.18, sz};
-  sp._spd=2*Math.PI/(2.6+(1-L.activation)*5.4);
-  sp._ph=L.phase;
-  lobeGlow[name]=sp; scene.add(sp);
+  const sz=BR*(1.40+L.activation*.46);sp.scale.setScalar(sz);
+  sp._base={op:.28+L.activation*.16,sz};
+  sp._spd=2*Math.PI/(2.6+(1-L.activation)*5.4);sp._ph=L.phase;
+  lobeGlow[name]=sp;scene.add(sp);
 }
 
 // ── Nodes ─────────────────────────────────────────────────
@@ -283,14 +293,10 @@ function makeNodeTex(r,g,b){
   const S=64,cv=document.createElement('canvas');cv.width=S;cv.height=S;
   const ctx=cv.getContext('2d');
   const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
-  gr.addColorStop(0,  `rgba(${r},${g},${b},1.0)`);
-  gr.addColorStop(.20,`rgba(${r},${g},${b},.75)`);
-  gr.addColorStop(.55,`rgba(${r},${g},${b},.18)`);
-  gr.addColorStop(1,  `rgba(${r},${g},${b},.00)`);
-  ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);
-  return new THREE.CanvasTexture(cv);
+  gr.addColorStop(0,`rgba(${r},${g},${b},1.0)`);gr.addColorStop(.20,`rgba(${r},${g},${b},.72)`);
+  gr.addColorStop(.55,`rgba(${r},${g},${b},.15)`);gr.addColorStop(1,`rgba(${r},${g},${b},.00)`);
+  ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);
 }
-
 function uh(n){let x=n^(n>>>16);x=Math.imul(x,0x45d9f3b);x^=x>>>16;return(x>>>0)/4294967295;}
 function coneDir(seed,deg,idx){
   const[sx,sy,sz]=seed;
@@ -298,15 +304,15 @@ function coneDir(seed,deg,idx){
   const ph=uh(idx*13+3)*2*Math.PI;
   const up=Math.abs(sx)<.9?[0,1,0]:[1,0,0];
   let tx=up[1]*sz-up[2]*sy,ty=up[2]*sx-up[0]*sz,tz=up[0]*sy-up[1]*sx;
-  const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1; tx/=tl;ty/=tl;tz/=tl;
+  const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1;tx/=tl;ty/=tl;tz/=tl;
   const bx=sy*tz-sz*ty,by=sz*tx-sx*tz,bz=sx*ty-sy*tx;
   const st=Math.sin(th),ct=Math.cos(th),sp2=Math.sin(ph),cp=Math.cos(ph);
-  return vN([tx*st*cp+bx*st*sp2+sx*ct, ty*st*cp+by*st*sp2+sy*ct, tz*st*cp+bz*st*sp2+sz*ct]);
+  return vN([tx*st*cp+bx*st*sp2+sx*ct,ty*st*cp+by*st*sp2+sy*ct,tz*st*cp+bz*st*sp2+sz*ct]);
 }
 
 const nodeMeshes=[];
 const nodeTex={};
-for(const n of LOBE_NAMES) nodeTex[n]=makeNodeTex(...LOBES[n].rgb);
+for(const n of LOBE_NAMES)nodeTex[n]=makeNodeTex(...LOBES[n].rgb);
 
 let gIdx=0;
 for(const name of LOBE_NAMES){
@@ -315,17 +321,20 @@ for(const name of LOBE_NAMES){
     const seed=L.seedsN[i%L.seedsN.length];
     const dir=coneDir(seed,30,gIdx++);
     const rr=RINGS[e.ring].r*BR;
-    const alpha=PALPHA[e.type], nsz=PSIZE[e.type];
+    // Base alpha blends perishability AND activation
+    const alpha=PALPHA[e.type]*(.55+e.activation*.45);
+    const nsz=PSIZE[e.type];
 
     const gMat=new THREE.SpriteMaterial({map:nodeTex[name],transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:alpha});
     const gSp=new THREE.Sprite(gMat);
     gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);
-    gSp.scale.setScalar(nsz*BR); scene.add(gSp);
+    gSp.scale.setScalar(nsz*BR*(0.8+e.activation*.4));// size also reflects activation
+    scene.add(gSp);
 
     const hit=new THREE.Mesh(new THREE.SphereGeometry(nsz*.48*BR,5,3),new THREE.MeshBasicMaterial({visible:false}));
     hit.position.copy(gSp.position);
     hit.userData={entry:e,mat:gMat,alpha,sprite:gSp};
-    scene.add(hit); nodeMeshes.push(hit);
+    scene.add(hit);nodeMeshes.push(hit);
   });
 }
 
@@ -334,69 +343,55 @@ const labelsDiv=document.getElementById('labels');
 const lobeLbls={};
 for(const name of LOBE_NAMES){
   const el=document.createElement('div');
-  el.className='lobe-lbl'; el.textContent=name; el.style.color=LOBES[name].hex;
-  labelsDiv.appendChild(el); lobeLbls[name]=el;
+  el.className='lobe-lbl';el.textContent=name;el.style.color=LOBES[name].hex;
+  labelsDiv.appendChild(el);lobeLbls[name]=el;
 }
 const nodeLbl=document.createElement('div');
-nodeLbl.className='node-lbl'; labelsDiv.appendChild(nodeLbl);
+nodeLbl.className='node-lbl';labelsDiv.appendChild(nodeLbl);
 
-function project(wp){
-  const v=wp.clone(); v.project(camera);
-  return{x:(v.x+1)/2*innerWidth, y:-(v.y-1)/2*innerHeight};
-}
+function project(wp){const v=wp.clone();v.project(camera);return{x:(v.x+1)/2*innerWidth,y:-(v.y-1)/2*innerHeight};}
 
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // INTERACTION — momentum rotation
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 let autoRotate=true;
-let rotX=.18, rotY=0;
-let velX=0, velY=0;           // angular velocity (rad/frame)
-let camZ=28, targetZ=28;
-let isDrag=false, lastX=0, lastY=0, didDrag=false;
-let activeFilter='all', hoveredSpace=null;
+let rotX=.18,rotY=0;
+let velX=0,velY=0;
+let camZ=28,targetZ=28;
+let isDrag=false,lastX=0,lastY=0,didDrag=false;
+let activeFilter='all',hoveredSpace=null;
 
-const AUTO_VEL   = 0.0032;    // target auto-rotate speed
-const FRICTION   = 0.88;      // velocity decay when released
-const DRAG_GAIN  = 0.006;     // mouse→velocity gain
+// Reduced sensitivity: smaller gain + velocity cap
+const AUTO_VEL  = 0.0030;
+const FRICTION  = 0.88;
+const DRAG_GAIN = 0.0018;  // was 0.006 — much less twitchy
+const VEL_CAP   = 0.035;   // max spin speed
 
 const resumeBtn=document.getElementById('resumeBtn');
 resumeBtn.addEventListener('click',()=>{autoRotate=true;resumeBtn.style.display='none';});
 
-function stopAuto(){
-  if(!autoRotate) return;
-  autoRotate=false; resumeBtn.style.display='block';
-}
+function stopAuto(){if(!autoRotate)return;autoRotate=false;resumeBtn.style.display='block';}
 
-canvas.addEventListener('mousedown',e=>{
-  isDrag=true; lastX=e.clientX; lastY=e.clientY; didDrag=false;
-  stopAuto();
-});
+canvas.addEventListener('mousedown',e=>{isDrag=true;lastX=e.clientX;lastY=e.clientY;didDrag=false;stopAuto();});
 window.addEventListener('mousemove',e=>{
   if(isDrag){
-    const dx=e.clientX-lastX, dy=e.clientY-lastY;
-    if(Math.abs(dx)+Math.abs(dy)>1) didDrag=true;
-    velY+=dx*DRAG_GAIN;   // accumulate impulse
-    velX+=dy*DRAG_GAIN;
-    lastX=e.clientX; lastY=e.clientY;
-  } else {
-    doHover(e.clientX,e.clientY);
-  }
+    const dx=e.clientX-lastX,dy=e.clientY-lastY;
+    if(Math.abs(dx)+Math.abs(dy)>1)didDrag=true;
+    velY=Math.max(-VEL_CAP,Math.min(VEL_CAP,velY+dx*DRAG_GAIN));
+    velX=Math.max(-VEL_CAP,Math.min(VEL_CAP,velX+dy*DRAG_GAIN));
+    lastX=e.clientX;lastY=e.clientY;
+  } else {doHover(e.clientX,e.clientY);}
 });
-window.addEventListener('mouseup',e=>{
-  if(isDrag&&!didDrag) doClick(e.clientX,e.clientY);
-  isDrag=false;
-  // velocity carries on, friction takes over
-});
-canvas.addEventListener('wheel',e=>{
-  targetZ=Math.max(14,Math.min(50,targetZ+e.deltaY*.04));
-},{passive:true});
+window.addEventListener('mouseup',e=>{if(isDrag&&!didDrag)doClick(e.clientX,e.clientY);isDrag=false;});
+canvas.addEventListener('wheel',e=>{targetZ=Math.max(14,Math.min(50,targetZ+e.deltaY*.04));},{passive:true});
 
 let tX=0,tY=0;
 canvas.addEventListener('touchstart',e=>{tX=e.touches[0].clientX;tY=e.touches[0].clientY;stopAuto();},{passive:true});
 canvas.addEventListener('touchmove',e=>{
   const dx=e.touches[0].clientX-tX,dy=e.touches[0].clientY-tY;
-  velY+=dx*DRAG_GAIN; velX+=dy*DRAG_GAIN;
-  tX=e.touches[0].clientX; tY=e.touches[0].clientY;
+  velY=Math.max(-VEL_CAP,Math.min(VEL_CAP,velY+dx*DRAG_GAIN));
+  velX=Math.max(-VEL_CAP,Math.min(VEL_CAP,velX+dy*DRAG_GAIN));
+  tX=e.touches[0].clientX;tY=e.touches[0].clientY;
 },{passive:true});
 
 const ray=new THREE.Raycaster();
@@ -432,34 +427,41 @@ function doHover(cx,cy){
       }
     }
     const sc=project(hit.position);
-    nodeLbl.style.left=sc.x+'px'; nodeLbl.style.top=sc.y+'px';
+    nodeLbl.style.left=sc.x+'px';nodeLbl.style.top=sc.y+'px';
     nodeLbl.innerHTML=`${e.name}<span class="nl-sub">${RINGS[e.ring].label} ago · ${e.type}</span>`;
     nodeLbl.classList.add('on');
   } else {
     canvas.style.cursor='default';
-    if(hoveredSpace){hoveredSpace=null; applyFilter();}
+    if(hoveredSpace){hoveredSpace=null;applyFilter();}
     nodeLbl.classList.remove('on');
   }
 }
 
 function doClick(cx,cy){
   const hit=getHit(cx,cy);
-  if(hit) showPanel(hit); else document.getElementById('panel').classList.remove('on');
+  if(hit)showPanel(hit);else document.getElementById('panel').classList.remove('on');
 }
 
 function showPanel(hit){
-  const e=hit.userData.entry, L=LOBES[e.space];
+  const e=hit.userData.entry,L=LOBES[e.space];
   document.getElementById('pSp').textContent=e.space;
   document.getElementById('pSp').style.color=L.hex;
   document.getElementById('pTi').textContent=e.name;
-  document.getElementById('pAge').textContent=RINGS[e.ring].label+' ago';
-  document.getElementById('pDecay').textContent=DECAY_LABEL[e.type];
-  document.getElementById('pDepth').textContent='Layer '+(e.ring+1)+' of '+RINGS.length;
-  document.getElementById('pPerish').textContent=e.type;
-  // Depth bar: ring 0 = full (surface), ring 8 = near-empty (deep core)
   const depthPct=Math.round((1-e.ring/8)*100);
-  document.getElementById('pDepthBar').style.width=depthPct+'%';
-  document.getElementById('pDepthBar').style.background=L.hex+'88';
+  const actPct=Math.round(e.activation*100);
+  document.getElementById('pBody').innerHTML=`
+    <div class="p-summary">${e.summary}</div>
+    <div class="p-divider"></div>
+    <div class="p-act-wrap">
+      <div class="p-act-lbl">Activation · ${actPct}%</div>
+      <div class="p-act-track"><div class="p-act-fill" style="width:${actPct}%;background:${L.hex}cc"></div></div>
+    </div>
+    <div class="p-row"><span class="p-key">Age</span><span class="p-val">${RINGS[e.ring].label} ago</span></div>
+    <div class="p-row"><span class="p-key">Decay</span><span class="p-val">${DECAY_LABEL[e.type]}</span></div>
+    <div class="p-row"><span class="p-key">Depth</span><span class="p-val">Layer ${e.ring+1} of ${RINGS.length}</span></div>
+    <div class="p-divider"></div>
+    <div class="p-act-lbl" style="margin-bottom:5px">Recency (surface = recent)</div>
+    <div class="p-depth-track"><div class="p-depth-fill" style="width:${depthPct}%;background:${L.hex}88"></div></div>`;
   document.getElementById('pLink').href='index.html?entry='+encodeURIComponent(e.name);
   document.getElementById('panel').classList.add('on');
 }
@@ -469,80 +471,71 @@ document.querySelectorAll('.fbtn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     activeFilter=btn.dataset.f;
     document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
-    btn.classList.add('on');
-    hoveredSpace=null; applyFilter();
+    btn.classList.add('on');hoveredSpace=null;applyFilter();
   });
 });
 
 window.addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
 });
 
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // RENDER LOOP
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 function animate(){
   requestAnimationFrame(animate);
   const t=Date.now()*.001;
 
-  // ── Velocity / momentum ──
   if(autoRotate){
-    // Ease velocity toward auto speed (smooth start)
-    velY += (AUTO_VEL - velY) * 0.04;
-    velX += (0 - velX) * 0.04;
+    velY+=(AUTO_VEL-velY)*.04;  // smooth acceleration into auto-spin
+    velX+=(0-velX)*.04;
   } else if(!isDrag){
-    // Friction decay (smooth stop)
-    velY *= FRICTION;
-    velX *= FRICTION;
+    velY*=FRICTION;              // smooth deceleration after release
+    velX*=FRICTION;
   }
-  // Clamp and apply
-  rotY += velY;
-  rotX += velX;
-  rotX = Math.max(-1.4, Math.min(1.4, rotX));
+  rotY+=velY;rotX+=velX;
+  rotX=Math.max(-1.4,Math.min(1.4,rotX));
 
-  camZ += (targetZ-camZ)*.065;
-  camera.position.x = Math.sin(rotY)*Math.cos(rotX)*camZ;
-  camera.position.y = Math.sin(rotX)*camZ;
-  camera.position.z = Math.cos(rotY)*Math.cos(rotX)*camZ;
+  camZ+=(targetZ-camZ)*.065;
+  camera.position.x=Math.sin(rotY)*Math.cos(rotX)*camZ;
+  camera.position.y=Math.sin(rotX)*camZ;
+  camera.position.z=Math.cos(rotY)*Math.cos(rotX)*camZ;
   camera.lookAt(0,0,0);
 
-  // ── Lobe breathing only (no zone highlights) ──
+  // Lobe breathing — pure, no zone boost
   for(const name of LOBE_NAMES){
     const sp=lobeGlow[name];
-    const breath=Math.sin(t*sp._spd+sp._ph);
+    const b=Math.sin(t*sp._spd+sp._ph);
     const vis=activeFilter==='all'||name===activeFilter;
-    sp.scale.setScalar(sp._base.sz*(1+breath*.07));
-    sp.material.opacity=Math.min(.88, sp._base.op*(1+breath*.22)*(vis?1:.06));
+    sp.scale.setScalar(sp._base.sz*(1+b*.07));
+    sp.material.opacity=Math.min(.85,sp._base.op*(1+b*.22)*(vis?1:.06));
   }
 
-  // ── Node pulse (single_use / fast flicker) ──
+  // Node pulse
   if(!hoveredSpace){
     for(const m of nodeMeshes){
       const{entry,mat,alpha}=m.userData;
       const vis=activeFilter==='all'||entry.space===activeFilter;
       if(!vis){mat.opacity=alpha*.06;continue;}
       let p=1;
-      if(entry.type==='single_use') p=.65+Math.sin(t*2.5+m.id*.9)*.35;
-      else if(entry.type==='fast')  p=.82+Math.sin(t*1.4+m.id*.5)*.18;
+      if(entry.type==='single_use')p=.65+Math.sin(t*2.5+m.id*.9)*.35;
+      else if(entry.type==='fast') p=.82+Math.sin(t*1.4+m.id*.5)*.18;
       mat.opacity=Math.min(1,alpha*p);
     }
   }
 
-  // ── HTML lobe labels ──
+  // HTML lobe labels — show when facing camera
   const toCamera=camera.position.clone().normalize();
   for(const name of LOBE_NAMES){
     const c=LOBES[name].centroid;
     const dot=toCamera.x*c[0]+toCamera.y*c[1]+toCamera.z*c[2];
-    const show=dot>0.30&&(activeFilter==='all'||activeFilter===name);
+    const show=dot>0.28&&(activeFilter==='all'||activeFilter===name);
     const el=lobeLbls[name];
     if(show){
       const wp=new THREE.Vector3(c[0],c[1],c[2]).multiplyScalar(BR*1.06);
       const sc=project(wp);
-      el.style.left=sc.x+'px'; el.style.top=sc.y+'px';
-      el.classList.add('on');
-    } else { el.classList.remove('on'); }
+      el.style.left=sc.x+'px';el.style.top=sc.y+'px';el.classList.add('on');
+    } else {el.classList.remove('on');}
   }
 
   renderer.render(scene,camera);
