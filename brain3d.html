@@ -6,310 +6,343 @@
 <title>Second Brain — 3D View</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0a0a0f; color: #e8e8f0; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden; height: 100vh; }
-#canvas-wrap { position: fixed; inset: 0; }
-canvas { display: block; width: 100%; height: 100%; }
-
-/* HUD */
-#hud { position: fixed; top: 0; left: 0; right: 0; pointer-events: none; }
-#header { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; }
-#header-left { display: flex; align-items: baseline; gap: 10px; }
-#header-title { font-size: 1rem; font-weight: 500; color: #e8e8f0; letter-spacing: -.01em; }
-#header-sub { font-size: .72rem; color: #686880; }
-#header-right { pointer-events: all; display: flex; gap: 8px; }
-.hud-btn { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: #a8a8c0; font-size: .72rem; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: background .15s; }
-.hud-btn:hover { background: rgba(255,255,255,.12); color: #e8e8f0; }
-.hud-btn.active { background: rgba(120,100,220,.25); border-color: rgba(120,100,220,.5); color: #c0b0ff; }
-
-/* Legend */
-#legend { position: fixed; bottom: 24px; left: 24px; display: flex; flex-direction: column; gap: 6px; }
-.legend-row { display: flex; align-items: center; gap: 8px; font-size: .72rem; color: #a8a8c0; }
-.legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-
-/* Tooltip */
-#tooltip { position: fixed; pointer-events: none; background: rgba(16,16,28,.92); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 10px 14px; max-width: 220px; opacity: 0; transition: opacity .15s; backdrop-filter: blur(8px); }
-#tooltip-title { font-size: .82rem; font-weight: 500; color: #e8e8f0; margin-bottom: 3px; }
-#tooltip-meta { font-size: .72rem; color: #686880; line-height: 1.5; }
-
-/* Stats bar */
-#stats { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 6px; text-align: right; }
-.stat { font-size: .7rem; color: #686880; }
-.stat span { color: #a8a8c0; font-weight: 500; }
-
-/* Instruction */
-#instructions { position: fixed; bottom: 70px; right: 24px; font-size: .68rem; color: #444460; text-align: right; line-height: 1.7; }
-
-#back-link { pointer-events: all; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #06060c; }
+#c { display: block; width: 100%; height: 100%; }
+#hud { position: fixed; inset: 0; pointer-events: none; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+#header { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; }
+#title { font-size: .95rem; font-weight: 500; color: rgba(255,255,255,.75); letter-spacing: -.01em; }
+#subtitle { font-size: .68rem; color: rgba(255,255,255,.3); margin-top: 2px; }
+#filters { pointer-events: all; display: flex; gap: 6px; flex-wrap: wrap; }
+.f-btn { background: rgba(255,255,255,.06); border: .5px solid rgba(255,255,255,.14); color: rgba(255,255,255,.45); font-size: .7rem; font-family: inherit; padding: 4px 11px; border-radius: 5px; cursor: pointer; transition: all .15s; }
+.f-btn:hover { background: rgba(255,255,255,.1); color: rgba(255,255,255,.7); }
+.f-btn.active { color: #fff; border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.12); }
+#legend { position: fixed; bottom: 22px; left: 22px; display: flex; flex-direction: column; gap: 5px; }
+.lr { display: flex; align-items: center; gap: 7px; font-size: .68rem; color: rgba(255,255,255,.38); }
+.ld { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+#stats { position: fixed; bottom: 22px; right: 22px; text-align: right; }
+.stat { font-size: .68rem; color: rgba(255,255,255,.3); line-height: 1.8; }
+.stat span { color: rgba(255,255,255,.55); }
+#tip { position: fixed; pointer-events: none; background: rgba(10,10,22,.92); border: .5px solid rgba(255,255,255,.14); border-radius: 8px; padding: 9px 13px; max-width: 210px; opacity: 0; transition: opacity .12s; }
+#tip-title { font-size: .8rem; font-weight: 500; color: #e8e8f4; margin-bottom: 3px; }
+#tip-meta { font-size: .68rem; color: rgba(255,255,255,.42); line-height: 1.6; }
+#hint { position: fixed; bottom: 65px; right: 22px; font-size: .62rem; color: rgba(255,255,255,.2); text-align: right; line-height: 1.9; }
+#back { position: fixed; top: 16px; right: 22px; pointer-events: all; }
+#back a { font-size: .7rem; color: rgba(255,255,255,.38); background: rgba(255,255,255,.06); border: .5px solid rgba(255,255,255,.12); border-radius: 5px; padding: 4px 10px; text-decoration: none; transition: all .15s; }
+#back a:hover { color: rgba(255,255,255,.7); background: rgba(255,255,255,.1); }
 </style>
 </head>
 <body>
-
-<div id="canvas-wrap"><canvas id="c"></canvas></div>
-
+<canvas id="c"></canvas>
 <div id="hud">
   <div id="header">
-    <div id="header-left">
-      <div id="header-title">Second Brain</div>
-      <div id="header-sub">3D view · 37 entries</div>
+    <div>
+      <div id="title">Second Brain</div>
+      <div id="subtitle">3D view &middot; 37 entries &middot; depth = recency</div>
     </div>
-    <div id="header-right">
-      <button class="hud-btn active" id="btn-all" onclick="filterSpace('all')">All</button>
-      <button class="hud-btn" id="btn-core" onclick="filterSpace('core')">Core</button>
-      <button class="hud-btn" id="btn-work" onclick="filterSpace('work')">Work</button>
-      <button class="hud-btn" id="btn-personal" onclick="filterSpace('personal')">Personal</button>
-      <button class="hud-btn" id="btn-family" onclick="filterSpace('family')">Family</button>
-      <button class="hud-btn" id="btn-leisure" onclick="filterSpace('leisure')">Leisure</button>
-      <a id="back-link" href="context-manager-v05.html" class="hud-btn">← Manager</a>
+    <div id="filters">
+      <button class="f-btn active" data-space="all">All</button>
+      <button class="f-btn" data-space="work">Work</button>
+      <button class="f-btn" data-space="personal">Personal</button>
+      <button class="f-btn" data-space="family">Family</button>
+      <button class="f-btn" data-space="leisure">Leisure</button>
+      <button class="f-btn" data-space="core">Core</button>
     </div>
   </div>
+  <div id="back"><a href="index.html">&#8592; Manager</a></div>
 </div>
-
 <div id="legend">
-  <div class="legend-row"><div class="legend-dot" style="background:#9090ff"></div>core</div>
-  <div class="legend-row"><div class="legend-dot" style="background:#7866d4"></div>work</div>
-  <div class="legend-row"><div class="legend-dot" style="background:#2fba8a"></div>personal</div>
-  <div class="legend-row"><div class="legend-dot" style="background:#e0704a"></div>family</div>
-  <div class="legend-row"><div class="legend-dot" style="background:#4a9fe0"></div>leisure</div>
-  <div class="legend-row" style="margin-top:6px"><div class="legend-dot" style="background:#e8e8f0;width:5px;height:5px"></div><span style="color:#686880">node size = activation</span></div>
+  <div class="lr"><div class="ld" style="background:#7866d4"></div>work</div>
+  <div class="lr"><div class="ld" style="background:#2fba8a"></div>personal</div>
+  <div class="lr"><div class="ld" style="background:#e0704a"></div>family</div>
+  <div class="lr"><div class="ld" style="background:#4a9fe0"></div>leisure</div>
+  <div class="lr"><div class="ld" style="background:#b0a8ff"></div>core</div>
+  <div class="lr" style="margin-top:5px;color:rgba(255,255,255,.22)"><div class="ld" style="background:#fff"></div>evergreen &middot; brightest</div>
+  <div class="lr" style="color:rgba(255,255,255,.22)"><div class="ld" style="background:#444"></div>single_use &middot; dimmest</div>
 </div>
-
-<div id="tooltip">
-  <div id="tooltip-title"></div>
-  <div id="tooltip-meta"></div>
-</div>
-
 <div id="stats">
-  <div class="stat">Active entries <span>37</span></div>
+  <div class="stat">Active <span>37</span></div>
   <div class="stat">Spaces <span>5</span></div>
   <div class="stat">Telemetry <span style="color:#2fba8a">live</span></div>
 </div>
-
-<div id="instructions">drag to rotate · scroll to zoom · hover nodes</div>
+<div id="hint">drag &middot; scroll to dive &middot; hover nodes</div>
+<div id="tip"><div id="tip-title"></div><div id="tip-meta"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const ENTRIES = [
-  { title:'Career Arc', space:'core', layer:'artifact', activation:3, perishability:'evergreen' },
-  { title:'Core Values', space:'core', layer:'behavioural', activation:3, perishability:'evergreen' },
-  { title:'Personal Working Style', space:'core', layer:'behavioural', activation:2, perishability:'evergreen' },
-  { title:'How I Build', space:'work', layer:'workflow', activation:2, perishability:'slow' },
-  { title:'Career Transition Target', space:'work', layer:'artifact', activation:2, perishability:'fast' },
-  { title:'100 Ideas Portfolio', space:'work', layer:'artifact', activation:2, perishability:'slow' },
-  { title:'InspectPro', space:'work', layer:'artifact', activation:1, perishability:'slow' },
-  { title:'MetrIQ', space:'work', layer:'artifact', activation:1, perishability:'slow' },
-  { title:'SplitLah', space:'work', layer:'artifact', activation:1, perishability:'slow' },
-  { title:'Mapletree VP Experience', space:'work', layer:'artifact', activation:2, perishability:'slow' },
-  { title:'Coca-Cola Outcome', space:'work', layer:'artifact', activation:1, perishability:'fast' },
-  { title:'FM Industry Focus', space:'work', layer:'domain', activation:1, perishability:'slow' },
-  { title:'Technical Environment', space:'work', layer:'domain', activation:1, perishability:'slow' },
-  { title:'Local LLM Infrastructure', space:'work', layer:'domain', activation:1, perishability:'slow' },
-  { title:'Second Brain Security', space:'work', layer:'workflow', activation:1, perishability:'slow' },
-  { title:'Weekly Codex Scan', space:'work', layer:'workflow', activation:1, perishability:'slow' },
-  { title:'CV Design Framework', space:'work', layer:'domain', activation:1, perishability:'slow' },
-  { title:'On investments', space:'personal', layer:'domain', activation:1, perishability:'slow' },
-  { title:'Motorcycle Choice', space:'personal', layer:'domain', activation:1, perishability:'fast' },
-  { title:'Mount Kinabalu', space:'personal', layer:'artifact', activation:1, perishability:'evergreen' },
-  { title:'BMW COE Renewal', space:'personal', layer:'domain', activation:1, perishability:'fast' },
-  { title:'Anniversary Trip', space:'personal', layer:'domain', activation:1, perishability:'single_use' },
-  { title:'How I roll outside work', space:'personal', layer:'behavioural', activation:1, perishability:'slow' },
-  { title:'Evenings Out', space:'personal', layer:'behavioural', activation:1, perishability:'slow' },
-  { title:'Cost of Living 2026', space:'personal', layer:'domain', activation:0, perishability:'fast' },
-  { title:'Health & Exercise', space:'personal', layer:'behavioural', activation:1, perishability:'slow' },
-  { title:'Shanghai Masters', space:'personal', layer:'domain', activation:0, perishability:'single_use' },
-  { title:'Inner Circle', space:'family', layer:'artifact', activation:1, perishability:'evergreen' },
-  { title:'Inner Circle Full', space:'family', layer:'artifact', activation:1, perishability:'evergreen' },
-  { title:'Cheryl', space:'family', layer:'artifact', activation:1, perishability:'slow' },
-  { title:'Ryan', space:'family', layer:'artifact', activation:1, perishability:'slow' },
-  { title:'Jake', space:'family', layer:'artifact', activation:1, perishability:'slow' },
-  { title:'Motorcycle Touring', space:'leisure', layer:'domain', activation:1, perishability:'slow' },
-  { title:'Travel', space:'leisure', layer:'domain', activation:1, perishability:'slow' },
-  { title:'South Korea Dec', space:'leisure', layer:'artifact', activation:0, perishability:'fast' },
-  { title:'Music / Evenings', space:'leisure', layer:'behavioural', activation:1, perishability:'slow' },
-  { title:'EnigmaPrint', space:'work', layer:'artifact', activation:0, perishability:'slow' },
+const BR = 10;
+
+const RINGS = [
+  {label:'2d',r:.965},{label:'1w',r:.905},{label:'3w',r:.840},
+  {label:'2mo',r:.755},{label:'4mo',r:.650},{label:'8mo',r:.525},
+  {label:'1.5yr',r:.390},{label:'4yr',r:.250},{label:'10yr+',r:.115}
 ];
 
-const SPACE_COLORS = {
-  core:    0x9090ff,
-  work:    0x7866d4,
-  personal:0x2fba8a,
-  family:  0xe0704a,
-  leisure: 0x4a9fe0,
-};
-
-const SPACE_CENTERS = {
-  core:    { x: 0, y: 0, z: 0 },
-  work:    { x: 5, y: 1, z: -2 },
-  personal:{ x:-4, y:-1, z: 2 },
-  family:  { x: 1, y: 4, z: 3 },
-  leisure: { x:-1, y:-4, z:-4 },
-};
-
-// Scene setup
-const canvas = document.getElementById('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x0a0a0f, 1);
-
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x0a0a0f, 0.045);
-
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
-camera.position.set(0, 0, 22);
-
-// Ambient + point lights
-scene.add(new THREE.AmbientLight(0x8888cc, 0.4));
-const pt1 = new THREE.PointLight(0x9090ff, 1.5, 40);
-pt1.position.set(0, 8, 5);
-scene.add(pt1);
-const pt2 = new THREE.PointLight(0x2fba8a, 1.2, 30);
-pt2.position.set(-8, -5, -2);
-scene.add(pt2);
-
-// Background particles
-const starGeo = new THREE.BufferGeometry();
-const starVerts = [];
-for (let i = 0; i < 800; i++) {
-  starVerts.push((Math.random()-0.5)*120, (Math.random()-0.5)*120, (Math.random()-0.5)*120);
+function noise3(x,y,z){
+  return Math.sin(x*1.37+y*0.91+z*1.73+1.10)*0.50
+        +Math.sin(x*0.83-y*1.49+z*0.61+2.73)*0.30
+        +Math.sin(x*2.11+y*1.13-z*1.29+0.43)*0.20;
 }
-starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts, 3));
-scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color:0x334455, size:0.08 })));
+function norm(v){const l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);return[v[0]/l,v[1]/l,v[2]/l];}
 
-// Connection lines between entries in same space
-const lineMat = new THREE.LineBasicMaterial({ color:0x334466, opacity:0.25, transparent:true });
+const LOBES={
+  work:    {hex:0x7866d4,rgb:[120,102,212],activation:.85,seeds:[norm([.70,.20,.50]),norm([.50,-.20,.80]),norm([.80,.50,.10]),norm([.30,.40,.70])]},
+  personal:{hex:0x2fba8a,rgb:[47,186,138], activation:.55,seeds:[norm([-.60,.30,.50]),norm([-.50,.50,.40]),norm([-.70,.00,.45])]},
+  family:  {hex:0xe0704a,rgb:[224,112,74],  activation:.38,seeds:[norm([.40,-.60,.40]),norm([.65,-.38,-.22])]},
+  leisure: {hex:0x4a9fe0,rgb:[74,159,224],  activation:.32,seeds:[norm([-.40,-.58,.32]),norm([-.52,-.42,-.32])]},
+  core:    {hex:0xb0a8ff,rgb:[176,168,255], activation:.72,seeds:[norm([-.08,.55,-.72])]}
+};
+const LOBE_NAMES=Object.keys(LOBES);
 
-// Build nodes
-const nodeMeshes = [];
-const nodePositions = [];
-
-function buildNodes(filterSpc) {
-  // Remove old nodes and lines
-  nodeMeshes.forEach(m => scene.remove(m));
-  nodeMeshes.length = 0;
-  scene.children.filter(c => c.isLine).forEach(l => scene.remove(l));
-
-  const visible = ENTRIES.filter(e => filterSpc === 'all' || e.space === filterSpc);
-
-  const spaceNodes = {};
-  visible.forEach((entry, i) => {
-    const center = SPACE_CENTERS[entry.space];
-    const radius = 2.5 + Math.random() * 1.8;
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    const x = center.x + radius * Math.sin(phi) * Math.cos(theta);
-    const y = center.y + radius * Math.sin(phi) * Math.sin(theta);
-    const z = center.z + radius * Math.cos(phi);
-
-    const size = entry.activation === 3 ? 0.32 : entry.activation === 2 ? 0.22 : entry.activation === 1 ? 0.15 : 0.1;
-    const geo = new THREE.SphereGeometry(size, 16, 16);
-    const mat = new THREE.MeshPhongMaterial({
-      color: SPACE_COLORS[entry.space],
-      emissive: SPACE_COLORS[entry.space],
-      emissiveIntensity: entry.activation >= 2 ? 0.5 : 0.2,
-      shininess: 80,
-      transparent: true,
-      opacity: filterSpc === 'all' || entry.space === filterSpc ? 1 : 0.15,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, y, z);
-    mesh.userData = { entry, baseY: y, phase: Math.random() * Math.PI * 2 };
-    scene.add(mesh);
-    nodeMeshes.push(mesh);
-    nodePositions.push(new THREE.Vector3(x, y, z));
-
-    if (!spaceNodes[entry.space]) spaceNodes[entry.space] = [];
-    spaceNodes[entry.space].push(new THREE.Vector3(x, y, z));
-  });
-
-  // Draw intra-space lines (connect first 3 within each space)
-  Object.values(spaceNodes).forEach(pts => {
-    for (let i = 0; i < pts.length - 1 && i < 4; i++) {
-      const geo = new THREE.BufferGeometry().setFromPoints([pts[i], pts[i+1]]);
-      const line = new THREE.Line(geo, lineMat);
-      line.isLine = true;
-      scene.add(line);
+function getLobe(x,y,z){
+  const l=Math.sqrt(x*x+y*y+z*z)||1;
+  const ux=x/l,uy=y/l,uz=z/l;
+  const n=noise3(ux*2.8,uy*2.8,uz*2.8)*0.28;
+  const nx=ux+n,ny=uy+n*.82,nz=uz+n*1.10;
+  let best='work',minD=Infinity;
+  for(const name of LOBE_NAMES){
+    for(const s of LOBES[name].seeds){
+      const d=(nx-s[0])*(nx-s[0])+(ny-s[1])*(ny-s[1])+(nz-s[2])*(nz-s[2]);
+      if(d<minD){minD=d;best=name;}
     }
-  });
+  }
+  return best;
 }
 
-buildNodes('all');
+const ENTRIES=[
+  {title:'Career Arc',            space:'core',    perishability:'evergreen',ring:8},
+  {title:'Core Values',           space:'core',    perishability:'evergreen',ring:8},
+  {title:'Personal Working Style',space:'core',    perishability:'evergreen',ring:5},
+  {title:'How I Build',           space:'work',    perishability:'slow',     ring:5},
+  {title:'Career Transition',     space:'work',    perishability:'fast',     ring:2},
+  {title:'100 Ideas Portfolio',   space:'work',    perishability:'slow',     ring:3},
+  {title:'InspectPro',            space:'work',    perishability:'slow',     ring:4},
+  {title:'MetrIQ',                space:'work',    perishability:'slow',     ring:5},
+  {title:'SplitLah',              space:'work',    perishability:'slow',     ring:4},
+  {title:'Mapletree VP',          space:'work',    perishability:'slow',     ring:6},
+  {title:'Coca-Cola Outcome',     space:'work',    perishability:'fast',     ring:1},
+  {title:'FM Industry Focus',     space:'work',    perishability:'slow',     ring:5},
+  {title:'Technical Environment', space:'work',    perishability:'slow',     ring:3},
+  {title:'Local LLM',             space:'work',    perishability:'slow',     ring:3},
+  {title:'Second Brain Security', space:'work',    perishability:'slow',     ring:2},
+  {title:'Weekly Codex Scan',     space:'work',    perishability:'slow',     ring:2},
+  {title:'CV Design Framework',   space:'work',    perishability:'slow',     ring:4},
+  {title:'EnigmaPrint',           space:'work',    perishability:'slow',     ring:4},
+  {title:'On investments',        space:'personal',perishability:'slow',     ring:5},
+  {title:'Motorcycle Choice',     space:'personal',perishability:'fast',     ring:1},
+  {title:'Mount Kinabalu',        space:'personal',perishability:'evergreen',ring:6},
+  {title:'BMW COE Renewal',       space:'personal',perishability:'fast',     ring:2},
+  {title:'Anniversary Trip',      space:'personal',perishability:'single_use',ring:0},
+  {title:'How I roll',            space:'personal',perishability:'slow',     ring:5},
+  {title:'Evenings Out',          space:'personal',perishability:'slow',     ring:4},
+  {title:'Cost of Living 2026',   space:'personal',perishability:'fast',     ring:2},
+  {title:'Shanghai Masters',      space:'personal',perishability:'single_use',ring:0},
+  {title:'Inner Circle',          space:'family',  perishability:'evergreen',ring:5},
+  {title:'Inner Circle Full',     space:'family',  perishability:'evergreen',ring:5},
+  {title:'Cheryl',                space:'family',  perishability:'slow',     ring:3},
+  {title:'Ryan',                  space:'family',  perishability:'slow',     ring:3},
+  {title:'Jake',                  space:'family',  perishability:'slow',     ring:3},
+  {title:'Motorcycle Touring',    space:'leisure', perishability:'slow',     ring:4},
+  {title:'Travel',                space:'leisure', perishability:'slow',     ring:5},
+  {title:'South Korea Dec',       space:'leisure', perishability:'fast',     ring:2},
+  {title:'Music / Evenings',      space:'leisure', perishability:'slow',     ring:4},
+  {title:'Health & Exercise',     space:'personal',perishability:'slow',     ring:4}
+];
 
-// Orbit controls (manual — no external dep needed)
-let isDragging = false, lastMouse = { x:0, y:0 };
-let rotX = 0.2, rotY = 0;
-const pivot = new THREE.Object3D();
-scene.add(pivot);
+const PALPHA={evergreen:1.0,slow:.68,fast:.38,single_use:.18};
+const PSIZE ={evergreen:.28,slow:.20,fast:.16,single_use:.13};
 
-canvas.addEventListener('mousedown', e => { isDragging = true; lastMouse = { x:e.clientX, y:e.clientY }; });
-window.addEventListener('mouseup', () => isDragging = false);
-window.addEventListener('mousemove', e => {
-  if (isDragging) {
-    rotY += (e.clientX - lastMouse.x) * 0.005;
-    rotX += (e.clientY - lastMouse.y) * 0.005;
-    rotX = Math.max(-1.2, Math.min(1.2, rotX));
-    lastMouse = { x:e.clientX, y:e.clientY };
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setClearColor(0x06060c,1);
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x06060c,0.026);
+
+const camera=new THREE.PerspectiveCamera(52,window.innerWidth/window.innerHeight,0.1,200);
+camera.position.set(0,0,26);
+
+scene.add(new THREE.AmbientLight(0x9090cc,0.35));
+const pl1=new THREE.PointLight(0x8877ff,1.4,50);pl1.position.set(8,10,6);scene.add(pl1);
+const pl2=new THREE.PointLight(0x2fba8a,1.0,40);pl2.position.set(-8,-6,-3);scene.add(pl2);
+const pl3=new THREE.PointLight(0xe0704a,0.6,30);pl3.position.set(4,-8,4);scene.add(pl3);
+
+const brain=new THREE.Group();
+scene.add(brain);
+
+// Vertex-coloured sphere shell
+const sphGeo=new THREE.SphereGeometry(BR,96,48);
+const vCount=sphGeo.attributes.position.count;
+const vColors=new Float32Array(vCount*3);
+const lobeAtV=new Uint8Array(vCount);
+for(let i=0;i<vCount;i++){
+  const x=sphGeo.attributes.position.getX(i);
+  const y=sphGeo.attributes.position.getY(i);
+  const z=sphGeo.attributes.position.getZ(i);
+  const ln=getLobe(x,y,z);
+  const li=LOBE_NAMES.indexOf(ln);
+  lobeAtV[i]=li;
+  const c=LOBES[ln].rgb;
+  vColors[i*3]=c[0]/255;vColors[i*3+1]=c[1]/255;vColors[i*3+2]=c[2]/255;
+}
+sphGeo.setAttribute('color',new THREE.Float32BufferAttribute(vColors,3));
+const shellMat=new THREE.MeshPhongMaterial({vertexColors:true,transparent:true,opacity:0.10,side:THREE.DoubleSide,depthWrite:false,shininess:60});
+brain.add(new THREE.Mesh(sphGeo,shellMat));
+
+// Seam lines
+{
+  const idx=sphGeo.index,pos=sphGeo.attributes.position,pts=[];
+  for(let f=0;f<idx.count;f+=3){
+    const a=idx.getX(f),b=idx.getX(f+1),c=idx.getX(f+2);
+    const la=lobeAtV[a],lb=lobeAtV[b],lc=lobeAtV[c];
+    if(la!==lb)pts.push(pos.getX(a),pos.getY(a),pos.getZ(a),pos.getX(b),pos.getY(b),pos.getZ(b));
+    if(lb!==lc)pts.push(pos.getX(b),pos.getY(b),pos.getZ(b),pos.getX(c),pos.getY(c),pos.getZ(c));
+    if(lc!==la)pts.push(pos.getX(c),pos.getY(c),pos.getZ(c),pos.getX(a),pos.getY(a),pos.getZ(a));
   }
-  // Tooltip hit-test
-  const mx = (e.clientX / window.innerWidth) * 2 - 1;
-  const my = -(e.clientY / window.innerHeight) * 2 + 1;
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(new THREE.Vector2(mx, my), camera);
-  const hits = raycaster.intersectObjects(nodeMeshes);
-  const tip = document.getElementById('tooltip');
-  if (hits.length > 0) {
-    const { entry } = hits[0].object.userData;
-    document.getElementById('tooltip-title').textContent = entry.title;
-    document.getElementById('tooltip-meta').innerHTML =
-      `space: ${entry.space}<br>layer: ${entry.layer}<br>decay: ${entry.perishability}<br>activation: ${'●'.repeat(entry.activation || 0)}${'○'.repeat(3 - (entry.activation || 0))}`;
-    tip.style.left = (e.clientX + 14) + 'px';
-    tip.style.top = (e.clientY - 10) + 'px';
-    tip.style.opacity = '1';
-  } else {
-    tip.style.opacity = '0';
-  }
+  const sg=new THREE.BufferGeometry();
+  sg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+  brain.add(new THREE.LineSegments(sg,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.20,blending:THREE.AdditiveBlending,depthWrite:false})));
+}
+
+// Depth rings
+RINGS.forEach(ring=>{
+  const wg=new THREE.SphereGeometry(BR*ring.r,48,24);
+  brain.add(new THREE.Mesh(wg,new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,transparent:true,opacity:0.013+(1-ring.r)*0.008,depthWrite:false})));
 });
 
-canvas.addEventListener('wheel', e => {
-  camera.position.z = Math.max(6, Math.min(40, camera.position.z + e.deltaY * 0.02));
+// Glow texture
+const gc2=document.createElement('canvas');gc2.width=gc2.height=64;
+const gctx=gc2.getContext('2d');
+const gg=gctx.createRadialGradient(32,32,0,32,32,32);
+gg.addColorStop(0,'rgba(255,255,255,1)');gg.addColorStop(.3,'rgba(255,255,255,.55)');
+gg.addColorStop(.7,'rgba(255,255,255,.12)');gg.addColorStop(1,'rgba(255,255,255,0)');
+gctx.fillStyle=gg;gctx.fillRect(0,0,64,64);
+const glowTex=new THREE.CanvasTexture(gc2);
+
+function coneDir(seed,maxDeg,hash){
+  const mr=maxDeg*Math.PI/180;
+  const phi=(((Math.sin(hash*127.1)*43758.5)%1+1)%1)*Math.PI*2;
+  const theta=(((Math.sin(hash*311.7)*28946.3)%1+1)%1)*mr;
+  const sv=new THREE.Vector3(seed[0],seed[1],seed[2]);
+  let perp=new THREE.Vector3(0,1,0);
+  if(Math.abs(sv.dot(perp))>.9)perp=new THREE.Vector3(1,0,0);
+  const ax1=new THREE.Vector3().crossVectors(sv,perp).normalize();
+  const ax2=new THREE.Vector3().crossVectors(sv,ax1).normalize();
+  return sv.clone().addScaledVector(ax1,Math.sin(theta)*Math.cos(phi)).addScaledVector(ax2,Math.sin(theta)*Math.sin(phi)).normalize();
+}
+
+const nodeMeshes=[];
+ENTRIES.forEach((entry,ei)=>{
+  const lobe=LOBES[entry.space];
+  const ring=RINGS[Math.min(entry.ring,RINGS.length-1)];
+  const r=ring.r*BR;
+  const seedIdx=ei%lobe.seeds.length;
+  const dir=coneDir(lobe.seeds[seedIdx],30,ei*7.3+seedIdx*3.7);
+  const pos=dir.clone().multiplyScalar(r);
+  const alpha=PALPHA[entry.perishability];
+  const dotSize=PSIZE[entry.perishability];
+  const color=new THREE.Color(lobe.hex);
+
+  const glowMat=new THREE.SpriteMaterial({map:glowTex,color,transparent:true,opacity:alpha*.55,blending:THREE.AdditiveBlending,depthWrite:false});
+  const glow=new THREE.Sprite(glowMat);
+  const gs=dotSize*5.5;glow.scale.set(gs,gs,1);
+  glow.position.copy(pos);brain.add(glow);
+
+  const dotMat=new THREE.MeshPhongMaterial({color,emissive:color,emissiveIntensity:.5,transparent:true,opacity:alpha});
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(dotSize,8,8),dotMat);
+  dot.position.copy(pos);
+  dot.userData={entry,glow,glowMat,dotMat,baseAlpha:alpha,phase:Math.random()*Math.PI*2};
+  brain.add(dot);nodeMeshes.push(dot);
+});
+
+// Stars
+{
+  const sp=[];for(let i=0;i<800;i++)sp.push((Math.random()-.5)*160,(Math.random()-.5)*160,(Math.random()-.5)*160);
+  const sg=new THREE.BufferGeometry();
+  sg.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));
+  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x334455,size:.08})));
+}
+
+let rotX=.18,rotY=0,isDrag=false,last={x:0,y:0};
+let camZ=26,targetCamZ=26,activeFilter='all';
+
+canvas.addEventListener('mousedown',e=>{isDrag=true;last={x:e.clientX,y:e.clientY};});
+window.addEventListener('mouseup',()=>isDrag=false);
+
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+const tip=document.getElementById('tip');
+
+window.addEventListener('mousemove',e=>{
+  if(isDrag){
+    rotY+=(e.clientX-last.x)*.0045;
+    rotX=Math.max(-1.3,Math.min(1.3,rotX+(e.clientY-last.y)*.0045));
+    last={x:e.clientX,y:e.clientY};
+  }
+  mouse.x=(e.clientX/window.innerWidth)*2-1;
+  mouse.y=-(e.clientY/window.innerHeight)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(nodeMeshes);
+  if(hits.length>0){
+    const {entry}=hits[0].object.userData;
+    document.getElementById('tip-title').textContent=entry.title;
+    document.getElementById('tip-meta').innerHTML=`space: ${entry.space}<br>decay: ${entry.perishability}<br>depth: ${RINGS[entry.ring].label} ago`;
+    tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-8)+'px';tip.style.opacity='1';
+  } else tip.style.opacity='0';
+});
+
+canvas.addEventListener('wheel',e=>{
+  targetCamZ=Math.max(1.5,Math.min(38,targetCamZ+e.deltaY*.035));
   e.preventDefault();
-}, { passive: false });
+},{passive:false});
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+let lt=null;
+canvas.addEventListener('touchstart',e=>{lt={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  if(!lt)return;const t=e.touches[0];
+  rotY+=(t.clientX-lt.x)*.0055;rotX=Math.max(-1.3,Math.min(1.3,rotX+(t.clientY-lt.y)*.0055));
+  lt={x:t.clientX,y:t.clientY};
+},{passive:true});
+
+document.querySelectorAll('.f-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    activeFilter=btn.dataset.space;
+    document.querySelectorAll('.f-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    nodeMeshes.forEach(m=>{
+      const vis=activeFilter==='all'||m.userData.entry.space===activeFilter;
+      m.userData.dotMat.opacity=vis?m.userData.baseAlpha:m.userData.baseAlpha*.05;
+      m.userData.glowMat.opacity=vis?m.userData.baseAlpha*.55:m.userData.baseAlpha*.02;
+    });
+    shellMat.opacity=activeFilter==='all'?.10:.05;
+  });
 });
 
-// Filter
-let activeFilter = 'all';
-function filterSpace(spc) {
-  activeFilter = spc;
-  document.querySelectorAll('.hud-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('btn-' + spc);
-  if (btn) btn.classList.add('active');
-  buildNodes(spc);
-}
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
 
-// Animate
-let t = 0;
-function animate() {
-  requestAnimationFrame(animate);
-  t += 0.008;
-
-  // Gentle float
-  nodeMeshes.forEach(m => {
-    m.position.y = m.userData.baseY + Math.sin(t + m.userData.phase) * 0.06;
-    m.rotation.y += 0.003;
+let t=0;
+function animate(){
+  requestAnimationFrame(animate);t+=.014;
+  camZ+=(targetCamZ-camZ)*.06;
+  camera.position.z=camZ;
+  brain.rotation.y=rotY;brain.rotation.x=rotX;
+  pl1.intensity=1.2+Math.sin(t*.55)*.35;
+  pl2.intensity=.8+Math.sin(t*.40+2)*.28;
+  nodeMeshes.forEach(m=>{
+    const {entry,glowMat,dotMat,baseAlpha,phase}=m.userData;
+    const p=entry.perishability;
+    let am=1;
+    if(p==='single_use')am=.5+.5*Math.abs(Math.sin(t*1.8+phase));
+    else if(p==='evergreen')am=.85+.15*Math.sin(t*.4+phase);
+    const vis=activeFilter==='all'||entry.space===activeFilter?1:.05;
+    dotMat.opacity=baseAlpha*am*vis;
+    glowMat.opacity=baseAlpha*.55*am*(vis===1?1:.04);
   });
-
-  // Rotate entire scene
-  scene.rotation.y = rotY;
-  scene.rotation.x = rotX;
-
-  // Pulse the point light
-  pt1.intensity = 1.2 + Math.sin(t * 0.7) * 0.4;
-
-  renderer.render(scene, camera);
+  renderer.render(scene,camera);
 }
 animate();
 </script>
