@@ -5,62 +5,119 @@
 <title>Second Brain — 3D View</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:#07070f;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;}
-#c{display:block;width:100vw;height:100vh;}
-#ui{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;}
-#topbar{position:absolute;top:0;left:0;right:0;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;}
-#topbar h1{font-size:12px;font-weight:600;color:#666;letter-spacing:.14em;text-transform:uppercase;}
-#topbar a{color:#444;text-decoration:none;font-size:12px;pointer-events:all;transition:color .2s;}
-#topbar a:hover{color:#aaa;}
-#filters{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:all;}
-.fbtn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:5px 14px;font-size:11px;color:#777;cursor:pointer;transition:all .2s;letter-spacing:.06em;font-family:inherit;}
-.fbtn:hover{background:rgba(255,255,255,.10);color:#ccc;}
-.fbtn.active{color:#fff;border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.12);}
-#panel{position:absolute;top:50%;right:24px;transform:translateY(-50%);width:220px;background:rgba(8,8,18,.94);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:18px 18px 16px;backdrop-filter:blur(16px);opacity:0;transition:opacity .25s;pointer-events:none;}
-#panel.show{opacity:1;pointer-events:all;}
-#panel .p-close{position:absolute;top:10px;right:14px;font-size:18px;color:#444;cursor:pointer;line-height:1;}
-#panel .p-close:hover{color:#aaa;}
-#panel .p-lobe{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:6px;}
-#panel .p-title{font-size:15px;font-weight:600;color:#e4e4ff;margin-bottom:5px;line-height:1.3;}
-#panel .p-meta{font-size:11px;color:#555;margin-bottom:10px;}
-#panel .p-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;}
-#panel .p-tag{font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid #222;color:#777;}
-#panel .p-link{font-size:11px;color:#7866d4;cursor:pointer;}
-#panel .p-link:hover{color:#aa99ff;}
-#hint{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);font-size:10px;color:#333;letter-spacing:.08em;white-space:nowrap;}
+body{background:#07070f;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:#dde;}
+#c{position:fixed;top:0;left:0;width:100vw;height:100vh;display:block;}
+
+/* ── topbar ── */
+#topbar{position:fixed;top:0;left:0;right:0;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;z-index:20;pointer-events:none;}
+#topbar h1{font-size:11px;font-weight:600;color:#444;letter-spacing:.16em;text-transform:uppercase;}
+#topbar a{pointer-events:all;color:#444;text-decoration:none;font-size:11px;transition:color .2s;}
+#topbar a:hover{color:#999;}
+
+/* ── HTML label overlay ── */
+#labels{position:fixed;inset:0;pointer-events:none;z-index:15;}
+.lobe-lbl{
+  position:absolute;transform:translate(-50%,-50%);
+  font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+  opacity:0;transition:opacity .5s;white-space:nowrap;
+  text-shadow:0 0 14px currentColor,0 0 4px #0007;
+}
+.lobe-lbl.on{opacity:1;}
+.node-lbl{
+  position:absolute;transform:translate(-50%,-140%);
+  font-size:13px;font-weight:500;color:rgba(220,220,255,.95);
+  background:rgba(6,6,20,.88);border:1px solid rgba(255,255,255,.09);
+  border-radius:7px;padding:5px 12px 6px;pointer-events:none;
+  white-space:nowrap;opacity:0;transition:opacity .15s;line-height:1.4;
+}
+.node-lbl .nl-sub{display:block;font-size:10px;color:#666;font-weight:400;margin-top:1px;}
+.node-lbl.on{opacity:1;}
+
+/* ── insights panel (left) ── */
+#insights{
+  position:fixed;top:0;left:0;width:280px;height:100vh;
+  padding:56px 18px 18px;display:flex;flex-direction:column;gap:12px;
+  z-index:18;pointer-events:none;
+  background:linear-gradient(to right,rgba(6,6,18,.93) 72%,transparent 100%);
+}
+.ins-head{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#3a3a5a;margin-bottom:2px;}
+.ins-card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:11px 13px;}
+.ins-card .lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:6px;}
+.ins-card .big{font-size:21px;font-weight:700;line-height:1;margin-bottom:3px;}
+.ins-card .sub{font-size:11px;color:#555;}
+.bar-row{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.bar-name{font-size:10px;width:58px;text-transform:capitalize;}
+.bar-track{flex:1;height:3px;background:#111128;border-radius:2px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:2px;}
+.bar-n{font-size:10px;color:#444;width:16px;text-align:right;}
+.risk-item{font-size:11px;color:#c88;margin-bottom:3px;display:flex;align-items:baseline;gap:6px;}
+.risk-item span{font-size:10px;color:#555;}
+
+/* ── node detail panel (right) ── */
+#panel{
+  position:fixed;top:50%;right:22px;transform:translateY(-50%);
+  width:210px;background:rgba(7,7,20,.95);border:1px solid rgba(255,255,255,.09);
+  border-radius:12px;padding:16px 16px 14px;backdrop-filter:blur(18px);
+  opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;
+}
+#panel.on{opacity:1;pointer-events:all;}
+#panel .pc{position:absolute;top:10px;right:13px;color:#444;cursor:pointer;font-size:17px;line-height:1;}
+#panel .pc:hover{color:#aaa;}
+#panel .p-sp{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:5px;}
+#panel .p-ti{font-size:14px;font-weight:600;color:#e2e2ff;margin-bottom:4px;line-height:1.3;}
+#panel .p-me{font-size:11px;color:#555;margin-bottom:10px;}
+#panel .p-tags{display:flex;gap:5px;flex-wrap:wrap;}
+#panel .p-tag{font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid #1e1e38;color:#666;}
+
+/* ── bottom bar ── */
+#bottom{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:7px;align-items:center;z-index:20;}
+.fbtn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:5px 13px;font-size:11px;color:#666;cursor:pointer;transition:all .2s;letter-spacing:.05em;font-family:inherit;}
+.fbtn:hover{background:rgba(255,255,255,.10);color:#bbb;}
+.fbtn.on{color:#fff;border-color:rgba(255,255,255,.30);background:rgba(255,255,255,.11);}
+#resumeBtn{display:none;background:rgba(100,90,200,.14);border:1px solid rgba(120,105,220,.30);color:#9988dd;padding:5px 15px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;}
+#resumeBtn:hover{background:rgba(100,90,200,.24);color:#ccbbff;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ui">
-  <div id="topbar">
-    <h1>Second Brain · 3D</h1>
-    <a href="index.html">← Manager</a>
-  </div>
-  <div id="panel">
-    <span class="p-close" id="panelClose">×</span>
-    <div class="p-lobe" id="pLobe"></div>
-    <div class="p-title" id="pTitle"></div>
-    <div class="p-meta" id="pMeta"></div>
-    <div class="p-tags" id="pTags"></div>
-    <div class="p-link">↗ open in manager</div>
-  </div>
-  <div id="filters">
-    <button class="fbtn active" data-lobe="all">All</button>
-    <button class="fbtn" data-lobe="work">Work</button>
-    <button class="fbtn" data-lobe="personal">Personal</button>
-    <button class="fbtn" data-lobe="family">Family</button>
-    <button class="fbtn" data-lobe="leisure">Leisure</button>
-    <button class="fbtn" data-lobe="core">Core</button>
-  </div>
-  <div id="hint">drag to orbit · scroll to zoom · click nodes</div>
+<div id="labels"></div>
+
+<div id="topbar">
+  <h1>Second Brain · 3D</h1>
+  <a href="index.html">← Manager</a>
+</div>
+
+<div id="insights">
+  <div class="ins-head">Brain State</div>
+  <div class="ins-card" id="ic-active"></div>
+  <div class="ins-card" id="ic-density"></div>
+  <div class="ins-card" id="ic-risk"></div>
+  <div class="ins-card" id="ic-ever"></div>
+</div>
+
+<div id="panel">
+  <span class="pc" id="pClose">×</span>
+  <div class="p-sp" id="pSp"></div>
+  <div class="p-ti" id="pTi"></div>
+  <div class="p-me" id="pMe"></div>
+  <div class="p-tags" id="pTags"></div>
+</div>
+
+<div id="bottom">
+  <button id="resumeBtn">↺ Resume</button>
+  <button class="fbtn on" data-f="all">All</button>
+  <button class="fbtn" data-f="work">Work</button>
+  <button class="fbtn" data-f="personal">Personal</button>
+  <button class="fbtn" data-f="family">Family</button>
+  <button class="fbtn" data-f="leisure">Leisure</button>
+  <button class="fbtn" data-f="core">Core</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ─────────────────────────────────────────────────────────────────
-// CONSTANTS
-// ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════
 const BR = 10;
 
 const LOBES = {
@@ -77,68 +134,118 @@ const LOBES = {
 };
 const LOBE_NAMES = Object.keys(LOBES);
 
-function norm(v){const l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];}
-function avgNorm(seeds){const s=[0,0,0];seeds.forEach(v=>{s[0]+=v[0];s[1]+=v[1];s[2]+=v[2];});return norm([s[0]/seeds.length,s[1]/seeds.length,s[2]/seeds.length]);}
+function vNorm(v){const l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];}
+function vAvgNorm(arr){const s=[0,0,0];arr.forEach(v=>{s[0]+=v[0];s[1]+=v[1];s[2]+=v[2];});return vNorm([s[0]/arr.length,s[1]/arr.length,s[2]/arr.length]);}
 
+// Pre-compute
 for(const n of LOBE_NAMES){
-  LOBES[n].seedsNorm = LOBES[n].seeds.map(norm);
-  LOBES[n].centroid  = avgNorm(LOBES[n].seeds);
+  LOBES[n].seedsN = LOBES[n].seeds.map(vNorm);
+  LOBES[n].centroid = vAvgNorm(LOBES[n].seeds);
+  LOBES[n].hex = '#'+new THREE.Color(LOBES[n].color).getHexString();
 }
 
-// ─────────────────────────────────────────────────────────────────
-// ENTRIES
-// ─────────────────────────────────────────────────────────────────
-const RINGS=[
-  {label:'2d',r:.965},{label:'1w',r:.905},{label:'3w',r:.840},
-  {label:'2mo',r:.755},{label:'4mo',r:.650},{label:'8mo',r:.525},
-  {label:'1.5yr',r:.390},{label:'4yr',r:.250},{label:'10yr+',r:.115}
+const RINGS = [
+  {label:'2d',    r:.965},{label:'1w',   r:.905},{label:'3w',  r:.840},
+  {label:'2mo',   r:.755},{label:'4mo',  r:.650},{label:'8mo', r:.525},
+  {label:'1.5yr', r:.390},{label:'4yr',  r:.250},{label:'10yr+',r:.115}
 ];
-const PALPHA={evergreen:1.0,slow:.72,fast:.42,single_use:.22};
-const PSIZE ={evergreen:.26,slow:.20,fast:.16,single_use:.13};
+const PALPHA = {evergreen:1.0, slow:.70, fast:.44, single_use:.26};
+const PSIZE  = {evergreen:.24, slow:.18, fast:.15, single_use:.12};
 
-const ENTRIES=[
-  {name:'Anniversary Trip',      space:'leisure', ring:0,type:'single_use'},
-  {name:'Shanghai Masters',      space:'leisure', ring:0,type:'single_use'},
-  {name:'Coca-Cola Outcome',     space:'work',    ring:1,type:'fast'},
-  {name:'Motorcycle Choice',     space:'personal',ring:1,type:'slow'},
-  {name:'BMW COE',               space:'personal',ring:2,type:'fast'},
-  {name:'Cost of Living',        space:'personal',ring:2,type:'slow'},
-  {name:'South Korea',           space:'leisure', ring:2,type:'fast'},
-  {name:'Career Transition',     space:'work',    ring:2,type:'slow'},
-  {name:'Second Brain Security', space:'core',    ring:2,type:'slow'},
-  {name:'Weekly Codex Scan',     space:'core',    ring:2,type:'fast'},
-  {name:'100 Ideas',             space:'personal',ring:3,type:'slow'},
-  {name:'Technical Environment', space:'work',    ring:3,type:'slow'},
-  {name:'Local LLM',             space:'work',    ring:3,type:'slow'},
-  {name:'Cheryl',                space:'personal',ring:3,type:'evergreen'},
-  {name:'Ryan',                  space:'family',  ring:3,type:'slow'},
-  {name:'Jake',                  space:'family',  ring:3,type:'slow'},
-  {name:'InspectPro',            space:'work',    ring:4,type:'slow'},
-  {name:'SplitLah',              space:'work',    ring:4,type:'slow'},
-  {name:'CV Design',             space:'work',    ring:4,type:'fast'},
-  {name:'Evenings Out',          space:'leisure', ring:4,type:'fast'},
-  {name:'Motorcycle Touring',    space:'leisure', ring:4,type:'slow'},
-  {name:'Music',                 space:'leisure', ring:4,type:'slow'},
-  {name:'EnigmaPrint',           space:'work',    ring:4,type:'slow'},
-  {name:'Health',                space:'personal',ring:4,type:'evergreen'},
-  {name:'How I Build',           space:'work',    ring:5,type:'evergreen'},
-  {name:'MetrIQ',                space:'work',    ring:5,type:'slow'},
-  {name:'FM Industry',           space:'work',    ring:5,type:'slow'},
-  {name:'On Investments',        space:'personal',ring:5,type:'slow'},
-  {name:'How I Roll',            space:'personal',ring:5,type:'evergreen'},
-  {name:'Travel',                space:'leisure', ring:5,type:'slow'},
-  {name:'Inner Circle A',        space:'personal',ring:5,type:'evergreen'},
-  {name:'Inner Circle B',        space:'personal',ring:5,type:'evergreen'},
-  {name:'Personal Working Style',space:'work',    ring:5,type:'evergreen'},
-  {name:'Mapletree VP',          space:'work',    ring:6,type:'slow'},
-  {name:'Mount Kinabalu',        space:'leisure', ring:6,type:'slow'},
-  {name:'Career Arc',            space:'core',    ring:8,type:'evergreen'},
-  {name:'Core Values',           space:'core',    ring:8,type:'evergreen'}
+const ENTRIES = [
+  {name:'Anniversary Trip',      space:'leisure', ring:0, type:'single_use'},
+  {name:'Shanghai Masters',      space:'leisure', ring:0, type:'single_use'},
+  {name:'Coca-Cola Outcome',     space:'work',    ring:1, type:'fast'},
+  {name:'Motorcycle Choice',     space:'personal',ring:1, type:'slow'},
+  {name:'BMW COE',               space:'personal',ring:2, type:'fast'},
+  {name:'Cost of Living',        space:'personal',ring:2, type:'slow'},
+  {name:'South Korea',           space:'leisure', ring:2, type:'fast'},
+  {name:'Career Transition',     space:'work',    ring:2, type:'slow'},
+  {name:'Second Brain Security', space:'core',    ring:2, type:'slow'},
+  {name:'Weekly Codex Scan',     space:'core',    ring:2, type:'fast'},
+  {name:'100 Ideas',             space:'personal',ring:3, type:'slow'},
+  {name:'Technical Environment', space:'work',    ring:3, type:'slow'},
+  {name:'Local LLM',             space:'work',    ring:3, type:'slow'},
+  {name:'Cheryl',                space:'personal',ring:3, type:'evergreen'},
+  {name:'Ryan',                  space:'family',  ring:3, type:'slow'},
+  {name:'Jake',                  space:'family',  ring:3, type:'slow'},
+  {name:'InspectPro',            space:'work',    ring:4, type:'slow'},
+  {name:'SplitLah',              space:'work',    ring:4, type:'slow'},
+  {name:'CV Design',             space:'work',    ring:4, type:'fast'},
+  {name:'Evenings Out',          space:'leisure', ring:4, type:'fast'},
+  {name:'Motorcycle Touring',    space:'leisure', ring:4, type:'slow'},
+  {name:'Music',                 space:'leisure', ring:4, type:'slow'},
+  {name:'EnigmaPrint',           space:'work',    ring:4, type:'slow'},
+  {name:'Health',                space:'personal',ring:4, type:'evergreen'},
+  {name:'How I Build',           space:'work',    ring:5, type:'evergreen'},
+  {name:'MetrIQ',                space:'work',    ring:5, type:'slow'},
+  {name:'FM Industry',           space:'work',    ring:5, type:'slow'},
+  {name:'On Investments',        space:'personal',ring:5, type:'slow'},
+  {name:'How I Roll',            space:'personal',ring:5, type:'evergreen'},
+  {name:'Travel',                space:'leisure', ring:5, type:'slow'},
+  {name:'Inner Circle A',        space:'personal',ring:5, type:'evergreen'},
+  {name:'Inner Circle B',        space:'personal',ring:5, type:'evergreen'},
+  {name:'Personal Working Style',space:'work',    ring:5, type:'evergreen'},
+  {name:'Mapletree VP',          space:'work',    ring:6, type:'slow'},
+  {name:'Mount Kinabalu',        space:'leisure', ring:6, type:'slow'},
+  {name:'Career Arc',            space:'core',    ring:8, type:'evergreen'},
+  {name:'Core Values',           space:'core',    ring:8, type:'evergreen'}
 ];
 
-// ─────────────────────────────────────────────────────────────────
-// RENDERER + SCENE + CAMERA
-// ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// INSIGHTS PANEL
+// ═══════════════════════════════════════════════════════════
+(function buildInsights(){
+  const cnt = {};
+  for(const n of LOBE_NAMES) cnt[n] = {total:0, recent:0, ev:0, sumRing:0};
+  for(const e of ENTRIES){
+    cnt[e.space].total++;
+    cnt[e.space].sumRing += e.ring;
+    if(e.ring <= 2) cnt[e.space].recent++;
+    if(e.type === 'evergreen') cnt[e.space].ev++;
+  }
+  const maxTotal = Math.max(...LOBE_NAMES.map(n=>cnt[n].total));
+  const mostActive = [...LOBE_NAMES].sort((a,b)=>cnt[b].recent-cnt[a].recent)[0];
+  const atRisk = ENTRIES.filter(e=>(e.type==='single_use'||e.type==='fast')&&e.ring>=4);
+  const evTotal = ENTRIES.filter(e=>e.type==='evergreen').length;
+  const deepest = [...LOBE_NAMES].sort((a,b)=>(cnt[b].sumRing/cnt[b].total)-(cnt[a].sumRing/cnt[a].total))[0];
+
+  document.getElementById('ic-active').innerHTML=`
+    <div class="lbl">Most Active Space</div>
+    <div class="big" style="color:${LOBES[mostActive].hex}">${mostActive}</div>
+    <div class="sub">${cnt[mostActive].recent} entries in last 3 weeks</div>`;
+
+  let bars = `<div class="lbl">Memory Density</div>`;
+  for(const n of LOBE_NAMES){
+    const pct = Math.round(cnt[n].total/maxTotal*100);
+    bars += `<div class="bar-row">
+      <div class="bar-name" style="color:${LOBES[n].hex}">${n}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${LOBES[n].hex}50;border-right:2px solid ${LOBES[n].hex}"></div></div>
+      <div class="bar-n">${cnt[n].total}</div>
+    </div>`;
+  }
+  document.getElementById('ic-density').innerHTML = bars;
+
+  let riskHTML = `<div class="lbl">Fading Fast ⚠</div>`;
+  if(atRisk.length === 0){
+    riskHTML += `<div class="sub">None right now ✓</div>`;
+  } else {
+    atRisk.slice(0,3).forEach(e=>{
+      riskHTML += `<div class="risk-item">${e.name}<span>${RINGS[e.ring].label} ago</span></div>`;
+    });
+    if(atRisk.length > 3) riskHTML += `<div class="sub">+${atRisk.length-3} more</div>`;
+  }
+  document.getElementById('ic-risk').innerHTML = riskHTML;
+
+  document.getElementById('ic-ever').innerHTML=`
+    <div class="lbl">Evergreen Knowledge</div>
+    <div class="big">${evTotal}</div>
+    <div class="sub">Deepest space: <span style="color:${LOBES[deepest].hex}">${deepest}</span></div>`;
+})();
+
+// ═══════════════════════════════════════════════════════════
+// THREE.JS SETUP
+// ═══════════════════════════════════════════════════════════
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -146,401 +253,370 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setClearColor(0x07070f, 1);
 
 const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, .1, 300);
+// Offset lookAt right so sphere sits in right 65% of screen
+const LOOK_OFFSET = new THREE.Vector3(2.5, 0, 0);
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, .1, 300);
 camera.position.set(0, 0, 28);
 
-scene.add(new THREE.AmbientLight(0xffffff, .5));
-const pt = new THREE.PointLight(0x8866ff, .6, 80);
-pt.position.set(10, 10, 15);
-scene.add(pt);
+scene.add(new THREE.AmbientLight(0xffffff, .45));
+const ptLight = new THREE.PointLight(0x9988ff, .55, 90);
+ptLight.position.set(10, 10, 15);
+scene.add(ptLight);
 
-// ─────────────────────────────────────────────────────────────────
-// SMOOTH LOBE SHELL — custom shader with soft Voronoi blending
-// ─────────────────────────────────────────────────────────────────
-// Build flat seed + color arrays for the shader
-const allSeeds  = [];
-const allColors = [];
-for(const name of LOBE_NAMES){
-  const L = LOBES[name];
-  const c = new THREE.Color(L.color);
-  for(const s of L.seedsNorm){
-    allSeeds.push(new THREE.Vector3(s[0], s[1], s[2]));
-    allColors.push(new THREE.Vector3(c.r, c.g, c.b));
-  }
-}
-const NS = allSeeds.length; // 12
+// ── Sphere outline only (no solid mesh) ──
+scene.add(new THREE.Mesh(
+  new THREE.SphereGeometry(BR, 22, 14),
+  new THREE.MeshBasicMaterial({wireframe:true, transparent:true, depthWrite:false, color:0x2c2c88, opacity:.055})
+));
+// Outer glow halo
+scene.add(new THREE.Mesh(
+  new THREE.SphereGeometry(BR*1.018, 48, 28),
+  new THREE.MeshBasicMaterial({color:0x1a1a77, transparent:true, opacity:.07, side:THREE.BackSide})
+));
 
-const shellMat = new THREE.ShaderMaterial({
-  uniforms:{
-    seeds:     {value: allSeeds},
-    seedColors:{value: allColors},
-    filterOpacity:{value: 1.0}
-  },
-  vertexShader:`
-    varying vec3 vPos;
-    varying vec3 vNorm;
-    void main(){
-      vPos  = normalize(position);
-      vNorm = normalize(normalMatrix * normal);
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-    }
-  `,
-  fragmentShader:`
-    #define NS ${NS}
-    uniform vec3  seeds[NS];
-    uniform vec3  seedColors[NS];
-    uniform float filterOpacity;
-    varying vec3 vPos;
-    varying vec3 vNorm;
-    void main(){
-      vec3  dir    = normalize(vPos);
-      float wts[NS];
-      float total  = 0.0;
-      for(int i=0;i<NS;i++){
-        float d = 1.0 - clamp(dot(dir, normalize(seeds[i])), -1.0, 1.0);
-        float w = exp(-8.0 * d * d);
-        wts[i]  = w;
-        total  += w;
-      }
-      vec3 col = vec3(0.0);
-      for(int i=0;i<NS;i++) col += (wts[i]/total) * seedColors[i];
-
-      // rim lighting: brighter near silhouette edge
-      vec3  viewDir = normalize(vec3(0.0,0.0,1.0));
-      float rim     = 1.0 - abs(dot(vNorm, viewDir));
-      float alpha   = (0.05 + rim * 0.12) * filterOpacity;
-      gl_FragColor  = vec4(col * (0.5 + rim * 0.8), alpha);
-    }
-  `,
-  transparent:true,
-  side:THREE.DoubleSide,
-  depthWrite:false,
-});
-
-const shell = new THREE.Mesh(new THREE.SphereGeometry(BR, 128, 64), shellMat);
-scene.add(shell);
-
-// Faint outer glow ring
-const edgeMesh = new THREE.Mesh(
-  new THREE.SphereGeometry(BR * 1.018, 64, 32),
-  new THREE.MeshBasicMaterial({color:0x3333aa, transparent:true, opacity:.12, side:THREE.BackSide})
-);
-scene.add(edgeMesh);
-
-// ─────────────────────────────────────────────────────────────────
-// LOBE GLOW VOLUMES — large additive sprites that breathe
-// ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// LOBE GLOW VOLUMES (breathe)
+// ═══════════════════════════════════════════════════════════
 function makeGlowTex(r,g,b){
-  const sz=256, cv=document.createElement('canvas');
-  cv.width=sz; cv.height=sz;
+  const S=256, cv=document.createElement('canvas'); cv.width=S; cv.height=S;
   const ctx=cv.getContext('2d');
-  const gr=ctx.createRadialGradient(sz/2,sz/2,0,sz/2,sz/2,sz/2);
-  gr.addColorStop(0,  `rgba(${r},${g},${b},0.90)`);
-  gr.addColorStop(.35,`rgba(${r},${g},${b},0.40)`);
-  gr.addColorStop(.65,`rgba(${r},${g},${b},0.12)`);
-  gr.addColorStop(1,  `rgba(${r},${g},${b},0.00)`);
-  ctx.fillStyle=gr; ctx.fillRect(0,0,sz,sz);
+  const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
+  gr.addColorStop(0,  `rgba(${r},${g},${b},.90)`);
+  gr.addColorStop(.32,`rgba(${r},${g},${b},.42)`);
+  gr.addColorStop(.62,`rgba(${r},${g},${b},.10)`);
+  gr.addColorStop(1,  `rgba(${r},${g},${b},.00)`);
+  ctx.fillStyle=gr; ctx.fillRect(0,0,S,S);
   return new THREE.CanvasTexture(cv);
 }
 
-const lobeSprites = {};
+const lobeGlow = {};
 for(const name of LOBE_NAMES){
   const L = LOBES[name];
   const mat = new THREE.SpriteMaterial({
-    map:       makeGlowTex(...L.rgb),
-    transparent:true,
-    blending:  THREE.AdditiveBlending,
-    depthWrite:false,
-    opacity:   0.50 + L.activation * .22
+    map: makeGlowTex(...L.rgb), transparent:true,
+    blending: THREE.AdditiveBlending, depthWrite:false,
+    opacity: .48 + L.activation*.24
   });
   const sp = new THREE.Sprite(mat);
-  const c  = L.centroid;
-  const r  = BR * (0.42 + L.activation * .14);
-  sp.position.set(c[0]*r, c[1]*r, c[2]*r);
-  const sz = BR * (1.5 + L.activation * .5);
+  const c = L.centroid;
+  const rr = BR*(.38 + L.activation*.14);
+  sp.position.set(c[0]*rr, c[1]*rr, c[2]*rr);
+  const sz = BR*(1.55 + L.activation*.52);
   sp.scale.setScalar(sz);
-  sp._baseSize    = sz;
-  sp._baseOpacity = 0.50 + L.activation * .22;
-  sp._speed       = 2*Math.PI / (2.5 + (1-L.activation) * 5.5); // 2.5–8s
-  sp._phase       = L.phase;
-  lobeSprites[name] = sp;
+  sp._base = {opacity: .48+L.activation*.24, sz};
+  sp._speed = 2*Math.PI / (2.4 + (1-L.activation)*5.6);
+  sp._phase = L.phase;
+  lobeGlow[name] = sp;
   scene.add(sp);
 }
 
-// ─────────────────────────────────────────────────────────────────
-// DEPTH RINGS
-// ─────────────────────────────────────────────────────────────────
-for(let i=0;i<RINGS.length;i++){
-  const mat = new THREE.MeshBasicMaterial({
-    wireframe:true, transparent:true, depthWrite:false, color:0xffffff,
-    opacity: i===0?.055 : i<3?.035 : .018
-  });
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(RINGS[i].r*BR,48,24), mat));
-}
-
-// ─────────────────────────────────────────────────────────────────
-// NODE SPRITES + RAYCASTING MESHES
-// ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// NODE SPRITES + HIT MESHES
+// ═══════════════════════════════════════════════════════════
 function makeNodeTex(r,g,b){
-  const sz=64, cv=document.createElement('canvas');
-  cv.width=sz; cv.height=sz;
+  const S=64, cv=document.createElement('canvas'); cv.width=S; cv.height=S;
   const ctx=cv.getContext('2d');
-  const gr=ctx.createRadialGradient(sz/2,sz/2,0,sz/2,sz/2,sz/2);
+  const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
   gr.addColorStop(0,  `rgba(${r},${g},${b},1.0)`);
-  gr.addColorStop(.25,`rgba(${r},${g},${b},0.7)`);
-  gr.addColorStop(.6, `rgba(${r},${g},${b},0.2)`);
-  gr.addColorStop(1,  `rgba(${r},${g},${b},0.0)`);
-  ctx.fillStyle=gr; ctx.fillRect(0,0,sz,sz);
+  gr.addColorStop(.22,`rgba(${r},${g},${b},.80)`);
+  gr.addColorStop(.55,`rgba(${r},${g},${b},.22)`);
+  gr.addColorStop(1,  `rgba(${r},${g},${b},.00)`);
+  ctx.fillStyle=gr; ctx.fillRect(0,0,S,S);
   return new THREE.CanvasTexture(cv);
 }
 
-function hash(n){let x=n^(n>>>16);x=Math.imul(x,0x45d9f3b);x^=x>>>16;return(x>>>0)/4294967295;}
-function coneDir(seed,deg,idx){
-  const th=Math.acos(1-hash(idx*7+1)*(1-Math.cos(deg*Math.PI/180)));
-  const ph=hash(idx*13+3)*2*Math.PI;
-  const st=Math.sin(th),ct=Math.cos(th),sp2=Math.sin(ph),cp=Math.cos(ph);
-  const[sx,sy,sz]=seed;
-  const ax=Math.abs(sx)<.9?0:1, ay=Math.abs(sx)<.9?1:0;
-  const tx=sy*0-sz*ay, ty=sz*ax-sx*0, tz=sx*ay-sy*ax;
-  const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1;
-  const ttx=tx/tl,tty=ty/tl,ttz=tz/tl;
-  const bx=sy*ttz-sz*tty, by=sz*ttx-sx*ttz, bz=sx*tty-sy*ttx;
-  return norm([ttx*st*cp+bx*st*sp2+sx*ct, tty*st*cp+by*st*sp2+sy*ct, ttz*st*cp+bz*st*sp2+sz*ct]);
+function uhash(n){let x=n^(n>>>16);x=Math.imul(x,0x45d9f3b);x^=x>>>16;return(x>>>0)/4294967295;}
+function coneDir(seed, deg, idx){
+  const [sx,sy,sz] = seed;
+  const th = Math.acos(Math.max(-1,Math.min(1, 1-uhash(idx*7+1)*(1-Math.cos(deg*Math.PI/180)))));
+  const ph = uhash(idx*13+3)*2*Math.PI;
+  // orthonormal basis
+  const up = Math.abs(sx)<.9 ? [0,1,0] : [1,0,0];
+  let tx=up[1]*sz-up[2]*sy, ty=up[2]*sx-up[0]*sz, tz=up[0]*sy-up[1]*sx;
+  const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1; tx/=tl; ty/=tl; tz/=tl;
+  const bx=sy*tz-sz*ty, by=sz*tx-sx*tz, bz=sx*ty-sy*tx;
+  const st=Math.sin(th), ct=Math.cos(th), sp=Math.sin(ph), cp=Math.cos(ph);
+  return vNorm([tx*st*cp+bx*st*sp+sx*ct, ty*st*cp+by*st*sp+sy*ct, tz*st*cp+bz*st*sp+sz*ct]);
 }
 
 const nodeMeshes = [];
 const nodeTex = {};
 for(const n of LOBE_NAMES) nodeTex[n] = makeNodeTex(...LOBES[n].rgb);
 
-let globalIdx = 0;
+let gIdx = 0;
 for(const name of LOBE_NAMES){
   const L = LOBES[name];
-  ENTRIES.filter(e=>e.space===name).forEach((e, i)=>{
-    const seed  = L.seedsNorm[i % L.seedsNorm.length];
-    const dir   = coneDir(seed, 28, globalIdx++);
-    const r     = RINGS[e.ring].r * BR;
+  ENTRIES.filter(e=>e.space===name).forEach((e,i)=>{
+    const seed = L.seedsN[i % L.seedsN.length];
+    const dir  = coneDir(seed, 30, gIdx++);
+    const rr   = RINGS[e.ring].r * BR;
     const alpha = PALPHA[e.type];
-    const sz    = PSIZE[e.type];
+    const nsz   = PSIZE[e.type];
 
-    // Glow sprite
     const gMat = new THREE.SpriteMaterial({
       map: nodeTex[name], transparent:true,
-      blending:THREE.AdditiveBlending, depthWrite:false, opacity:alpha
+      blending: THREE.AdditiveBlending, depthWrite:false, opacity:alpha
     });
     const gSp = new THREE.Sprite(gMat);
-    gSp.position.set(dir[0]*r, dir[1]*r, dir[2]*r);
-    gSp.scale.setScalar(sz * BR);
+    gSp.position.set(dir[0]*rr, dir[1]*rr, dir[2]*rr);
+    gSp.scale.setScalar(nsz*BR);
     scene.add(gSp);
 
-    // Invisible hit mesh
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(sz*.35*BR, 6, 4),
+    const hit = new THREE.Mesh(
+      new THREE.SphereGeometry(nsz*.45*BR, 5, 3),
       new THREE.MeshBasicMaterial({visible:false})
     );
-    mesh.position.copy(gSp.position);
-    mesh.userData = {entry:e, glowMat:gMat, alpha, baseSz:sz*BR, sprite:gSp};
-    scene.add(mesh);
-    nodeMeshes.push(mesh);
+    hit.position.copy(gSp.position);
+    hit.userData = {entry:e, mat:gMat, alpha, sprite:gSp};
+    scene.add(hit);
+    nodeMeshes.push(hit);
   });
 }
 
-// ─────────────────────────────────────────────────────────────────
-// LOBE NAME LABELS (always-on sprites)
-// ─────────────────────────────────────────────────────────────────
-function makeLabelTex(text, hexColor){
-  const cv=document.createElement('canvas'); cv.width=256; cv.height=48;
-  const ctx=cv.getContext('2d');
-  ctx.font='700 11px system-ui';
-  ctx.fillStyle=hexColor;
-  ctx.globalAlpha=0.82;
-  ctx.fillText(text.toUpperCase(), 4, 16);
-  return new THREE.CanvasTexture(cv);
-}
+// ═══════════════════════════════════════════════════════════
+// HTML LABELS
+// ═══════════════════════════════════════════════════════════
+const labelsDiv = document.getElementById('labels');
+
+// Lobe labels
+const lobeLbls = {};
 for(const name of LOBE_NAMES){
-  const L=LOBES[name];
-  const c=L.centroid;
-  const r=BR*0.90;
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({
-    map:makeLabelTex(name,'#'+new THREE.Color(L.color).getHexString()),
-    transparent:true, depthWrite:false
-  }));
-  sp.position.set(c[0]*r, c[1]*r+.6, c[2]*r);
-  sp.scale.set(3.8, .72, 1);
-  scene.add(sp);
+  const el = document.createElement('div');
+  el.className = 'lobe-lbl';
+  el.textContent = name;
+  el.style.color = LOBES[name].hex;
+  labelsDiv.appendChild(el);
+  lobeLbls[name] = el;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// HOVER LABEL
-// ─────────────────────────────────────────────────────────────────
-const hoverMat = new THREE.SpriteMaterial({transparent:true, depthWrite:false, opacity:0});
-const hoverSp  = new THREE.Sprite(hoverMat);
-hoverSp.scale.set(5.5, 1.0, 1);
-scene.add(hoverSp);
+// Node hover label (single element, repositioned)
+const nodeLbl = document.createElement('div');
+nodeLbl.className = 'node-label node-lbl';
+labelsDiv.appendChild(nodeLbl);
 
-function updateHoverLabel(mesh){
-  const e=mesh.userData.entry;
-  const cv=document.createElement('canvas'); cv.width=320; cv.height=52;
-  const ctx=cv.getContext('2d');
-  ctx.font='500 13px system-ui';
-  ctx.fillStyle='rgba(210,210,255,0.92)';
-  ctx.fillText(e.name, 4, 18);
-  ctx.font='10px system-ui';
-  ctx.fillStyle='rgba(130,130,165,0.70)';
-  ctx.fillText(RINGS[e.ring].label+' ago · '+e.type, 4, 36);
-  const tex=new THREE.CanvasTexture(cv);
-  if(hoverMat.map) hoverMat.map.dispose();
-  hoverMat.map=tex; hoverMat.needsUpdate=true; hoverMat.opacity=1;
-  hoverSp.position.copy(mesh.position);
-  hoverSp.position.y += 1.6;
+function toScreen(worldPos){
+  const v = worldPos.clone().sub(LOOK_OFFSET).project(camera);
+  // Shift back to account for lookAt offset
+  const wx = worldPos.clone();
+  wx.project(camera);
+  // Use camera that looks at LOOK_OFFSET
+  return { x:(wx.x+1)/2*innerWidth, y:-(wx.y-1)/2*innerHeight };
 }
 
-// ─────────────────────────────────────────────────────────────────
-// ORBIT CONTROLS (manual)
-// ─────────────────────────────────────────────────────────────────
-let isDragging=false, lastX=0, lastY=0;
-let rotX=.18, rotY=.0;
-let targetZ=28, camZ=28;
-let didDrag=false;
+function project(p){
+  const v = p.clone(); v.project(camera);
+  return { x:(v.x+1)/2*innerWidth, y:-(v.y-1)/2*innerHeight };
+}
+
+// ═══════════════════════════════════════════════════════════
+// INTERACTION STATE
+// ═══════════════════════════════════════════════════════════
+let autoRotate = true;
+let rotX=.20, rotY=0, camZ=28, targetZ=28;
+let isDrag=false, lastX=0, lastY=0, didDrag=false;
+let activeFilter = 'all';
+let hoveredSpace = null;
+
+// Resume button
+const resumeBtn = document.getElementById('resumeBtn');
+resumeBtn.addEventListener('click', ()=>{ autoRotate=true; resumeBtn.style.display='none'; });
+
+function stopAuto(){
+  if(!autoRotate) return;
+  autoRotate = false;
+  resumeBtn.style.display = 'block';
+}
 
 canvas.addEventListener('mousedown', e=>{
-  isDragging=true; lastX=e.clientX; lastY=e.clientY; didDrag=false;
+  isDrag=true; lastX=e.clientX; lastY=e.clientY; didDrag=false;
+  stopAuto();
 });
 window.addEventListener('mousemove', e=>{
-  if(isDragging){
+  if(isDrag){
     const dx=e.clientX-lastX, dy=e.clientY-lastY;
     if(Math.abs(dx)+Math.abs(dy)>2) didDrag=true;
     rotY+=dx*.005; rotX+=dy*.005;
-    rotX=Math.max(-1.4, Math.min(1.4, rotX));
+    rotX=Math.max(-1.4,Math.min(1.4,rotX));
     lastX=e.clientX; lastY=e.clientY;
   } else {
-    // Hover raycasting
-    const rect=canvas.getBoundingClientRect();
-    const mouse=new THREE.Vector2(
-      ((e.clientX-rect.left)/rect.width)*2-1,
-      -((e.clientY-rect.top)/rect.height)*2+1
-    );
-    const ray=new THREE.Raycaster();
-    ray.setFromCamera(mouse,camera);
-    const hits=ray.intersectObjects(nodeMeshes);
-    if(hits.length>0){
-      canvas.style.cursor='pointer';
-      updateHoverLabel(hits[0].object);
-    } else {
-      canvas.style.cursor='default';
-      hoverMat.opacity=0;
-    }
+    handleHover(e.clientX, e.clientY);
   }
 });
 window.addEventListener('mouseup', e=>{
-  if(isDragging && !didDrag){
-    // treat as click
-    const rect=canvas.getBoundingClientRect();
-    const mouse=new THREE.Vector2(
-      ((e.clientX-rect.left)/rect.width)*2-1,
-      -((e.clientY-rect.top)/rect.height)*2+1
-    );
-    const ray=new THREE.Raycaster();
-    ray.setFromCamera(mouse,camera);
-    const hits=ray.intersectObjects(nodeMeshes);
-    if(hits.length>0) openPanel(hits[0].object);
-    else closePanel();
-  }
-  isDragging=false;
+  if(isDrag && !didDrag) handleClick(e.clientX, e.clientY);
+  isDrag=false;
 });
 canvas.addEventListener('wheel', e=>{
   targetZ=Math.max(14,Math.min(50,targetZ+e.deltaY*.04));
 },{passive:true});
 
-// Touch support
-let lastTouchX=0, lastTouchY=0;
-canvas.addEventListener('touchstart', e=>{lastTouchX=e.touches[0].clientX;lastTouchY=e.touches[0].clientY;},{passive:true});
-canvas.addEventListener('touchmove', e=>{
-  const dx=e.touches[0].clientX-lastTouchX, dy=e.touches[0].clientY-lastTouchY;
-  rotY+=dx*.004; rotX+=dy*.004;
-  rotX=Math.max(-1.4,Math.min(1.4,rotX));
-  lastTouchX=e.touches[0].clientX; lastTouchY=e.touches[0].clientY;
+// Touch
+let tX=0,tY=0;
+canvas.addEventListener('touchstart',e=>{tX=e.touches[0].clientX;tY=e.touches[0].clientY;stopAuto();},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  const dx=e.touches[0].clientX-tX,dy=e.touches[0].clientY-tY;
+  rotY+=dx*.004;rotX+=dy*.004;rotX=Math.max(-1.4,Math.min(1.4,rotX));
+  tX=e.touches[0].clientX;tY=e.touches[0].clientY;
 },{passive:true});
 
-// ─────────────────────────────────────────────────────────────────
-// PANEL
-// ─────────────────────────────────────────────────────────────────
-function openPanel(mesh){
-  const e=mesh.userData.entry;
-  const L=LOBES[e.space];
-  document.getElementById('pLobe').textContent=e.space;
-  document.getElementById('pLobe').style.color='#'+new THREE.Color(L.color).getHexString();
-  document.getElementById('pTitle').textContent=e.name;
-  document.getElementById('pMeta').textContent=RINGS[e.ring].label+' ago · '+e.type+' decay';
-  document.getElementById('pTags').innerHTML=
-    '<span class="p-tag">'+e.type+'</span><span class="p-tag">'+e.space+'</span><span class="p-tag">'+RINGS[e.ring].label+'</span>';
-  document.getElementById('panel').classList.add('show');
+// Raycast helper
+const raycaster = new THREE.Raycaster();
+function getHit(cx,cy){
+  const rect=canvas.getBoundingClientRect();
+  raycaster.setFromCamera(
+    new THREE.Vector2(((cx-rect.left)/rect.width)*2-1,-((cy-rect.top)/rect.height)*2+1),
+    camera
+  );
+  const hits=raycaster.intersectObjects(nodeMeshes);
+  return hits.length>0?hits[0].object:null;
 }
-function closePanel(){
-  document.getElementById('panel').classList.remove('show');
-}
-document.getElementById('panelClose').addEventListener('click', closePanel);
 
-// ─────────────────────────────────────────────────────────────────
-// FILTERS
-// ─────────────────────────────────────────────────────────────────
-let activeFilter='all';
+function applyFilter(){
+  for(const m of nodeMeshes){
+    const vis=activeFilter==='all'||m.userData.entry.space===activeFilter;
+    m.userData.mat.opacity = vis?m.userData.alpha:m.userData.alpha*.06;
+  }
+  for(const n of LOBE_NAMES){
+    const vis=activeFilter==='all'||n===activeFilter;
+    lobeGlow[n].material.opacity=vis?lobeGlow[n]._base.opacity:lobeGlow[n]._base.opacity*.06;
+  }
+}
+
+function handleHover(cx,cy){
+  const hit = getHit(cx,cy);
+  if(hit){
+    const e=hit.userData.entry;
+    canvas.style.cursor='pointer';
+    if(hoveredSpace !== e.space){
+      hoveredSpace = e.space;
+      // dim all other nodes
+      for(const m of nodeMeshes){
+        const same=m.userData.entry.space===e.space;
+        const vis=activeFilter==='all'||m.userData.entry.space===activeFilter;
+        m.userData.mat.opacity = (same&&vis)?m.userData.alpha:m.userData.alpha*.07;
+      }
+    }
+    // Update hover label position
+    const sc = project(hit.position);
+    nodeLbl.style.left = sc.x+'px';
+    nodeLbl.style.top  = sc.y+'px';
+    nodeLbl.innerHTML  = `${e.name}<span class="nl-sub">${RINGS[e.ring].label} ago · ${e.type}</span>`;
+    nodeLbl.classList.add('on');
+  } else {
+    canvas.style.cursor='default';
+    if(hoveredSpace){ hoveredSpace=null; applyFilter(); }
+    nodeLbl.classList.remove('on');
+  }
+}
+
+function handleClick(cx,cy){
+  const hit=getHit(cx,cy);
+  if(hit){ showPanel(hit); }
+  else { document.getElementById('panel').classList.remove('on'); }
+}
+
+function showPanel(hit){
+  const e=hit.userData.entry, L=LOBES[e.space];
+  document.getElementById('pSp').textContent=e.space;
+  document.getElementById('pSp').style.color=L.hex;
+  document.getElementById('pTi').textContent=e.name;
+  document.getElementById('pMe').textContent=RINGS[e.ring].label+' ago · '+e.type+' decay';
+  document.getElementById('pTags').innerHTML=
+    `<span class="p-tag">${e.type}</span><span class="p-tag">${e.space}</span><span class="p-tag">${RINGS[e.ring].label}</span>`;
+  document.getElementById('panel').classList.add('on');
+}
+document.getElementById('pClose').addEventListener('click',()=>document.getElementById('panel').classList.remove('on'));
+
+// Filters
 document.querySelectorAll('.fbtn').forEach(btn=>{
   btn.addEventListener('click',()=>{
-    activeFilter=btn.dataset.lobe;
-    document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    for(const mesh of nodeMeshes){
-      const match=activeFilter==='all'||mesh.userData.entry.space===activeFilter;
-      mesh.userData.glowMat.opacity = match ? mesh.userData.alpha : mesh.userData.alpha*.08;
-    }
-    for(const name of LOBE_NAMES){
-      const match=activeFilter==='all'||name===activeFilter;
-      lobeSprites[name].material.opacity = match ? lobeSprites[name]._baseOpacity : lobeSprites[name]._baseOpacity*.08;
-    }
-    shellMat.uniforms.filterOpacity.value = 1.0;
+    activeFilter=btn.dataset.f;
+    document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    hoveredSpace=null;
+    applyFilter();
   });
 });
 
-// ─────────────────────────────────────────────────────────────────
-// RESIZE
-// ─────────────────────────────────────────────────────────────────
 window.addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
 });
 
-// ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
 // RENDER LOOP
-// ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
 function animate(){
   requestAnimationFrame(animate);
-  const t=Date.now()*.001;
+  const t = Date.now()*.001;
 
-  // Smooth zoom
+  if(autoRotate) rotY += .0035;
   camZ += (targetZ-camZ)*.065;
 
-  // Camera orbit from rotX/rotY
-  camera.position.x = Math.sin(rotY)*Math.cos(rotX)*camZ;
+  // Camera orbits around origin but looks slightly right (sphere appears right of panel)
+  camera.position.x = Math.sin(rotY)*Math.cos(rotX)*camZ + LOOK_OFFSET.x*.5;
   camera.position.y = Math.sin(rotX)*camZ;
   camera.position.z = Math.cos(rotY)*Math.cos(rotX)*camZ;
-  camera.lookAt(0,0,0);
+  camera.lookAt(LOOK_OFFSET);
 
-  // Lobe breathing
+  // Which lobes are front-facing?
+  const camFwd = new THREE.Vector3().subVectors(LOOK_OFFSET, camera.position).normalize();
+
   for(const name of LOBE_NAMES){
-    const sp=lobeSprites[name];
-    const b=Math.sin(t*sp._speed+sp._phase);
-    sp.scale.setScalar(sp._baseSize*(1+b*.065));
-    sp.material.opacity=Math.min(.98, sp._baseOpacity*(1+b*.18));
+    const sp = lobeGlow[name];
+    const c  = LOBES[name].centroid;
+    // Dot: lobe centroid direction vs camera forward (from sphere center)
+    const toCamera = camera.position.clone().sub(LOOK_OFFSET).normalize();
+    const dot = toCamera.x*c[0] + toCamera.y*c[1] + toCamera.z*c[2];
+    const front = dot > 0.35;
+
+    // Breathing
+    const breath = Math.sin(t*sp._speed + sp._phase);
+    let scaleMul = 1 + breath*.07;
+    let opMul    = 1 + breath*.20;
+
+    // Highlight front-facing lobe during auto-rotate
+    if(autoRotate && front && (activeFilter==='all'||activeFilter===name)){
+      scaleMul *= 1.30;
+      opMul    *= 1.45;
+    }
+
+    const vis = activeFilter==='all'||name===activeFilter;
+    sp.scale.setScalar(sp._base.sz * scaleMul);
+    sp.material.opacity = Math.min(.96, sp._base.opacity * opMul * (vis?1:.06));
   }
 
-  // Node pulse (single_use and fast decay glow erratically)
-  for(const mesh of nodeMeshes){
-    const {entry,glowMat,alpha}=mesh.userData;
-    let p=1;
-    if(entry.type==='single_use') p=.75+Math.sin(t*2.3+mesh.id*.7)*.25;
-    else if(entry.type==='fast')  p=.88+Math.sin(t*1.2+mesh.id*.4)*.12;
-    glowMat.opacity=Math.min(1, alpha*p);
+  // Node pulse (single_use/fast flicker; don't override hover dimming)
+  if(!hoveredSpace){
+    for(const m of nodeMeshes){
+      const {entry,mat,alpha}=m.userData;
+      const vis=activeFilter==='all'||entry.space===activeFilter;
+      if(!vis){ mat.opacity=alpha*.06; continue; }
+      let p=1;
+      if(entry.type==='single_use') p=.65+Math.sin(t*2.5+m.id*.9)*.35;
+      else if(entry.type==='fast')  p=.82+Math.sin(t*1.4+m.id*.5)*.18;
+      mat.opacity=Math.min(1,alpha*p);
+    }
+  }
+
+  // Update HTML lobe labels
+  const toCamera2 = camera.position.clone().sub(LOOK_OFFSET).normalize();
+  for(const name of LOBE_NAMES){
+    const c=LOBES[name].centroid;
+    const dot=toCamera2.x*c[0]+toCamera2.y*c[1]+toCamera2.z*c[2];
+    const show=(dot>0.28)&&(activeFilter==='all'||activeFilter===name);
+    const el=lobeLbls[name];
+    if(show){
+      // Project lobe centroid just outside sphere surface
+      const wp=new THREE.Vector3(c[0],c[1],c[2]).multiplyScalar(BR*1.05).add(LOOK_OFFSET);
+      const sc=project(wp);
+      el.style.left=sc.x+'px';
+      el.style.top =sc.y+'px';
+      el.classList.add('on');
+    } else {
+      el.classList.remove('on');
+    }
   }
 
   renderer.render(scene,camera);
