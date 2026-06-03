@@ -357,12 +357,13 @@ backdrop.addEventListener('click',()=>{insightsEl.classList.remove('open');backd
 // THREE.JS
 // ═══════════════════════════════════════════════════════════
 const canvas=document.getElementById('c');
+const isMobile=window.innerWidth<=600;
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.setClearColor(0x06060e,1);
 const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,300);
+const camera=new THREE.PerspectiveCamera(isMobile?72:50,innerWidth/innerHeight,.1,300);
 camera.position.set(0,0,28);
 scene.add(new THREE.AmbientLight(0xffffff,.35));
 const pt=new THREE.PointLight(0x8877ee,.42,90);pt.position.set(10,10,14);scene.add(pt);
@@ -495,7 +496,6 @@ canvas.addEventListener('touchend',e=>{
 
 const ray=new THREE.Raycaster();
 // Increase raycaster threshold on mobile for easier tap targets
-const isMobile=window.innerWidth<=600;
 if(isMobile)ray.params.Points={threshold:.5};
 
 function getHit(cx,cy){
@@ -521,15 +521,7 @@ function doHover(cx,cy){
 }
 function doClick(cx,cy){const hit=getHit(cx,cy);if(hit)showPanel(hit);else document.getElementById('panel').classList.remove('on');}
 document.querySelectorAll('.fbtn').forEach(btn=>{btn.addEventListener('click',()=>{activeFilter=btn.dataset.f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');hoveredSpace=null;applyFilter();});});
-function onResize(){
-  camera.aspect=innerWidth/innerHeight;
-  // zoom out on narrow screens so the sphere fits
-  camera.fov = innerWidth<=600 ? 72 : 50;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-}
-window.addEventListener('resize', onResize);
-onResize(); // apply on first load too
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 
 // ═══════════════════════════════════════════════════════════
 // RENDER LOOP
