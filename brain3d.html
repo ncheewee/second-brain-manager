@@ -107,19 +107,17 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
   .node-lbl{font-size:15px !important;padding:8px 16px 9px !important;border-radius:10px !important;}
   .node-lbl .nl-sub{font-size:12px !important;margin-top:3px !important;}
 
-  /* insights — top strip, visible by default */
+  /* insights — single-row top strip, fits within screen width */
   #insights{
     top:max(44px,env(safe-area-inset-top));
     left:0;right:0;
     width:100%;
     height:auto;
     flex-direction:row;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    padding:6px 10px 6px 12px;
-    gap:8px;
-    background:rgba(5,5,14,.88);
+    flex-wrap:wrap;
+    padding:7px 12px 7px 12px;
+    gap:4px;
+    background:rgba(5,5,14,.90);
     backdrop-filter:blur(8px);
     -webkit-backdrop-filter:blur(8px);
     border-bottom:1px solid rgba(255,255,255,.07);
@@ -130,34 +128,13 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
     pointer-events:all;
     z-index:25;
     align-items:center;
+    overflow:visible;
   }
-  #insights::-webkit-scrollbar{display:none;}
   #insights.hidden{transform:translateY(-110%);}
-  /* "Brain State" header — becomes hide button on mobile */
   #insights .ins-head{display:none;}
-
-  /* compact chips for each card */
-  #insights .ins-card{
-    flex-shrink:0;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:8px;
-    padding:5px 10px;
-    display:flex;
-    flex-direction:column;
-    gap:1px;
-    min-width:max-content;
-  }
-  .ins-card .lbl{font-size:9px;letter-spacing:.10em;color:#5858a8;margin-bottom:2px;}
-  .ins-card .big{font-size:15px;font-weight:700;line-height:1.1;}
-  .ins-card .sub{font-size:10px;color:#6868b0;}
-  .bar-row{margin-bottom:2px;}
-  .bar-name{font-size:10px;width:44px;}
-  .bar-track{height:2px;}
-  .risk-item{font-size:10px;}
-  .act-note{font-size:10px;max-width:160px;white-space:normal;}
-
-  /* hide toggle button in topbar on mobile — replaced by strip's own button */
+  /* on mobile ic-active holds all chips inline, others hidden */
+  #insights #ic-active{display:flex;flex-wrap:wrap;align-items:center;gap:4px;flex:1;background:none;border:none;padding:0;}
+  #insights #ic-density,#insights #ic-risk,#insights #ic-act-note{display:none;}
   #insightsToggle{display:block;}
 
   /* entry panel — bottom sheet instead of right sidebar */
@@ -357,6 +334,10 @@ const ENTRIES=[
   {name:'Core Values',space:'core',ring:8,type:'evergreen',activation:.75,summary:'Foundational values — what I stand for, what I won\'t compromise.',notes:['Integrity: I won\'t misrepresent myself or my work to get ahead','Ownership: if I said I\'d do it, it gets done','Curiosity: I stay genuinely interested in how things work','Presence: the people in front of me deserve my full attention']}
 ];
 
+// ── must come first — used by insights + toggle code below ──
+const canvas=document.getElementById('c');
+const isMobile=window.innerWidth<=600;
+
 // ── insights ──────────────────────────────────────────────
 (function(){
   const cnt={};
@@ -365,16 +346,27 @@ const ENTRIES=[
   const maxT=Math.max(...LOBE_NAMES.map(n=>cnt[n].total));
   const most=[...LOBE_NAMES].sort((a,b)=>cnt[b].recent-cnt[a].recent)[0];
   const atRisk=ENTRIES.filter(e=>(e.type==='single_use'||e.type==='fast')&&e.ring>=4);
-  const deepest=[...LOBE_NAMES].sort((a,b)=>(cnt[b].sumRing/cnt[b].total)-(cnt[a].sumRing/cnt[a].total))[0];
-  document.getElementById('ic-active').innerHTML=`<div class="lbl">Most Active Space</div><div class="big" style="color:${LOBES[most].hex}">${most}</div><div class="sub">${cnt[most].recent} entries in last 3 weeks</div>`;
-  let bars=`<div class="lbl">Memory Density</div>`;
-  for(const n of LOBE_NAMES){const p=Math.round(cnt[n].total/maxT*100);bars+=`<div class="bar-row"><div class="bar-name" style="color:${LOBES[n].hex}">${n}</div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${LOBES[n].hex}40;border-right:2px solid ${LOBES[n].hex}80"></div></div><div class="bar-n">${cnt[n].total}</div></div>`;}
-  document.getElementById('ic-density').innerHTML=bars;
-  let r=`<div class="lbl">Fading Fast</div>`;
-  if(!atRisk.length)r+=`<div class="sub">None at risk ✓</div>`;
-  else{atRisk.slice(0,3).forEach(e=>{r+=`<div class="risk-item">${e.name}<span>${RINGS[e.ring].label}</span></div>`;});if(atRisk.length>3)r+=`<div class="sub">+${atRisk.length-3} more</div>`;}
-  document.getElementById('ic-risk').innerHTML=r;
-  document.getElementById('ic-act-note').innerHTML=`<div class="lbl">Activation</div><div class="act-note">Node <strong style="color:#6050a8">brightness</strong> and <strong style="color:#6050a8">size</strong> reflect estimated activation. Live telemetry matures ~7 June.</div>`;
+
+  if(isMobile){
+    // Single compact row: colored space chips + risk badge
+    let chips=LOBE_NAMES.map(n=>`<span style="color:${LOBES[n].hex};font-size:12px;font-weight:600;white-space:nowrap">${n[0].toUpperCase()+n.slice(1)} <span style="opacity:.6;font-weight:400">${cnt[n].total}</span></span>`).join('<span style="color:#2a2a50;margin:0 4px">·</span>');
+    const risk=atRisk.length?`<span style="color:#b05040;font-size:12px;white-space:nowrap;margin-left:6px">⚠ ${atRisk.length} fading</span>`:'';
+    document.getElementById('ic-active').innerHTML=chips+risk;
+    document.getElementById('ic-density').innerHTML='';
+    document.getElementById('ic-risk').innerHTML='';
+    document.getElementById('ic-act-note').innerHTML='';
+  } else {
+    const deepest=[...LOBE_NAMES].sort((a,b)=>(cnt[b].sumRing/cnt[b].total)-(cnt[a].sumRing/cnt[a].total))[0];
+    document.getElementById('ic-active').innerHTML=`<div class="lbl">Most Active Space</div><div class="big" style="color:${LOBES[most].hex}">${most}</div><div class="sub">${cnt[most].recent} entries in last 3 weeks</div>`;
+    let bars=`<div class="lbl">Memory Density</div>`;
+    for(const n of LOBE_NAMES){const p=Math.round(cnt[n].total/maxT*100);bars+=`<div class="bar-row"><div class="bar-name" style="color:${LOBES[n].hex}">${n}</div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${LOBES[n].hex}40;border-right:2px solid ${LOBES[n].hex}80"></div></div><div class="bar-n">${cnt[n].total}</div></div>`;}
+    document.getElementById('ic-density').innerHTML=bars;
+    let r=`<div class="lbl">Fading Fast</div>`;
+    if(!atRisk.length)r+=`<div class="sub">None at risk ✓</div>`;
+    else{atRisk.slice(0,3).forEach(e=>{r+=`<div class="risk-item">${e.name}<span>${RINGS[e.ring].label}</span></div>`;});if(atRisk.length>3)r+=`<div class="sub">+${atRisk.length-3} more</div>`;}
+    document.getElementById('ic-risk').innerHTML=r;
+    document.getElementById('ic-act-note').innerHTML=`<div class="lbl">Activation</div><div class="act-note">Node <strong style="color:#6050a8">brightness</strong> and <strong style="color:#6050a8">size</strong> reflect estimated activation. Live telemetry matures ~7 June.</div>`;
+  }
 })();
 
 /// ── mobile: insights strip toggle ───────────────────────────
@@ -434,8 +426,6 @@ canvas.addEventListener('touchend',e=>{if(e.touches.length<2)pinchDist0=null;},{
 // ═══════════════════════════════════════════════════════════
 // THREE.JS
 // ═══════════════════════════════════════════════════════════
-const canvas=document.getElementById('c');
-const isMobile=window.innerWidth<=600;
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
