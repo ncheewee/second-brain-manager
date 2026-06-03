@@ -379,7 +379,7 @@ for(let i=0;i<MAX_CO;i++){
   d.innerHTML='<div class="cc-name"></div><div class="cc-space"></div><div class="cc-ring"></div>';
   document.body.appendChild(d);ccards.push(d);
   const l=document.createElementNS('http://www.w3.org/2000/svg','path');
-  l.setAttribute('stroke-width','1');l.setAttribute('stroke-dasharray','4 3');l.setAttribute('fill','none');l.style.opacity='0';
+  l.setAttribute('stroke-width','1.5');l.setAttribute('fill','none');l.style.opacity='0';
   l.style.transition='opacity .45s';csvg.appendChild(l);clines.push(l);
 }
 const CARD_W=isMobile?110:128,CARD_H=54;
@@ -432,9 +432,10 @@ function updateCallouts(){
     const cardEdgeX=onLeft?cx+CARD_W:cx;
     const cardConnY=putBelow?cy:cy+CARD_H;
     const armX=pick.sx+(onLeft?-22:22);
-    line.setAttribute('d',`M ${pick.sx} ${pick.sy} L ${armX} ${pick.sy} L ${cardEdgeX} ${cardConnY}`);
+    line.setAttribute('d',`M ${pick.sx} ${pick.sy} L ${cardEdgeX} ${cardConnY}`);
     line.setAttribute('stroke',L.hex+'cc');
     line.setAttribute('stroke-width','1.5');
+    line.removeAttribute('stroke-dasharray');
     line.style.opacity='1';
   }
 }
