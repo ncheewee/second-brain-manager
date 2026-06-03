@@ -425,13 +425,15 @@ function updateCallouts(){
     const cy=Math.max(70,Math.min(innerHeight-CARD_H-20,pick.sy-CARD_H/2));
     card.style.left=cx+'px';card.style.top=cy+'px';
     card.classList.add('on');
-    // Elbow path: bubble → elbow point (horizontal) → card mid-edge
+    // Elbow path: short horizontal leader from bubble, then diagonal to card mid-edge
     const cardMidY=cy+CARD_H/2;
     const cardEdgeX=onLeft?cx+CARD_W:cx;
-    // elbow sits at card's vertical midpoint, offset 18px away from card edge
-    const elbowX=onLeft?cardEdgeX+18:cardEdgeX-18;
-    line.setAttribute('d',`M ${pick.sx} ${pick.sy} L ${elbowX} ${cardMidY} L ${cardEdgeX} ${cardMidY}`);
-    line.setAttribute('stroke',L.hex+'88');
+    const leaderLen=onLeft?-28:28; // short horizontal arm off the bubble
+    const elbowX=pick.sx+leaderLen;
+    const elbowY=pick.sy;
+    line.setAttribute('d',`M ${pick.sx} ${pick.sy} L ${elbowX} ${elbowY} L ${cardEdgeX} ${cardMidY}`);
+    line.setAttribute('stroke',L.hex+'bb');
+    line.setAttribute('stroke-width','1.5');
     line.style.opacity='1';
   }
 }
