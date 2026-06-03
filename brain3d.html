@@ -10,13 +10,20 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 #c{position:fixed;top:0;left:0;width:100vw;height:100vh;display:block;}
 
 /* ── topbar ── */
-#topbar{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;z-index:30;pointer-events:none;padding-top:max(14px,env(safe-area-inset-top));}
+#topbar{position:fixed;top:0;left:0;right:0;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:30;pointer-events:none;padding-top:max(12px,env(safe-area-inset-top));}
 #topbar h1{font-size:11px;font-weight:600;color:#2e2e48;letter-spacing:.16em;text-transform:uppercase;}
 #topbar-right{display:flex;align-items:center;gap:10px;pointer-events:all;}
 #topbar a{color:#2e2e48;text-decoration:none;font-size:11px;transition:color .2s;}
 #topbar a:hover{color:#888;}
-/* insights toggle — mobile only */
-#insightsToggle{display:none;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:8px;padding:5px 10px;font-size:11px;color:#666;cursor:pointer;pointer-events:all;}
+
+/* ── filter bar (top, below topbar) ── */
+#filterbar{position:fixed;left:0;right:0;display:flex;gap:6px;align-items:center;z-index:29;pointer-events:all;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:6px 14px;background:linear-gradient(to bottom,rgba(6,6,14,.92) 60%,transparent 100%);}
+#filterbar::-webkit-scrollbar{display:none;}
+.fpill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:5px 12px;font-size:12px;color:#5a5a80;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;font-family:inherit;min-height:30px;}
+.fpill:hover,.fpill:active{background:rgba(255,255,255,.09);color:#aaa;}
+.fpill.on{color:#ccd;border-color:rgba(255,255,255,.24);background:rgba(255,255,255,.09);}
+.fpill-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.fpill-n{font-size:10px;opacity:.55;font-weight:400;}
 
 /* ── label overlay ── */
 #labels{position:fixed;inset:0;pointer-events:none;z-index:15;}
@@ -26,8 +33,9 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 .node-lbl .nl-sub{display:block;font-size:10px;color:#484868;font-weight:400;margin-top:1px;}
 .node-lbl.on{opacity:1;}
 
-/* ── insights panel — desktop ── */
-#insights{position:fixed;top:0;left:0;width:272px;height:100vh;padding:52px 16px 16px;display:flex;flex-direction:column;gap:10px;z-index:28;pointer-events:none;background:linear-gradient(to right,rgba(5,5,14,.95) 66%,transparent 100%);transition:transform .3s;}
+/* ── insights panel — desktop sidebar ── */
+#insights{position:fixed;top:0;left:0;width:272px;height:100vh;padding:90px 16px 16px;display:flex;flex-direction:column;gap:10px;z-index:28;pointer-events:none;background:linear-gradient(to right,rgba(5,5,14,.95) 66%,transparent 100%);transition:transform .3s;transform:translateX(-100%);}
+#insights.open{transform:translateX(0);}
 .ins-head{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#252540;margin-bottom:1px;}
 .ins-card{background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.048);border-radius:9px;padding:9px 11px;}
 .ins-card .lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#323252;margin-bottom:5px;}
@@ -42,7 +50,7 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 .risk-item span{font-size:10px;color:#3e3e60;}
 .act-note{font-size:10px;color:#3e3e60;line-height:1.55;}
 
-/* ── entry panel — desktop: right sidebar ── */
+/* ── entry panel — desktop right sidebar ── */
 #panel{
   position:fixed;top:50%;right:20px;transform:translateY(-50%);
   width:256px;max-height:86vh;
@@ -82,184 +90,92 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 #panel .p-link:hover{color:#7a70cc;}
 
 /* ── bottom controls ── */
-#bottom{position:fixed;bottom:0;left:0;right:0;padding:10px 12px max(12px,env(safe-area-inset-bottom));display:flex;gap:6px;align-items:center;justify-content:center;z-index:30;flex-wrap:wrap;}
-.fbtn{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:5px 13px;font-size:11px;color:#46466a;cursor:pointer;transition:all .2s;letter-spacing:.05em;font-family:inherit;min-height:32px;}
-.fbtn:hover,.fbtn:active{background:rgba(255,255,255,.09);color:#aaa;}
-.fbtn.on{color:#ccd;border-color:rgba(255,255,255,.26);background:rgba(255,255,255,.09);}
-#resumeBtn{display:none;background:rgba(65,55,130,.11);border:1px solid rgba(85,75,160,.25);color:#6058a0;padding:5px 14px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;min-height:32px;}
+#bottom{position:fixed;bottom:0;left:0;right:0;padding:10px 16px max(12px,env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center;justify-content:center;z-index:30;}
+#resumeBtn{display:none;background:rgba(65,55,130,.11);border:1px solid rgba(85,75,160,.25);color:#6058a0;padding:6px 16px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;min-height:32px;}
 #resumeBtn:hover{background:rgba(65,55,130,.20);color:#9080cc;}
+
+/* ── callout cards ── */
+.ccard{position:fixed;background:rgba(6,6,20,.93);border:1px solid rgba(255,255,255,.13);border-radius:10px;padding:7px 11px;width:128px;pointer-events:none;z-index:19;opacity:0;transition:opacity .45s;}
+.ccard.on{opacity:1;}
+.cc-name{font-size:13px;font-weight:600;color:#dde;line-height:1.25;}
+.cc-space{font-size:10px;margin-top:2px;text-transform:capitalize;letter-spacing:.06em;}
+.cc-ring{font-size:10px;color:#38385a;margin-top:1px;}
+#callout-svg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:18;}
 
 /* ═══════════════════════════════════════════════════════
    MOBILE  (≤ 600px)
 ═══════════════════════════════════════════════════════ */
 @media(max-width:600px){
-
   /* topbar */
-  #topbar{padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));}
-  #topbar h1{font-size:12px;}
-  #topbar a{font-size:12px;}
-  #insightsToggle{display:block;}
+  #topbar h1{font-size:13px;color:#6060a0;}
+  #topbar a{font-size:13px;color:#6060a0;}
 
-  /* lobe labels bigger */
-  .lobe-lbl{font-size:14px !important;letter-spacing:.10em;}
+  /* filter bar bigger pills */
+  .fpill{font-size:14px;padding:6px 14px;min-height:36px;}
+  .fpill-dot{width:8px;height:8px;}
+  .fpill-n{font-size:12px;}
 
-  /* node tooltip — bigger font, more padding */
-  .node-lbl{font-size:15px !important;padding:8px 16px 9px !important;border-radius:10px !important;}
-  .node-lbl .nl-sub{font-size:12px !important;margin-top:3px !important;}
+  /* lobe labels */
+  .lobe-lbl{font-size:15px !important;letter-spacing:.10em;}
+  .lobe-lbl.on{opacity:1 !important;}
 
-  /* insights — fixed-height top strip */
-  #insights{
-    top:max(44px,env(safe-area-inset-top));
-    left:0;right:0;
-    width:100%;
-    height:64px;
-    flex-direction:row;
-    flex-wrap:nowrap;
-    padding:0 10px;
-    gap:6px;
-    background:rgba(8,8,20,.94);
-    border-bottom:1px solid rgba(255,255,255,.10);
-    border-right:none;
-    box-shadow:none;
-    transform:translateY(0);
-    transition:transform .3s, opacity .3s;
-    opacity:1;
-    pointer-events:all;
-    z-index:25;
-    align-items:center;
-    overflow:hidden;
-  }
-  #insights.hidden{transform:translateY(-100%);opacity:0;pointer-events:none;}
-  #insights .ins-head{display:none;}
-  /* chips row fills full width */
-  #insights #ic-active{
-    display:flex;flex:1;align-items:stretch;gap:5px;
-    background:none;border:none;padding:0;height:48px;
-  }
-  #insights #ic-density,#insights #ic-risk,#insights #ic-act-note{display:none;}
-  /* each chip */
-  #insights .ms-chip{
-    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
-    border-radius:7px;padding:0 4px;min-width:0;
-  }
-  #insights .ms-name{font-size:22px;font-weight:700;letter-spacing:.03em;line-height:1.1;white-space:nowrap;}
-  #insights .ms-count{font-size:20px;color:rgba(200,200,255,.65);line-height:1.1;}
-  #insights .ms-risk{
-    flex-shrink:0;display:flex;align-items:center;justify-content:center;
-    background:rgba(160,60,40,.20);border:1px solid rgba(200,80,60,.30);
-    border-radius:7px;padding:0 8px;height:48px;
-    font-size:18px;color:#d06050;white-space:nowrap;
-  }
-  #insightsToggle{display:block;}
+  /* node tooltip */
+  .node-lbl{font-size:15px !important;padding:8px 16px 9px !important;color:rgba(230,230,255,.98) !important;background:rgba(5,5,20,.97) !important;}
+  .node-lbl .nl-sub{font-size:12px !important;color:#7878a8 !important;}
 
-  /* entry panel — bottom sheet instead of right sidebar */
+  /* entry panel — bottom sheet */
   #panel{
     top:auto;right:0;bottom:0;left:0;
-    transform:none;
-    width:100%;
-    max-height:45vh;
+    width:100%;max-height:45vh;
     border-radius:16px 16px 0 0;
-    border:1px solid rgba(255,255,255,.09);
-    border-bottom:none;
-    /* slide in from bottom */
-    opacity:0;
-    transform:translateY(100%);
+    border:1px solid rgba(255,255,255,.09);border-bottom:none;
+    opacity:0;transform:translateY(100%);
     transition:opacity .25s,transform .3s;
   }
   #panel.on{opacity:1;transform:translateY(0);pointer-events:all;}
-
-  /* panel content bigger on mobile */
   #panel .p-head{padding:14px 18px 12px;}
-  #panel .p-sp{font-size:10px;}
+  #panel .p-sp{font-size:11px;}
   #panel .p-ti{font-size:17px;}
-  #panel .p-close{font-size:22px;padding:0 2px;}
-  .p-section-body{font-size:14px !important;padding:12px 18px 14px !important;line-height:1.7;}
+  #panel .p-close{font-size:22px;}
+  .p-section-body{font-size:14px !important;padding:12px 18px 14px !important;color:#9090c8 !important;}
   .p-acc-head{padding:12px 18px;min-height:48px;}
-  .p-acc-title{font-size:11px;}
-  .p-acc-body{padding:0 18px 14px;}
-  .p-notes li{font-size:14px !important;padding:4px 0;}
-  .p-meta-row{margin-bottom:9px;}
-  .p-meta-key{font-size:10px;}
-  .p-meta-val{font-size:13px;}
-  #panel .p-foot{padding:12px 18px;}
-  #panel .p-link{font-size:13px;}
-
-  /* handle bar */
-  #panel .p-head::before{
-    content:'';display:block;width:36px;height:4px;
-    background:rgba(255,255,255,.15);border-radius:2px;
-    margin:0 auto 12px;
-  }
-
-  /* ── mobile brightness boost ── */
-  /* brighten lobe labels */
-  .lobe-lbl.on{opacity:1 !important;}
-  /* brighter node tooltip */
-  .node-lbl{color:rgba(230,230,255,.98) !important;background:rgba(5,5,20,.97) !important;}
-  .node-lbl .nl-sub{color:#7878a8 !important;}
-  /* brighter insights text */
-  .ins-head{color:#5050a0 !important;}
-  .ins-card .lbl{color:#5858a8 !important;}
-  .ins-card .sub{color:#6868b0 !important;}
-  .bar-name{color:#a0a0cc !important;}
-  .bar-n{color:#6868a8 !important;}
-  .act-note{color:#6868a8 !important;}
-  /* brighter panel text */
-  .p-section-body{color:#9090c8 !important;}
-  .p-notes li{color:#8888c0 !important;}
-  .p-notes li::before{color:#5050a0 !important;}
-  .p-meta-key{color:#5050a0 !important;}
-  .p-meta-val{color:#9090c8 !important;}
-  .p-acc-title{color:#7070b8 !important;}
+  .p-acc-title{font-size:12px;color:#7070b8 !important;}
   .p-acc-arrow{color:#6060b0 !important;}
-  /* brighter filter buttons */
-  .fbtn{color:#8080b8 !important;}
-  .fbtn.on{color:#dde !important;}
-  /* topbar legible on mobile */
-  #topbar h1{color:#6060a0 !important;}
-  #topbar a{color:#6060a0 !important;}
-  #insightsToggle{color:#8888cc !important;border-color:rgba(255,255,255,.18) !important;}
+  .p-acc-body{padding:0 18px 14px;}
+  .p-notes li{font-size:14px !important;color:#8888c0 !important;}
+  .p-notes li::before{color:#5050a0 !important;}
+  .p-meta-key{font-size:11px;color:#5050a0 !important;}
+  .p-meta-val{font-size:13px;color:#9090c8 !important;}
+  #panel .p-foot{padding:12px 18px;}
+  #panel .p-link{font-size:14px;}
+  #panel .p-head::before{content:'';display:block;width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 12px;}
 
-  /* bottom controls — horizontal scroll, bigger targets */
-  #bottom{
-    flex-wrap:nowrap;
-    overflow-x:auto;
-    justify-content:flex-start;
-    padding:8px 12px max(10px,env(safe-area-inset-bottom));
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    gap:7px;
-  }
-  #bottom::-webkit-scrollbar{display:none;}
-  .fbtn{font-size:13px;padding:7px 16px;min-height:38px;flex-shrink:0;}
-  #resumeBtn{font-size:13px;padding:7px 16px;min-height:38px;flex-shrink:0;}
+  /* bottom */
+  #bottom{padding:8px 16px max(10px,env(safe-area-inset-bottom));}
+  #resumeBtn{font-size:13px;padding:7px 18px;}
+
+  /* callout cards smaller on mobile */
+  .ccard{width:110px;}
+  .cc-name{font-size:12px;}
+  .cc-space{font-size:10px;}
+  .cc-ring{font-size:9px;}
 }
-
-/* overlay backdrop for insights on mobile */
-#insightsBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:35;}
-#insightsBackdrop.on{display:block;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="labels"></div>
-<div id="insightsBackdrop" id="insightsBackdrop"></div>
+<svg id="callout-svg"></svg>
 
 <div id="topbar">
   <h1>Second Brain · 3D</h1>
   <div id="topbar-right">
-    <button id="insightsToggle">Brain State</button>
     <a href="index.html">← Manager</a>
   </div>
 </div>
 
-<div id="insights">
-  <div class="ins-head">Brain State</div>
-  <div class="ins-card" id="ic-active"></div>
-  <div class="ins-card" id="ic-density"></div>
-  <div class="ins-card" id="ic-risk"></div>
-  <div class="ins-card" id="ic-act-note"></div>
+<div id="filterbar">
+  <!-- populated by JS -->
 </div>
 
 <div id="panel">
@@ -274,12 +190,6 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 
 <div id="bottom">
   <button id="resumeBtn">↺ Resume</button>
-  <button class="fbtn on" data-f="all">All</button>
-  <button class="fbtn" data-f="work">Work</button>
-  <button class="fbtn" data-f="personal">Personal</button>
-  <button class="fbtn" data-f="family">Family</button>
-  <button class="fbtn" data-f="leisure">Leisure</button>
-  <button class="fbtn" data-f="core">Core</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -349,73 +259,45 @@ const ENTRIES=[
   {name:'Core Values',space:'core',ring:8,type:'evergreen',activation:.75,summary:'Foundational values — what I stand for, what I won\'t compromise.',notes:['Integrity: I won\'t misrepresent myself or my work to get ahead','Ownership: if I said I\'d do it, it gets done','Curiosity: I stay genuinely interested in how things work','Presence: the people in front of me deserve my full attention']}
 ];
 
-// ── must come first — used by insights + toggle code below ──
+// ── early constants ──────────────────────────────────────────
 const canvas=document.getElementById('c');
 const isMobile=window.innerWidth<=600;
 
-// ── insights ──────────────────────────────────────────────
+// ── filter bar — pill buttons with entry counts ──────────────
 (function(){
-  const cnt={};
-  for(const n of LOBE_NAMES)cnt[n]={total:0,recent:0,sumRing:0};
-  for(const e of ENTRIES){cnt[e.space].total++;cnt[e.space].sumRing+=e.ring;if(e.ring<=2)cnt[e.space].recent++;}
-  const maxT=Math.max(...LOBE_NAMES.map(n=>cnt[n].total));
-  const most=[...LOBE_NAMES].sort((a,b)=>cnt[b].recent-cnt[a].recent)[0];
-  const atRisk=ENTRIES.filter(e=>(e.type==='single_use'||e.type==='fast')&&e.ring>=4);
-
-  if(isMobile){
-    // Equal-width chips, one per space
-    let chips=LOBE_NAMES.map(n=>`<div class="ms-chip"><span class="ms-name" style="color:${LOBES[n].hex}">${n[0].toUpperCase()+n.slice(1)}</span><span class="ms-count">${cnt[n].total}</span></div>`).join('');
-    const risk=atRisk.length?`<div class="ms-risk">⚠ ${atRisk.length}</div>`:'';
-    document.getElementById('ic-active').innerHTML=chips+risk;
-    document.getElementById('ic-density').innerHTML='';
-    document.getElementById('ic-risk').innerHTML='';
-    document.getElementById('ic-act-note').innerHTML='';
-  } else {
-    const deepest=[...LOBE_NAMES].sort((a,b)=>(cnt[b].sumRing/cnt[b].total)-(cnt[a].sumRing/cnt[a].total))[0];
-    document.getElementById('ic-active').innerHTML=`<div class="lbl">Most Active Space</div><div class="big" style="color:${LOBES[most].hex}">${most}</div><div class="sub">${cnt[most].recent} entries in last 3 weeks</div>`;
-    let bars=`<div class="lbl">Memory Density</div>`;
-    for(const n of LOBE_NAMES){const p=Math.round(cnt[n].total/maxT*100);bars+=`<div class="bar-row"><div class="bar-name" style="color:${LOBES[n].hex}">${n}</div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${LOBES[n].hex}40;border-right:2px solid ${LOBES[n].hex}80"></div></div><div class="bar-n">${cnt[n].total}</div></div>`;}
-    document.getElementById('ic-density').innerHTML=bars;
-    let r=`<div class="lbl">Fading Fast</div>`;
-    if(!atRisk.length)r+=`<div class="sub">None at risk ✓</div>`;
-    else{atRisk.slice(0,3).forEach(e=>{r+=`<div class="risk-item">${e.name}<span>${RINGS[e.ring].label}</span></div>`;});if(atRisk.length>3)r+=`<div class="sub">+${atRisk.length-3} more</div>`;}
-    document.getElementById('ic-risk').innerHTML=r;
-    document.getElementById('ic-act-note').innerHTML=`<div class="lbl">Activation</div><div class="act-note">Node <strong style="color:#6050a8">brightness</strong> and <strong style="color:#6050a8">size</strong> reflect estimated activation. Live telemetry matures ~7 June.</div>`;
+  const cnt={};for(const n of LOBE_NAMES)cnt[n]=0;for(const e of ENTRIES)cnt[e.space]++;
+  const fb=document.getElementById('filterbar');
+  const allBtn=document.createElement('button');
+  allBtn.className='fpill on';allBtn.dataset.f='all';
+  allBtn.innerHTML=`All <span class="fpill-n">${ENTRIES.length}</span>`;
+  fb.appendChild(allBtn);
+  for(const n of LOBE_NAMES){
+    const L=LOBES[n];
+    const b=document.createElement('button');
+    b.className='fpill';b.dataset.f=n;
+    b.innerHTML=`<span class="fpill-dot" style="background:${L.hex}"></span><span style="color:${L.hex}">${n[0].toUpperCase()+n.slice(1)}</span> <span class="fpill-n">${cnt[n]}</span>`;
+    fb.appendChild(b);
   }
 })();
 
-/// ── insights toggle ──────────────────────────────────────────
-const insightsEl=document.getElementById('insights');
-const backdrop=document.getElementById('insightsBackdrop');
-const insightsToggle=document.getElementById('insightsToggle');
-
-if(isMobile){
-  insightsToggle.textContent='Hide ↑';
-  insightsToggle.addEventListener('click',()=>{
-    const hidden=insightsEl.classList.toggle('hidden');
-    insightsToggle.textContent=hidden?'Brain State ↓':'Hide ↑';
-  });
-} else {
-  insightsToggle.addEventListener('click',()=>{
-    insightsEl.classList.toggle('open');
-    backdrop.classList.toggle('on');
-  });
-  backdrop.addEventListener('click',()=>{insightsEl.classList.remove('open');backdrop.classList.remove('on');});
-}
+// Position filterbar below topbar
+(function(){
+  const tb=document.getElementById('topbar');
+  const tbH=tb.getBoundingClientRect().height||44;
+  const safeTop=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')||'0')||0;
+  document.getElementById('filterbar').style.top=(tbH)+'px';
+})();
 
 // ── pinch-to-zoom ────────────────────────────────────────────
 let pinchDist0=null;
 const CAM_Z_MIN=16, CAM_Z_MAX=50;
 canvas.addEventListener('touchstart',e=>{
-  if(e.touches.length===2){
-    pinchDist0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-  }
+  if(e.touches.length===2) pinchDist0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
 },{passive:true});
 canvas.addEventListener('touchmove',e=>{
-  if(e.touches.length===2 && pinchDist0!==null){
-    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-    const delta=pinchDist0-d; // positive = fingers closer = zoom out
-    targetZ=Math.min(CAM_Z_MAX,Math.max(CAM_Z_MIN,targetZ+delta*0.08));
+  if(e.touches.length===2&&pinchDist0!==null){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    targetZ=Math.min(CAM_Z_MAX,Math.max(CAM_Z_MIN,targetZ+(pinchDist0-d)*0.08));
     pinchDist0=d;
   }
 },{passive:true});
@@ -452,7 +334,7 @@ function makeGlowTex(r,g,b){const S=256,cv=document.createElement('canvas');cv.w
 const lobeGlow={};
 for(const name of LOBE_NAMES){
   const L=LOBES[name];
-  const lobeOpacity=isMobile ? Math.min(1,(.26+L.activation*.15)*1.8) : .26+L.activation*.15;
+  const lobeOpacity=isMobile?Math.min(1,(.26+L.activation*.15)*1.8):.26+L.activation*.15;
   const mat=new THREE.SpriteMaterial({map:makeGlowTex(...L.rgb),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:lobeOpacity});
   const sp=new THREE.Sprite(mat);
   const c=L.centroid,rr=BR*(.34+L.activation*.12);sp.position.set(c[0]*rr,c[1]*rr,c[2]*rr);
@@ -488,8 +370,73 @@ for(const name of LOBE_NAMES){const el=document.createElement('div');el.classNam
 const nodeLbl=document.createElement('div');nodeLbl.className='node-lbl';labelsDiv.appendChild(nodeLbl);
 function project(wp){const v=wp.clone();v.project(camera);return{x:(v.x+1)/2*innerWidth,y:-(v.y-1)/2*innerHeight};}
 
+// ── callout system ───────────────────────────────────────────
+const MAX_CO=isMobile?2:3;
+const csvg=document.getElementById('callout-svg');
+const ccards=[],clines=[];
+for(let i=0;i<MAX_CO;i++){
+  const d=document.createElement('div');d.className='ccard';
+  d.innerHTML='<div class="cc-name"></div><div class="cc-space"></div><div class="cc-ring"></div>';
+  document.body.appendChild(d);ccards.push(d);
+  const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+  l.setAttribute('stroke-width','1');l.setAttribute('stroke-dasharray','4 3');l.style.opacity='0';
+  l.style.transition='opacity .45s';csvg.appendChild(l);clines.push(l);
+}
+const CARD_W=isMobile?110:128,CARD_H=54;
+let calloutActive=[];
+
+function updateCallouts(){
+  if(!autoRotate||isDrag){
+    ccards.forEach(c=>c.classList.remove('on'));
+    clines.forEach(l=>{l.style.opacity='0';});
+    return;
+  }
+  // Project visible nodes to screen space
+  const visible=nodeMeshes.filter(m=>activeFilter==='all'||m.userData.entry.space===activeFilter);
+  const proj=[];
+  for(const m of visible){
+    const v=m.position.clone();v.project(camera);
+    if(v.z>1.0)continue; // behind camera
+    const sx=(v.x+1)/2*innerWidth,sy=-(v.y-1)/2*innerHeight;
+    if(sx<0||sx>innerWidth||sy<0||sy>innerHeight)continue;
+    proj.push({m,entry:m.userData.entry,sx,sy,ndcZ:v.z});
+  }
+  proj.sort((a,b)=>a.ndcZ-b.ndcZ); // lowest ndcZ = closest
+
+  // Pick top MAX_CO with minimum screen distance between them
+  const picks=[];
+  const MIN_DIST=isMobile?90:110;
+  for(const p of proj){
+    if(picks.length>=MAX_CO)break;
+    if(!picks.some(q=>Math.hypot(p.sx-q.sx,p.sy-q.sy)<MIN_DIST))picks.push(p);
+  }
+
+  for(let i=0;i<MAX_CO;i++){
+    const card=ccards[i],line=clines[i],pick=picks[i];
+    if(!pick){card.classList.remove('on');line.style.opacity='0';continue;}
+    const e=pick.entry,L=LOBES[e.space];
+    card.querySelector('.cc-name').textContent=e.name;
+    card.querySelector('.cc-space').textContent=e.space;
+    card.querySelector('.cc-space').style.color=L.hex;
+    card.querySelector('.cc-ring').textContent=RINGS[e.ring].label+' ago';
+    // Place card left or right of bubble
+    const onLeft=pick.sx>innerWidth*0.5;
+    const cx=onLeft?pick.sx-CARD_W-20:pick.sx+20;
+    const cy=Math.max(70,Math.min(innerHeight-CARD_H-20,pick.sy-CARD_H/2));
+    card.style.left=cx+'px';card.style.top=cy+'px';
+    card.classList.add('on');
+    // Line: bubble → card edge
+    const lx2=onLeft?cx+CARD_W:cx;
+    const ly2=cy+CARD_H/2;
+    line.setAttribute('x1',pick.sx);line.setAttribute('y1',pick.sy);
+    line.setAttribute('x2',lx2);line.setAttribute('y2',ly2);
+    line.setAttribute('stroke',L.hex+'99');
+    line.style.opacity='1';
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
-// PANEL — accordion builder
+// PANEL
 // ═══════════════════════════════════════════════════════════
 function buildPanel(e,L){
   const depthPct=Math.round((1-e.ring/8)*100),actPct=Math.round(e.activation*100);
@@ -540,14 +487,14 @@ window.addEventListener('mousemove',e=>{
 window.addEventListener('mouseup',e=>{if(isDrag&&!didDrag)doClick(e.clientX,e.clientY);isDrag=false;});
 canvas.addEventListener('wheel',e=>{targetZ=Math.max(14,Math.min(50,targetZ+e.deltaY*.04));},{passive:true});
 
-// Touch — separate drag vs tap tracking
 let tX=0,tY=0,tDidMove=false,tStart=0;
 canvas.addEventListener('touchstart',e=>{
-  const t=e.touches[0];tX=t.clientX;tY=t.clientY;tDidMove=false;tStart=Date.now();stopAuto();
+  const t=e.touches[0];tX=t.clientX;tY=t.clientY;tDidMove=false;tStart=Date.now();
+  if(e.touches.length===1)stopAuto();
 },{passive:true});
 canvas.addEventListener('touchmove',e=>{
   e.preventDefault();
-  if(e.touches.length>=2) return; // let pinch handler take over
+  if(e.touches.length>=2)return;
   const t=e.touches[0],dx=t.clientX-tX,dy=t.clientY-tY;
   if(Math.abs(dx)+Math.abs(dy)>4)tDidMove=true;
   velY=Math.max(-VEL_CAP,Math.min(VEL_CAP,velY+dx*DRAG_GAIN));
@@ -555,22 +502,15 @@ canvas.addEventListener('touchmove',e=>{
   tX=t.clientX;tY=t.clientY;
 },{passive:false});
 canvas.addEventListener('touchend',e=>{
-  if(!tDidMove&&Date.now()-tStart<300){
-    // Treat as tap → click
-    const t=e.changedTouches[0];doClick(t.clientX,t.clientY);
-  }
+  if(!tDidMove&&Date.now()-tStart<300){const t=e.changedTouches[0];doClick(t.clientX,t.clientY);}
 });
 
 const ray=new THREE.Raycaster();
-// Increase raycaster threshold on mobile for easier tap targets
 if(isMobile)ray.params.Points={threshold:.5};
-
 function getHit(cx,cy){
   const rect=canvas.getBoundingClientRect();
   ray.setFromCamera(new THREE.Vector2(((cx-rect.left)/rect.width)*2-1,-((cy-rect.top)/rect.height)*2+1),camera);
-  // Use larger threshold on mobile
-  const threshold=isMobile?BR*.15:BR*.08;
-  ray.params.Mesh={};
+  const threshold=isMobile?BR*.15:BR*.08;ray.params.Mesh={};
   const hits=ray.intersectObjects(nodeMeshes);return hits.length?hits[0].object:null;
 }
 function applyFilter(){
@@ -587,7 +527,7 @@ function doHover(cx,cy){
   }else{canvas.style.cursor='default';if(hoveredSpace){hoveredSpace=null;applyFilter();}nodeLbl.classList.remove('on');}
 }
 function doClick(cx,cy){const hit=getHit(cx,cy);if(hit)showPanel(hit);else document.getElementById('panel').classList.remove('on');}
-document.querySelectorAll('.fbtn').forEach(btn=>{btn.addEventListener('click',()=>{activeFilter=btn.dataset.f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');hoveredSpace=null;applyFilter();});});
+document.querySelectorAll('.fpill').forEach(btn=>{btn.addEventListener('click',()=>{activeFilter=btn.dataset.f;document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');hoveredSpace=null;applyFilter();});});
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 
 // ═══════════════════════════════════════════════════════════
@@ -607,6 +547,7 @@ function animate(){
   if(!hoveredSpace){for(const m of nodeMeshes){const{entry,mat,alpha}=m.userData,vis=activeFilter==='all'||entry.space===activeFilter;if(!vis){mat.opacity=alpha*.06;continue;}let p=1;if(entry.type==='single_use')p=.65+Math.sin(t*2.5+m.id*.9)*.35;else if(entry.type==='fast')p=.82+Math.sin(t*1.4+m.id*.5)*.18;mat.opacity=Math.min(1,alpha*p);}}
   const toCamera=camera.position.clone().normalize();
   for(const name of LOBE_NAMES){const c=LOBES[name].centroid,dot=toCamera.x*c[0]+toCamera.y*c[1]+toCamera.z*c[2],show=dot>0.28&&(activeFilter==='all'||activeFilter===name),el=lobeLbls[name];if(show){const wp=new THREE.Vector3(c[0],c[1],c[2]).multiplyScalar(BR*1.06),sc=project(wp);el.style.left=sc.x+'px';el.style.top=sc.y+'px';el.classList.add('on');}else el.classList.remove('on');}
+  updateCallouts();
   renderer.render(scene,camera);
 }
 animate();
