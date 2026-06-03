@@ -432,7 +432,8 @@ function updateCallouts(){
     const cardEdgeX=onLeft?cx+CARD_W:cx;
     const cardConnY=putBelow?cy:cy+CARD_H;
     const armX=pick.sx+(onLeft?-22:22);
-    const elbowX=onLeft?cardEdgeX+24:cardEdgeX-24; // elbow sits just outside card edge
+    const yDist=Math.abs(pick.sy-cardConnY); // vertical span → use as horizontal span for 45°
+    const elbowX=onLeft?cardEdgeX+yDist:cardEdgeX-yDist;
     line.setAttribute('d',`M ${pick.sx} ${pick.sy} L ${elbowX} ${cardConnY} L ${cardEdgeX} ${cardConnY}`);
     line.setAttribute('stroke',L.hex+'cc');
     line.setAttribute('stroke-width','1.5');
