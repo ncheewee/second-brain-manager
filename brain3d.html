@@ -167,6 +167,35 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
     margin:0 auto 12px;
   }
 
+  /* ── mobile brightness boost ── */
+  /* brighten lobe labels */
+  .lobe-lbl.on{opacity:1 !important;}
+  /* brighter node tooltip */
+  .node-lbl{color:rgba(230,230,255,.98) !important;background:rgba(5,5,20,.97) !important;}
+  .node-lbl .nl-sub{color:#7878a8 !important;}
+  /* brighter insights text */
+  .ins-head{color:#5050a0 !important;}
+  .ins-card .lbl{color:#5858a8 !important;}
+  .ins-card .sub{color:#6868b0 !important;}
+  .bar-name{color:#a0a0cc !important;}
+  .bar-n{color:#6868a8 !important;}
+  .act-note{color:#6868a8 !important;}
+  /* brighter panel text */
+  .p-section-body{color:#9090c8 !important;}
+  .p-notes li{color:#8888c0 !important;}
+  .p-notes li::before{color:#5050a0 !important;}
+  .p-meta-key{color:#5050a0 !important;}
+  .p-meta-val{color:#9090c8 !important;}
+  .p-acc-title{color:#7070b8 !important;}
+  .p-acc-arrow{color:#6060b0 !important;}
+  /* brighter filter buttons */
+  .fbtn{color:#8080b8 !important;}
+  .fbtn.on{color:#dde !important;}
+  /* topbar legible on mobile */
+  #topbar h1{color:#6060a0 !important;}
+  #topbar a{color:#6060a0 !important;}
+  #insightsToggle{color:#8888cc !important;border-color:rgba(255,255,255,.18) !important;}
+
   /* bottom controls — horizontal scroll, bigger targets */
   #bottom{
     flex-wrap:nowrap;
@@ -356,7 +385,8 @@ function makeGlowTex(r,g,b){const S=256,cv=document.createElement('canvas');cv.w
 const lobeGlow={};
 for(const name of LOBE_NAMES){
   const L=LOBES[name];
-  const mat=new THREE.SpriteMaterial({map:makeGlowTex(...L.rgb),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.26+L.activation*.15});
+  const lobeOpacity=isMobile ? Math.min(1,(.26+L.activation*.15)*1.8) : .26+L.activation*.15;
+  const mat=new THREE.SpriteMaterial({map:makeGlowTex(...L.rgb),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:lobeOpacity});
   const sp=new THREE.Sprite(mat);
   const c=L.centroid,rr=BR*(.34+L.activation*.12);sp.position.set(c[0]*rr,c[1]*rr,c[2]*rr);
   const sz=BR*(1.38+L.activation*.44);sp.scale.setScalar(sz);
@@ -375,7 +405,8 @@ for(const name of LOBE_NAMES){
   const L=LOBES[name];
   ENTRIES.filter(e=>e.space===name).forEach((e,i)=>{
     const seed=L.seedsN[i%L.seedsN.length],dir=coneDir(seed,30,gIdx++),rr=RINGS[e.ring].r*BR;
-    const alpha=PALPHA[e.type]*(.55+e.activation*.45),nsz=PSIZE[e.type];
+    const mobileBright=isMobile?1.6:1.0;
+    const alpha=Math.min(1,PALPHA[e.type]*(.55+e.activation*.45)*mobileBright),nsz=PSIZE[e.type];
     const gMat=new THREE.SpriteMaterial({map:nodeTex[name],transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:alpha});
     const gSp=new THREE.Sprite(gMat);gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);gSp.scale.setScalar(nsz*BR*(0.8+e.activation*.4));scene.add(gSp);
     const hit=new THREE.Mesh(new THREE.SphereGeometry(nsz*.48*BR,5,3),new THREE.MeshBasicMaterial({visible:false}));
@@ -490,7 +521,15 @@ function doHover(cx,cy){
 }
 function doClick(cx,cy){const hit=getHit(cx,cy);if(hit)showPanel(hit);else document.getElementById('panel').classList.remove('on');}
 document.querySelectorAll('.fbtn').forEach(btn=>{btn.addEventListener('click',()=>{activeFilter=btn.dataset.f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');hoveredSpace=null;applyFilter();});});
-window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+function onResize(){
+  camera.aspect=innerWidth/innerHeight;
+  // zoom out on narrow screens so the sphere fits
+  camera.fov = innerWidth<=600 ? 72 : 50;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+}
+window.addEventListener('resize', onResize);
+onResize(); // apply on first load too
 
 // ═══════════════════════════════════════════════════════════
 // RENDER LOOP
