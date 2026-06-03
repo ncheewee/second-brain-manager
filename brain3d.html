@@ -107,34 +107,50 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
   .node-lbl{font-size:15px !important;padding:8px 16px 9px !important;border-radius:10px !important;}
   .node-lbl .nl-sub{font-size:12px !important;margin-top:3px !important;}
 
-  /* insights — single-row top strip, fits within screen width */
+  /* insights — fixed-height top strip */
   #insights{
     top:max(44px,env(safe-area-inset-top));
     left:0;right:0;
     width:100%;
-    height:auto;
+    height:46px;
     flex-direction:row;
-    flex-wrap:wrap;
-    padding:7px 12px 7px 12px;
-    gap:4px;
-    background:rgba(5,5,14,.90);
-    backdrop-filter:blur(8px);
-    -webkit-backdrop-filter:blur(8px);
-    border-bottom:1px solid rgba(255,255,255,.07);
+    flex-wrap:nowrap;
+    padding:0 10px;
+    gap:6px;
+    background:rgba(8,8,20,.94);
+    border-bottom:1px solid rgba(255,255,255,.10);
     border-right:none;
     box-shadow:none;
     transform:translateY(0);
-    transition:transform .3s;
+    transition:transform .3s, opacity .3s;
+    opacity:1;
     pointer-events:all;
     z-index:25;
     align-items:center;
-    overflow:visible;
+    overflow:hidden;
   }
-  #insights.hidden{transform:translateY(-110%);}
+  #insights.hidden{transform:translateY(-100%);opacity:0;pointer-events:none;}
   #insights .ins-head{display:none;}
-  /* on mobile ic-active holds all chips inline, others hidden */
-  #insights #ic-active{display:flex;flex-wrap:wrap;align-items:center;gap:4px;flex:1;background:none;border:none;padding:0;}
+  /* chips row fills full width */
+  #insights #ic-active{
+    display:flex;flex:1;align-items:stretch;gap:5px;
+    background:none;border:none;padding:0;height:30px;
+  }
   #insights #ic-density,#insights #ic-risk,#insights #ic-act-note{display:none;}
+  /* each chip */
+  #insights .ms-chip{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+    border-radius:7px;padding:0 4px;min-width:0;
+  }
+  #insights .ms-name{font-size:11px;font-weight:700;letter-spacing:.03em;line-height:1.1;white-space:nowrap;}
+  #insights .ms-count{font-size:10px;color:rgba(200,200,255,.65);line-height:1.1;}
+  #insights .ms-risk{
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(160,60,40,.20);border:1px solid rgba(200,80,60,.30);
+    border-radius:7px;padding:0 8px;height:30px;
+    font-size:11px;color:#d06050;white-space:nowrap;
+  }
   #insightsToggle{display:block;}
 
   /* entry panel — bottom sheet instead of right sidebar */
@@ -240,7 +256,6 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 
 <div id="insights">
   <div class="ins-head">Brain State</div>
-  <button id="insightsHide" style="display:none;flex-shrink:0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:6px;padding:4px 9px;font-size:11px;color:#6868b0;cursor:pointer;font-family:inherit;margin-right:4px;">Hide ↑</button>
   <div class="ins-card" id="ic-active"></div>
   <div class="ins-card" id="ic-density"></div>
   <div class="ins-card" id="ic-risk"></div>
@@ -348,9 +363,9 @@ const isMobile=window.innerWidth<=600;
   const atRisk=ENTRIES.filter(e=>(e.type==='single_use'||e.type==='fast')&&e.ring>=4);
 
   if(isMobile){
-    // Single compact row: colored space chips + risk badge
-    let chips=LOBE_NAMES.map(n=>`<span style="color:${LOBES[n].hex};font-size:12px;font-weight:600;white-space:nowrap">${n[0].toUpperCase()+n.slice(1)} <span style="opacity:.6;font-weight:400">${cnt[n].total}</span></span>`).join('<span style="color:#2a2a50;margin:0 4px">·</span>');
-    const risk=atRisk.length?`<span style="color:#b05040;font-size:12px;white-space:nowrap;margin-left:6px">⚠ ${atRisk.length} fading</span>`:'';
+    // Equal-width chips, one per space
+    let chips=LOBE_NAMES.map(n=>`<div class="ms-chip"><span class="ms-name" style="color:${LOBES[n].hex}">${n[0].toUpperCase()+n.slice(1)}</span><span class="ms-count">${cnt[n].total}</span></div>`).join('');
+    const risk=atRisk.length?`<div class="ms-risk">⚠ ${atRisk.length}</div>`:'';
     document.getElementById('ic-active').innerHTML=chips+risk;
     document.getElementById('ic-density').innerHTML='';
     document.getElementById('ic-risk').innerHTML='';
@@ -369,33 +384,16 @@ const isMobile=window.innerWidth<=600;
   }
 })();
 
-/// ── mobile: insights strip toggle ───────────────────────────
+/// ── insights toggle ──────────────────────────────────────────
 const insightsEl=document.getElementById('insights');
 const backdrop=document.getElementById('insightsBackdrop');
-const insightsHide=document.getElementById('insightsHide');
 const insightsToggle=document.getElementById('insightsToggle');
 
-function updateInsightsUI(){
-  if(!isMobile) return;
-  insightsHide.style.display='flex';
-}
-updateInsightsUI();
-
-function hideInsights(){
-  insightsEl.classList.add('hidden');
-  insightsToggle.textContent='Brain State ↓';
-}
-function showInsights(){
-  insightsEl.classList.remove('hidden');
-  insightsToggle.textContent='Hide ↑';
-}
-
 if(isMobile){
-  insightsToggle.textContent='Hide ↑'; // visible by default
-  insightsHide.addEventListener('click', hideInsights);
+  insightsToggle.textContent='Hide ↑';
   insightsToggle.addEventListener('click',()=>{
-    if(insightsEl.classList.contains('hidden')) showInsights();
-    else hideInsights();
+    const hidden=insightsEl.classList.toggle('hidden');
+    insightsToggle.textContent=hidden?'Brain State ↓':'Hide ↑';
   });
 } else {
   insightsToggle.addEventListener('click',()=>{
@@ -549,6 +547,7 @@ canvas.addEventListener('touchstart',e=>{
 },{passive:true});
 canvas.addEventListener('touchmove',e=>{
   e.preventDefault();
+  if(e.touches.length>=2) return; // let pinch handler take over
   const t=e.touches[0],dx=t.clientX-tX,dy=t.clientY-tY;
   if(Math.abs(dx)+Math.abs(dy)>4)tDidMove=true;
   velY=Math.max(-VEL_CAP,Math.min(VEL_CAP,velY+dx*DRAG_GAIN));
