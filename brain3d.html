@@ -95,7 +95,7 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 #resumeBtn:hover{background:rgba(65,55,130,.20);color:#9080cc;}
 
 /* ── callout cards ── */
-.ccard{position:fixed;background:rgba(6,6,20,.93);border:1px solid rgba(255,255,255,.13);border-radius:10px;padding:7px 11px;width:128px;pointer-events:none;z-index:19;opacity:0;transition:opacity .45s;}
+.ccard{position:fixed;background:rgba(6,6,20,.45);border:none;border-radius:10px;padding:7px 11px;width:128px;pointer-events:none;z-index:19;opacity:0;transition:opacity .45s;}
 .ccard.on{opacity:1;}
 .cc-name{font-size:13px;font-weight:600;color:#dde;line-height:1.25;}
 .cc-space{font-size:10px;margin-top:2px;text-transform:capitalize;letter-spacing:.06em;}
@@ -378,8 +378,8 @@ for(let i=0;i<MAX_CO;i++){
   const d=document.createElement('div');d.className='ccard';
   d.innerHTML='<div class="cc-name"></div><div class="cc-space"></div><div class="cc-ring"></div>';
   document.body.appendChild(d);ccards.push(d);
-  const l=document.createElementNS('http://www.w3.org/2000/svg','line');
-  l.setAttribute('stroke-width','1');l.setAttribute('stroke-dasharray','4 3');l.style.opacity='0';
+  const l=document.createElementNS('http://www.w3.org/2000/svg','path');
+  l.setAttribute('stroke-width','1');l.setAttribute('stroke-dasharray','4 3');l.setAttribute('fill','none');l.style.opacity='0';
   l.style.transition='opacity .45s';csvg.appendChild(l);clines.push(l);
 }
 const CARD_W=isMobile?110:128,CARD_H=54;
@@ -425,12 +425,13 @@ function updateCallouts(){
     const cy=Math.max(70,Math.min(innerHeight-CARD_H-20,pick.sy-CARD_H/2));
     card.style.left=cx+'px';card.style.top=cy+'px';
     card.classList.add('on');
-    // Line: bubble → card edge
-    const lx2=onLeft?cx+CARD_W:cx;
-    const ly2=cy+CARD_H/2;
-    line.setAttribute('x1',pick.sx);line.setAttribute('y1',pick.sy);
-    line.setAttribute('x2',lx2);line.setAttribute('y2',ly2);
-    line.setAttribute('stroke',L.hex+'99');
+    // Elbow path: bubble → elbow point (horizontal) → card mid-edge
+    const cardMidY=cy+CARD_H/2;
+    const cardEdgeX=onLeft?cx+CARD_W:cx;
+    // elbow sits at card's vertical midpoint, offset 18px away from card edge
+    const elbowX=onLeft?cardEdgeX+18:cardEdgeX-18;
+    line.setAttribute('d',`M ${pick.sx} ${pick.sy} L ${elbowX} ${cardMidY} L ${cardEdgeX} ${cardMidY}`);
+    line.setAttribute('stroke',L.hex+'88');
     line.style.opacity='1';
   }
 }
