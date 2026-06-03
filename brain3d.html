@@ -419,20 +419,21 @@ function updateCallouts(){
     card.querySelector('.cc-space').textContent=e.space;
     card.querySelector('.cc-space').style.color=L.hex;
     card.querySelector('.cc-ring').textContent=RINGS[e.ring].label+' ago';
-    // Place card left or right of bubble
+    // Card: left/right of bubble, placed ABOVE (so y always differs from bubble.y)
     const onLeft=pick.sx>innerWidth*0.5;
     const cx=onLeft?pick.sx-CARD_W-20:pick.sx+20;
-    const cy=Math.max(70,Math.min(innerHeight-CARD_H-20,pick.sy-CARD_H/2));
+    const putBelow=pick.sy<140;
+    const cy=putBelow
+      ? Math.min(pick.sy+36,innerHeight-CARD_H-16)
+      : Math.max(60,pick.sy-CARD_H-36);
     card.style.left=cx+'px';card.style.top=cy+'px';
     card.classList.add('on');
-    // Elbow path: short horizontal leader from bubble, then diagonal to card mid-edge
-    const cardMidY=cy+CARD_H/2;
+    // Elbow: horizontal arm from bubble → diagonal to card's nearest y-edge
     const cardEdgeX=onLeft?cx+CARD_W:cx;
-    const leaderLen=onLeft?-28:28; // short horizontal arm off the bubble
-    const elbowX=pick.sx+leaderLen;
-    const elbowY=pick.sy;
-    line.setAttribute('d',`M ${pick.sx} ${pick.sy} L ${elbowX} ${elbowY} L ${cardEdgeX} ${cardMidY}`);
-    line.setAttribute('stroke',L.hex+'bb');
+    const cardConnY=putBelow?cy:cy+CARD_H;
+    const armX=pick.sx+(onLeft?-22:22);
+    line.setAttribute('d',`M ${pick.sx} ${pick.sy} L ${armX} ${pick.sy} L ${cardEdgeX} ${cardConnY}`);
+    line.setAttribute('stroke',L.hex+'cc');
     line.setAttribute('stroke-width','1.5');
     line.style.opacity='1';
   }
