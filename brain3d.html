@@ -112,7 +112,7 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
     top:max(44px,env(safe-area-inset-top));
     left:0;right:0;
     width:100%;
-    height:46px;
+    height:64px;
     flex-direction:row;
     flex-wrap:nowrap;
     padding:0 10px;
@@ -134,7 +134,7 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
   /* chips row fills full width */
   #insights #ic-active{
     display:flex;flex:1;align-items:stretch;gap:5px;
-    background:none;border:none;padding:0;height:30px;
+    background:none;border:none;padding:0;height:48px;
   }
   #insights #ic-density,#insights #ic-risk,#insights #ic-act-note{display:none;}
   /* each chip */
@@ -143,13 +143,13 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
     background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
     border-radius:7px;padding:0 4px;min-width:0;
   }
-  #insights .ms-name{font-size:11px;font-weight:700;letter-spacing:.03em;line-height:1.1;white-space:nowrap;}
-  #insights .ms-count{font-size:10px;color:rgba(200,200,255,.65);line-height:1.1;}
+  #insights .ms-name{font-size:22px;font-weight:700;letter-spacing:.03em;line-height:1.1;white-space:nowrap;}
+  #insights .ms-count{font-size:20px;color:rgba(200,200,255,.65);line-height:1.1;}
   #insights .ms-risk{
     flex-shrink:0;display:flex;align-items:center;justify-content:center;
     background:rgba(160,60,40,.20);border:1px solid rgba(200,80,60,.30);
-    border-radius:7px;padding:0 8px;height:30px;
-    font-size:11px;color:#d06050;white-space:nowrap;
+    border-radius:7px;padding:0 8px;height:48px;
+    font-size:18px;color:#d06050;white-space:nowrap;
   }
   #insightsToggle{display:block;}
 
@@ -414,8 +414,8 @@ canvas.addEventListener('touchstart',e=>{
 canvas.addEventListener('touchmove',e=>{
   if(e.touches.length===2 && pinchDist0!==null){
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-    const delta=pinchDist0-d; // positive = pinch in = zoom out
-    camera.position.z=Math.min(CAM_Z_MAX,Math.max(CAM_Z_MIN,camera.position.z+delta*0.05));
+    const delta=pinchDist0-d; // positive = fingers closer = zoom out
+    targetZ=Math.min(CAM_Z_MAX,Math.max(CAM_Z_MIN,targetZ+delta*0.08));
     pinchDist0=d;
   }
 },{passive:true});
