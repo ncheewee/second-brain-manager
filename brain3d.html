@@ -2,26 +2,32 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Second Brain — 3D View</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:#ccd;}
 #c{position:fixed;top:0;left:0;width:100vw;height:100vh;display:block;}
-#topbar{position:fixed;top:0;left:0;right:0;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;z-index:20;pointer-events:none;}
-#topbar h1{font-size:11px;font-weight:600;color:#2e2e48;letter-spacing:.16em;text-transform:uppercase;}
-#topbar a{pointer-events:all;color:#2e2e48;text-decoration:none;font-size:11px;transition:color .2s;}
-#topbar a:hover{color:#888;}
 
-/* label overlay */
+/* ── topbar ── */
+#topbar{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;z-index:30;pointer-events:none;padding-top:max(14px,env(safe-area-inset-top));}
+#topbar h1{font-size:11px;font-weight:600;color:#2e2e48;letter-spacing:.16em;text-transform:uppercase;}
+#topbar-right{display:flex;align-items:center;gap:10px;pointer-events:all;}
+#topbar a{color:#2e2e48;text-decoration:none;font-size:11px;transition:color .2s;}
+#topbar a:hover{color:#888;}
+/* insights toggle — mobile only */
+#insightsToggle{display:none;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:8px;padding:5px 10px;font-size:11px;color:#666;cursor:pointer;pointer-events:all;}
+
+/* ── label overlay ── */
 #labels{position:fixed;inset:0;pointer-events:none;z-index:15;}
-.lobe-lbl{position:absolute;transform:translate(-50%,-50%);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:0;transition:opacity .5s;white-space:nowrap;text-shadow:0 0 10px currentColor;}
+.lobe-lbl{position:absolute;transform:translate(-50%,-50%);font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:0;transition:opacity .5s;white-space:nowrap;text-shadow:0 0 10px currentColor;font-size:11px;}
 .lobe-lbl.on{opacity:.78;}
-.node-lbl{position:absolute;transform:translate(-50%,-148%);font-size:13px;font-weight:500;color:rgba(210,210,255,.92);background:rgba(5,5,18,.90);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:5px 12px 6px;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .15s;line-height:1.4;}
+.node-lbl{position:absolute;transform:translate(-50%,-148%);font-weight:500;color:rgba(210,210,255,.92);background:rgba(5,5,18,.92);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:6px 13px 7px;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .15s;line-height:1.5;font-size:13px;}
 .node-lbl .nl-sub{display:block;font-size:10px;color:#484868;font-weight:400;margin-top:1px;}
 .node-lbl.on{opacity:1;}
 
-/* insights */
-#insights{position:fixed;top:0;left:0;width:272px;height:100vh;padding:52px 16px 16px;display:flex;flex-direction:column;gap:10px;z-index:18;pointer-events:none;background:linear-gradient(to right,rgba(5,5,14,.95) 66%,transparent 100%);}
+/* ── insights panel — desktop ── */
+#insights{position:fixed;top:0;left:0;width:272px;height:100vh;padding:52px 16px 16px;display:flex;flex-direction:column;gap:10px;z-index:28;pointer-events:none;background:linear-gradient(to right,rgba(5,5,14,.95) 66%,transparent 100%);transition:transform .3s;}
 .ins-head{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#252540;margin-bottom:1px;}
 .ins-card{background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.048);border-radius:9px;padding:9px 11px;}
 .ins-card .lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#323252;margin-bottom:5px;}
@@ -36,68 +42,163 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 .risk-item span{font-size:10px;color:#3e3e60;}
 .act-note{font-size:10px;color:#3e3e60;line-height:1.55;}
 
-/* entry panel */
+/* ── entry panel — desktop: right sidebar ── */
 #panel{
   position:fixed;top:50%;right:20px;transform:translateY(-50%);
   width:256px;max-height:86vh;
   background:rgba(6,6,18,.97);border:1px solid rgba(255,255,255,.08);
   border-radius:12px;overflow:hidden;display:flex;flex-direction:column;
-  opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;
+  opacity:0;transition:opacity .25s;pointer-events:none;z-index:30;
 }
 #panel.on{opacity:1;pointer-events:all;}
 #panel .p-head{padding:13px 14px 10px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;}
-#panel .p-close{float:right;color:#363658;cursor:pointer;font-size:16px;line-height:1;margin-top:1px;}
+#panel .p-close{float:right;color:#363658;cursor:pointer;font-size:18px;line-height:1;padding:2px 4px;}
 #panel .p-close:hover{color:#888;}
 #panel .p-sp{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:4px;}
 #panel .p-ti{font-size:15px;font-weight:600;color:#dde;line-height:1.3;}
-
-/* scrollable body */
-#panel .p-scroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#1e1e38 transparent;}
-
-/* summary section — always open */
+#panel .p-scroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#1e1e38 transparent;-webkit-overflow-scrolling:touch;}
 .p-section{border-bottom:1px solid rgba(255,255,255,.05);}
-.p-section-body{padding:10px 14px 12px;font-size:12px;color:#6868a0;line-height:1.65;}
-
-/* accordion sections */
+.p-section-body{padding:10px 14px 12px;font-size:12px;color:#6868a0;line-height:1.7;}
 .p-acc{border-bottom:1px solid rgba(255,255,255,.04);}
-.p-acc-head{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;cursor:pointer;user-select:none;transition:background .15s;}
+.p-acc-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none;transition:background .15s;min-height:44px;}
 .p-acc-head:hover{background:rgba(255,255,255,.03);}
 .p-acc-title{font-size:10px;letter-spacing:.10em;text-transform:uppercase;color:#484868;}
-.p-acc-arrow{font-size:11px;color:#363658;transition:transform .25s;}
+.p-acc-arrow{font-size:13px;color:#363658;transition:transform .25s;padding:0 2px;}
 .p-acc.open .p-acc-arrow{transform:rotate(90deg);}
-.p-acc-body{display:none;padding:0 14px 11px;}
+.p-acc-body{display:none;padding:0 14px 12px;}
 .p-acc.open .p-acc-body{display:block;}
-
-/* content inside accordion */
 .p-notes{list-style:none;padding:0;}
-.p-notes li{font-size:12px;color:#6060a0;line-height:1.6;padding:3px 0;display:flex;gap:8px;}
+.p-notes li{font-size:12px;color:#6060a0;line-height:1.65;padding:3px 0;display:flex;gap:8px;}
 .p-notes li::before{content:'—';color:#303058;flex-shrink:0;}
-.p-meta-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.p-meta-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
 .p-meta-key{font-size:9px;color:#303058;text-transform:uppercase;letter-spacing:.08em;}
 .p-meta-val{font-size:11px;color:#6868a0;}
 .p-bar-wrap{margin-bottom:10px;}
 .p-bar-lbl{font-size:9px;color:#303058;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
 .p-bar-track{height:4px;background:#0c0c1a;border-radius:2px;overflow:hidden;}
 .p-bar-fill{height:100%;border-radius:2px;}
-
-/* footer */
 #panel .p-foot{padding:9px 14px;border-top:1px solid rgba(255,255,255,.04);flex-shrink:0;}
 #panel .p-link{font-size:11px;color:#4a42a0;text-decoration:none;}
 #panel .p-link:hover{color:#7a70cc;}
 
-/* bottom controls */
-#bottom{position:fixed;bottom:17px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;z-index:20;}
-.fbtn{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:4px 11px;font-size:11px;color:#46466a;cursor:pointer;transition:all .2s;letter-spacing:.05em;font-family:inherit;}
-.fbtn:hover{background:rgba(255,255,255,.09);color:#aaa;}
+/* ── bottom controls ── */
+#bottom{position:fixed;bottom:0;left:0;right:0;padding:10px 12px max(12px,env(safe-area-inset-bottom));display:flex;gap:6px;align-items:center;justify-content:center;z-index:30;flex-wrap:wrap;}
+.fbtn{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:5px 13px;font-size:11px;color:#46466a;cursor:pointer;transition:all .2s;letter-spacing:.05em;font-family:inherit;min-height:32px;}
+.fbtn:hover,.fbtn:active{background:rgba(255,255,255,.09);color:#aaa;}
 .fbtn.on{color:#ccd;border-color:rgba(255,255,255,.26);background:rgba(255,255,255,.09);}
-#resumeBtn{display:none;background:rgba(65,55,130,.11);border:1px solid rgba(85,75,160,.25);color:#6058a0;padding:4px 13px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;}
+#resumeBtn{display:none;background:rgba(65,55,130,.11);border:1px solid rgba(85,75,160,.25);color:#6058a0;padding:5px 14px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;min-height:32px;}
 #resumeBtn:hover{background:rgba(65,55,130,.20);color:#9080cc;}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE  (≤ 600px)
+═══════════════════════════════════════════════════════ */
+@media(max-width:600px){
+
+  /* topbar */
+  #topbar{padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));}
+  #topbar h1{font-size:12px;}
+  #topbar a{font-size:12px;}
+  #insightsToggle{display:block;}
+
+  /* lobe labels bigger */
+  .lobe-lbl{font-size:14px !important;letter-spacing:.10em;}
+
+  /* node tooltip — bigger font, more padding */
+  .node-lbl{font-size:15px !important;padding:8px 16px 9px !important;border-radius:10px !important;}
+  .node-lbl .nl-sub{font-size:12px !important;margin-top:3px !important;}
+
+  /* insights — hidden by default, slides in as overlay */
+  #insights{
+    width:min(88vw,320px);
+    background:rgba(5,5,14,.97);
+    transform:translateX(-110%);
+    pointer-events:all;
+    padding-top:max(56px,env(safe-area-inset-top));
+    z-index:40;
+    box-shadow:4px 0 32px rgba(0,0,0,.6);
+    border-right:1px solid rgba(255,255,255,.07);
+  }
+  #insights.open{transform:translateX(0);}
+
+  /* insights cards bigger text on mobile */
+  .ins-card .big{font-size:22px;}
+  .ins-card .sub{font-size:12px;}
+  .ins-card .lbl{font-size:10px;}
+  .bar-name{font-size:11px;}
+  .risk-item{font-size:12px;}
+  .act-note{font-size:11px;}
+
+  /* entry panel — bottom sheet instead of right sidebar */
+  #panel{
+    top:auto;right:0;bottom:0;left:0;
+    transform:none;
+    width:100%;
+    max-height:72vh;
+    border-radius:16px 16px 0 0;
+    border:1px solid rgba(255,255,255,.09);
+    border-bottom:none;
+    /* slide in from bottom */
+    opacity:0;
+    transform:translateY(100%);
+    transition:opacity .25s,transform .3s;
+  }
+  #panel.on{opacity:1;transform:translateY(0);pointer-events:all;}
+
+  /* panel content bigger on mobile */
+  #panel .p-head{padding:14px 18px 12px;}
+  #panel .p-sp{font-size:10px;}
+  #panel .p-ti{font-size:17px;}
+  #panel .p-close{font-size:22px;padding:0 2px;}
+  .p-section-body{font-size:14px !important;padding:12px 18px 14px !important;line-height:1.7;}
+  .p-acc-head{padding:12px 18px;min-height:48px;}
+  .p-acc-title{font-size:11px;}
+  .p-acc-body{padding:0 18px 14px;}
+  .p-notes li{font-size:14px !important;padding:4px 0;}
+  .p-meta-row{margin-bottom:9px;}
+  .p-meta-key{font-size:10px;}
+  .p-meta-val{font-size:13px;}
+  #panel .p-foot{padding:12px 18px;}
+  #panel .p-link{font-size:13px;}
+
+  /* handle bar */
+  #panel .p-head::before{
+    content:'';display:block;width:36px;height:4px;
+    background:rgba(255,255,255,.15);border-radius:2px;
+    margin:0 auto 12px;
+  }
+
+  /* bottom controls — horizontal scroll, bigger targets */
+  #bottom{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    justify-content:flex-start;
+    padding:8px 12px max(10px,env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    gap:7px;
+  }
+  #bottom::-webkit-scrollbar{display:none;}
+  .fbtn{font-size:13px;padding:7px 16px;min-height:38px;flex-shrink:0;}
+  #resumeBtn{font-size:13px;padding:7px 16px;min-height:38px;flex-shrink:0;}
+}
+
+/* overlay backdrop for insights on mobile */
+#insightsBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:35;}
+#insightsBackdrop.on{display:block;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="labels"></div>
-<div id="topbar"><h1>Second Brain · 3D</h1><a href="index.html">← Manager</a></div>
+<div id="insightsBackdrop" id="insightsBackdrop"></div>
+
+<div id="topbar">
+  <h1>Second Brain · 3D</h1>
+  <div id="topbar-right">
+    <button id="insightsToggle">Brain State</button>
+    <a href="index.html">← Manager</a>
+  </div>
+</div>
 
 <div id="insights">
   <div class="ins-head">Brain State</div>
@@ -154,119 +255,44 @@ const PALPHA={evergreen:.80,slow:.54,fast:.34,single_use:.20};
 const PSIZE ={evergreen:.23,slow:.17,fast:.14,single_use:.11};
 const DECAY_LABEL={evergreen:'Never decays',slow:'Slow decay',fast:'Fast decay',single_use:'One-time use'};
 
-// notes: key points that expand in the accordion
 const ENTRIES=[
-  {name:'Anniversary Trip',space:'leisure',ring:0,type:'single_use',activation:.90,
-   summary:'Planning notes and itinerary for upcoming trip with Cheryl.',
-   notes:['Dates, flights, and accommodation shortlist','Restaurants and experiences to try','Budget allocation per day','Things Cheryl specifically wants to do']},
-  {name:'Shanghai Masters',space:'leisure',ring:0,type:'single_use',activation:.85,
-   summary:'Tennis tournament attendance — schedule, tickets, logistics.',
-   notes:['Session times and court assignments','Getting there from accommodation','Key matches to catch','Food and transport around the venue']},
-  {name:'Coca-Cola Outcome',space:'work',ring:1,type:'fast',activation:.75,
-   summary:'Debrief from the Coca-Cola application process.',
-   notes:['Final decision and reasoning','What I could have done differently','Relationships worth maintaining','What this confirms about target role fit']},
-  {name:'Motorcycle Choice',space:'personal',ring:1,type:'slow',activation:.65,
-   summary:'Decision framework for choosing the next bike.',
-   notes:['Model shortlist with pros/cons','COE timing and budget ceiling','Insurance and running cost estimates','What riding style I\'m optimising for']},
-  {name:'BMW COE',space:'personal',ring:2,type:'fast',activation:.50,
-   summary:'COE bidding status and key deadlines for the BMW.',
-   notes:['Current COE premium trajectory','Bid strategy and ceiling price','Fallback: hold or switch model','Timeline milestones to watch']},
-  {name:'Cost of Living',space:'personal',ring:2,type:'slow',activation:.55,
-   summary:'2026 personal budget: monthly targets, actuals, adjustments.',
-   notes:['Fixed costs breakdown (housing, insurance, subscriptions)','Variable spend categories and limits','Year-to-date variance from plan','Areas where I\'m overspending consistently']},
-  {name:'South Korea',space:'leisure',ring:2,type:'fast',activation:.60,
-   summary:'Trip research for Seoul and Busan.',
-   notes:['Must-eat list across both cities','Accommodation options and neighbourhoods','Getting around (KTX, subway cards)','Visa requirements and travel window']},
-  {name:'Career Transition',space:'work',ring:2,type:'slow',activation:.80,
-   summary:'Thinking through the pivot — FM industry vs tech-adjacent roles.',
-   notes:['Where my edge is vs where I want to be','Roles that bridge both worlds','Timeline and financial runway required','People to talk to for signal']},
-  {name:'Second Brain Security',space:'core',ring:2,type:'slow',activation:.70,
-   summary:'Access controls, backup, and incident response for the Second Brain.',
-   notes:['Who has access to what','Backup schedule and verification steps','What to do if Cloudflare or GitHub goes down','Recovery procedure from scratch']},
-  {name:'Weekly Codex Scan',space:'core',ring:2,type:'fast',activation:.88,
-   summary:'Weekly ritual: review inbox, promote entries, trigger synthesis.',
-   notes:['Scan frequency: every Sunday evening','What triggers an entry promotion','How to handle stale fast-decay items','Link to the codex manager tool']},
-  {name:'100 Ideas',space:'personal',ring:3,type:'slow',activation:.45,
-   summary:'Running list of ideas across products, systems, and life.',
-   notes:['Product ideas (apps, tools, services)','Life experiments worth trying','Systems to improve or automate','Ideas flagged for deeper exploration']},
-  {name:'Technical Environment',space:'work',ring:3,type:'slow',activation:.55,
-   summary:'Dev tooling, hardware setup, shell config, preferred stack.',
-   notes:['Machine spec and OS config','Terminal, editor, and key extensions','Preferred languages and frameworks by context','How I set up a new project']},
-  {name:'Local LLM',space:'work',ring:3,type:'slow',activation:.50,
-   summary:'Running models locally — Ollama, hardware limits, use cases.',
-   notes:['Hardware limitations and what fits in VRAM','Best models for each task type','When local beats API (latency, privacy, cost)','Current setup and how to replicate it']},
-  {name:'Cheryl',space:'personal',ring:3,type:'evergreen',activation:.72,
-   summary:'Evergreen profile: background, interests, relationship context.',
-   notes:['Personal history and formative experiences','What matters most to her right now','How she prefers to spend time together','Things I want to remember to do / say']},
-  {name:'Ryan',space:'family',ring:3,type:'slow',activation:.35,
-   summary:'Context on Ryan — shared history and current chapter.',
-   notes:['Background and how we met','What he\'s working on now','Best ways to stay connected','Things he cares about that I should ask about']},
-  {name:'Jake',space:'family',ring:3,type:'slow',activation:.30,
-   summary:'Context on Jake — background, interests, how to stay in touch.',
-   notes:['Background and relationship history','Current life situation','Shared interests and touchpoints','Cadence of contact that works']},
-  {name:'InspectPro',space:'work',ring:4,type:'slow',activation:.42,
-   summary:'Property inspection app — problem space, MVP, target market.',
-   notes:['Core problem: manual inspection reports are slow and inconsistent','MVP: mobile photo capture + auto-generated report','Target: licensed property agents in SG','Competitive landscape and differentiation']},
-  {name:'SplitLah',space:'work',ring:4,type:'slow',activation:.40,
-   summary:'Bill-splitting app for SG context.',
-   notes:['Core differentiation from Splitwise: SG payment rails (PayNow)','Target: groups who eat out regularly','MVP feature set','Monetisation approach']},
-  {name:'CV Design',space:'work',ring:4,type:'fast',activation:.55,
-   summary:'CV structure, design choices, and narrative arc.',
-   notes:['Which version of the CV for which role type','Key achievements that have proven to land','Format decisions (length, layout, typography)','What to update when applying to FM vs tech roles']},
-  {name:'Evenings Out',space:'leisure',ring:4,type:'fast',activation:.38,
-   summary:'Log of social evenings — venues, company, energy level.',
-   notes:['Pattern: I recharge best with 2–4 people, not large groups','Favourite venue types and why','Evenings that felt worth the effort vs drained','What I want more / less of socially']},
-  {name:'Motorcycle Touring',space:'leisure',ring:4,type:'slow',activation:.35,
-   summary:'Multi-day touring — routes, gear, logistics.',
-   notes:['Route ideas: Peninsula, Borneo, Thailand north','Gear checklist and what I\'d do differently','Packing strategy for multi-day','Riding pace and daily distance that feels right']},
-  {name:'Music',space:'leisure',ring:4,type:'slow',activation:.28,
-   summary:'Listening patterns, albums of note, occasional guitar log.',
-   notes:['Albums I keep returning to and why','Guitar practice — what I\'m working on','Concerts or shows I want to see','Music that fits different moods / contexts']},
-  {name:'EnigmaPrint',space:'work',ring:4,type:'slow',activation:.48,
-   summary:'Daily mystery print side project — concept, fulfilment, subscribers.',
-   notes:['Core concept: daily 3D print puzzle delivered to subscribers','Current subscriber count and growth rate','Fulfilment: BambuStudio → A1 Mini → shipping','Next milestone and what\'s blocking it']},
-  {name:'Health',space:'personal',ring:4,type:'evergreen',activation:.60,
-   summary:'Evergreen health principles: sleep, training, nutrition baselines.',
-   notes:['Sleep: target 7.5h, blackout room, no screens 45min before','Training: 3–4x/week, mix of strength and cardio','Nutrition: no hard rules, but watch alcohol and late eating','Deviations to notice and what they usually signal']},
-  {name:'How I Build',space:'work',ring:5,type:'evergreen',activation:.65,
-   summary:'Personal product philosophy — how I scope, validate, ship.',
-   notes:['Principle: smallest thing that tests the riskiest assumption','I overweight polish too early — watch for this','My validation sequence: problem → user → revenue → build','What "done" means at each stage']},
-  {name:'MetrIQ',space:'work',ring:5,type:'slow',activation:.45,
-   summary:'Analytics app for facilities managers — metrics, persona, build status.',
-   notes:['Core pain: FM teams lack real-time visibility into asset performance','Target persona: FM director at mid-size commercial property firm','Key metrics to surface: uptime, SLA adherence, cost per sqft','Current build status and next milestone']},
-  {name:'FM Industry',space:'work',ring:5,type:'slow',activation:.40,
-   summary:'Facilities management landscape — players, pain points, macro trends.',
-   notes:['Key players: Jones Lang LaSalle, CBRE, local operators','Biggest pain: fragmented data, manual processes, reactive culture','Macro tailwinds: sustainability mandates, smart building tech','Where software is winning and where it isn\'t yet']},
-  {name:'On Investments',space:'personal',ring:5,type:'slow',activation:.38,
-   summary:'Personal investment philosophy and SG-specific constraints.',
-   notes:['Risk tolerance: moderate, 10yr+ horizon on core positions','Vehicles: CPF OA, SRS, brokerage (IBKR)','What I won\'t touch: individual stocks, leverage, crypto speculation','Review cadence: quarterly rebalance check']},
-  {name:'How I Roll',space:'personal',ring:5,type:'evergreen',activation:.55,
-   summary:'Evergreen operating principles — how I work, decide, manage energy.',
-   notes:['Deep work: mornings are protected, meetings after lunch','Decision-making: I default to reversible options when uncertain','Energy: I need at least one unscheduled day per week','Communication: I prefer async for complex topics, sync for relationship']},
-  {name:'Travel',space:'leisure',ring:5,type:'slow',activation:.30,
-   summary:'General travel philosophy, packing system, wishlist destinations.',
-   notes:['Philosophy: depth over breadth — fewer places, longer stays','Packing: carry-on only, neutral colours, one pair of shoes','Wishlist: Japan (rural), Portugal, Patagonia, Bhutan','What makes a trip feel worth it vs a waste of time']},
-  {name:'Inner Circle A',space:'personal',ring:5,type:'evergreen',activation:.50,
-   summary:'First-tier relationships — how to show up for the people who matter most.',
-   notes:['Who\'s in this tier and why','What each person needs from me to feel valued','Cadence of deep contact I\'m aiming for','Things I want to ask them about next time we talk']},
-  {name:'Inner Circle B',space:'personal',ring:5,type:'evergreen',activation:.48,
-   summary:'Second-tier relationships — warm contacts and staying meaningfully in touch.',
-   notes:['Who\'s in this tier: close enough to matter, not daily contact','Target cadence: monthly or quarterly check-in','Best touchpoints (a meme, an article, a question)','Who I\'ve been neglecting and should reach out to']},
-  {name:'Personal Working Style',space:'work',ring:5,type:'evergreen',activation:.58,
-   summary:'Deep work patterns, peak hours, collaboration preferences.',
-   notes:['Peak cognitive hours: 8–11am, second wind 4–6pm','Context-switching cost is high — batch similar tasks','I work better with loose structure than rigid schedules','What makes collaboration feel good vs draining']},
-  {name:'Mapletree VP',space:'work',ring:6,type:'slow',activation:.35,
-   summary:'VP-level role at Mapletree — application, contacts, fit analysis.',
-   notes:['Role: VP Asset Management, commercial portfolio','Application status and next steps','Key contacts at Mapletree worth nurturing','Strategic fit: yes on skills, question mark on culture']},
-  {name:'Mount Kinabalu',space:'leisure',ring:6,type:'slow',activation:.25,
-   summary:'Climb completed. Route notes, gear, what to do differently.',
-   notes:['Route: Summit trail via Laban Rata — 8.7km to summit','Gear: what I brought vs what I needed','Physical prep that worked and what I underestimated','Would I do it again? Yes. What would change?']},
-  {name:'Career Arc',space:'core',ring:8,type:'evergreen',activation:.68,
-   summary:'Long-arc career vision — where I am, where I want to be.',
-   notes:['Current chapter: transitioning from FM ops to tech/product','5-year target: building or leading a product with real traction','What I\'m optimising for at each stage: skills → leverage → ownership','The through-line: I want to build things that run without me']},
-  {name:'Core Values',space:'core',ring:8,type:'evergreen',activation:.75,
-   summary:'Foundational values — what I stand for, what I won\'t compromise.',
-   notes:['Integrity: I won\'t misrepresent myself or my work to get ahead','Ownership: if I said I\'d do it, it gets done','Curiosity: I stay genuinely interested in how things work','Presence: the people in front of me deserve my full attention']}
+  {name:'Anniversary Trip',space:'leisure',ring:0,type:'single_use',activation:.90,summary:'Planning notes and itinerary for upcoming trip with Cheryl.',notes:['Dates, flights, and accommodation shortlist','Restaurants and experiences to try','Budget allocation per day','Things Cheryl specifically wants to do']},
+  {name:'Shanghai Masters',space:'leisure',ring:0,type:'single_use',activation:.85,summary:'Tennis tournament attendance — schedule, tickets, logistics.',notes:['Session times and court assignments','Getting there from accommodation','Key matches to catch','Food and transport around the venue']},
+  {name:'Coca-Cola Outcome',space:'work',ring:1,type:'fast',activation:.75,summary:'Debrief from the Coca-Cola application process.',notes:['Final decision and reasoning','What I could have done differently','Relationships worth maintaining','What this confirms about target role fit']},
+  {name:'Motorcycle Choice',space:'personal',ring:1,type:'slow',activation:.65,summary:'Decision framework for choosing the next bike.',notes:['Model shortlist with pros/cons','COE timing and budget ceiling','Insurance and running cost estimates','What riding style I\'m optimising for']},
+  {name:'BMW COE',space:'personal',ring:2,type:'fast',activation:.50,summary:'COE bidding status and key deadlines for the BMW.',notes:['Current COE premium trajectory','Bid strategy and ceiling price','Fallback: hold or switch model','Timeline milestones to watch']},
+  {name:'Cost of Living',space:'personal',ring:2,type:'slow',activation:.55,summary:'2026 personal budget: monthly targets, actuals, adjustments.',notes:['Fixed costs breakdown (housing, insurance, subscriptions)','Variable spend categories and limits','Year-to-date variance from plan','Areas where I\'m overspending consistently']},
+  {name:'South Korea',space:'leisure',ring:2,type:'fast',activation:.60,summary:'Trip research for Seoul and Busan.',notes:['Must-eat list across both cities','Accommodation options and neighbourhoods','Getting around (KTX, subway cards)','Visa requirements and travel window']},
+  {name:'Career Transition',space:'work',ring:2,type:'slow',activation:.80,summary:'Thinking through the pivot — FM industry vs tech-adjacent roles.',notes:['Where my edge is vs where I want to be','Roles that bridge both worlds','Timeline and financial runway required','People to talk to for signal']},
+  {name:'Second Brain Security',space:'core',ring:2,type:'slow',activation:.70,summary:'Access controls, backup, and incident response for the Second Brain.',notes:['Who has access to what','Backup schedule and verification steps','What to do if Cloudflare or GitHub goes down','Recovery procedure from scratch']},
+  {name:'Weekly Codex Scan',space:'core',ring:2,type:'fast',activation:.88,summary:'Weekly ritual: review inbox, promote entries, trigger synthesis.',notes:['Scan frequency: every Sunday evening','What triggers an entry promotion','How to handle stale fast-decay items','Link to the codex manager tool']},
+  {name:'100 Ideas',space:'personal',ring:3,type:'slow',activation:.45,summary:'Running list of ideas across products, systems, and life.',notes:['Product ideas (apps, tools, services)','Life experiments worth trying','Systems to improve or automate','Ideas flagged for deeper exploration']},
+  {name:'Technical Environment',space:'work',ring:3,type:'slow',activation:.55,summary:'Dev tooling, hardware setup, shell config, preferred stack.',notes:['Machine spec and OS config','Terminal, editor, and key extensions','Preferred languages and frameworks by context','How I set up a new project']},
+  {name:'Local LLM',space:'work',ring:3,type:'slow',activation:.50,summary:'Running models locally — Ollama, hardware limits, use cases.',notes:['Hardware limitations and what fits in VRAM','Best models for each task type','When local beats API (latency, privacy, cost)','Current setup and how to replicate it']},
+  {name:'Cheryl',space:'personal',ring:3,type:'evergreen',activation:.72,summary:'Evergreen profile: background, interests, relationship context.',notes:['Personal history and formative experiences','What matters most to her right now','How she prefers to spend time together','Things I want to remember to do / say']},
+  {name:'Ryan',space:'family',ring:3,type:'slow',activation:.35,summary:'Context on Ryan — shared history and current chapter.',notes:['Background and how we met','What he\'s working on now','Best ways to stay connected','Things he cares about that I should ask about']},
+  {name:'Jake',space:'family',ring:3,type:'slow',activation:.30,summary:'Context on Jake — background, interests, how to stay in touch.',notes:['Background and relationship history','Current life situation','Shared interests and touchpoints','Cadence of contact that works']},
+  {name:'InspectPro',space:'work',ring:4,type:'slow',activation:.42,summary:'Property inspection app — problem space, MVP, target market.',notes:['Core problem: manual inspection reports are slow and inconsistent','MVP: mobile photo capture + auto-generated report','Target: licensed property agents in SG','Competitive landscape and differentiation']},
+  {name:'SplitLah',space:'work',ring:4,type:'slow',activation:.40,summary:'Bill-splitting app for SG context.',notes:['Core differentiation from Splitwise: SG payment rails (PayNow)','Target: groups who eat out regularly','MVP feature set','Monetisation approach']},
+  {name:'CV Design',space:'work',ring:4,type:'fast',activation:.55,summary:'CV structure, design choices, and narrative arc.',notes:['Which version of the CV for which role type','Key achievements that have proven to land','Format decisions (length, layout, typography)','What to update when applying to FM vs tech roles']},
+  {name:'Evenings Out',space:'leisure',ring:4,type:'fast',activation:.38,summary:'Log of social evenings — venues, company, energy level.',notes:['Pattern: I recharge best with 2–4 people, not large groups','Favourite venue types and why','Evenings that felt worth the effort vs drained','What I want more / less of socially']},
+  {name:'Motorcycle Touring',space:'leisure',ring:4,type:'slow',activation:.35,summary:'Multi-day touring — routes, gear, logistics.',notes:['Route ideas: Peninsula, Borneo, Thailand north','Gear checklist and what I\'d do differently','Packing strategy for multi-day','Riding pace and daily distance that feels right']},
+  {name:'Music',space:'leisure',ring:4,type:'slow',activation:.28,summary:'Listening patterns, albums of note, occasional guitar log.',notes:['Albums I keep returning to and why','Guitar practice — what I\'m working on','Concerts or shows I want to see','Music that fits different moods / contexts']},
+  {name:'EnigmaPrint',space:'work',ring:4,type:'slow',activation:.48,summary:'Daily mystery print side project — concept, fulfilment, subscribers.',notes:['Core concept: daily 3D print puzzle delivered to subscribers','Current subscriber count and growth rate','Fulfilment: BambuStudio → A1 Mini → shipping','Next milestone and what\'s blocking it']},
+  {name:'Health',space:'personal',ring:4,type:'evergreen',activation:.60,summary:'Evergreen health principles: sleep, training, nutrition baselines.',notes:['Sleep: target 7.5h, blackout room, no screens 45min before','Training: 3–4x/week, mix of strength and cardio','Nutrition: no hard rules, but watch alcohol and late eating','Deviations to notice and what they usually signal']},
+  {name:'How I Build',space:'work',ring:5,type:'evergreen',activation:.65,summary:'Personal product philosophy — how I scope, validate, ship.',notes:['Principle: smallest thing that tests the riskiest assumption','I overweight polish too early — watch for this','My validation sequence: problem → user → revenue → build','What "done" means at each stage']},
+  {name:'MetrIQ',space:'work',ring:5,type:'slow',activation:.45,summary:'Analytics app for facilities managers — metrics, persona, build status.',notes:['Core pain: FM teams lack real-time visibility into asset performance','Target persona: FM director at mid-size commercial property firm','Key metrics to surface: uptime, SLA adherence, cost per sqft','Current build status and next milestone']},
+  {name:'FM Industry',space:'work',ring:5,type:'slow',activation:.40,summary:'Facilities management landscape — players, pain points, macro trends.',notes:['Key players: Jones Lang LaSalle, CBRE, local operators','Biggest pain: fragmented data, manual processes, reactive culture','Macro tailwinds: sustainability mandates, smart building tech','Where software is winning and where it isn\'t yet']},
+  {name:'On Investments',space:'personal',ring:5,type:'slow',activation:.38,summary:'Personal investment philosophy and SG-specific constraints.',notes:['Risk tolerance: moderate, 10yr+ horizon on core positions','Vehicles: CPF OA, SRS, brokerage (IBKR)','What I won\'t touch: individual stocks, leverage, crypto speculation','Review cadence: quarterly rebalance check']},
+  {name:'How I Roll',space:'personal',ring:5,type:'evergreen',activation:.55,summary:'Evergreen operating principles — how I work, decide, manage energy.',notes:['Deep work: mornings are protected, meetings after lunch','Decision-making: I default to reversible options when uncertain','Energy: I need at least one unscheduled day per week','Communication: I prefer async for complex topics, sync for relationship']},
+  {name:'Travel',space:'leisure',ring:5,type:'slow',activation:.30,summary:'General travel philosophy, packing system, wishlist destinations.',notes:['Philosophy: depth over breadth — fewer places, longer stays','Packing: carry-on only, neutral colours, one pair of shoes','Wishlist: Japan (rural), Portugal, Patagonia, Bhutan','What makes a trip feel worth it vs a waste of time']},
+  {name:'Inner Circle A',space:'personal',ring:5,type:'evergreen',activation:.50,summary:'First-tier relationships — how to show up for the people who matter most.',notes:['Who\'s in this tier and why','What each person needs from me to feel valued','Cadence of deep contact I\'m aiming for','Things I want to ask them about next time we talk']},
+  {name:'Inner Circle B',space:'personal',ring:5,type:'evergreen',activation:.48,summary:'Second-tier relationships — warm contacts, staying meaningfully in touch.',notes:['Who\'s in this tier: close enough to matter, not daily contact','Target cadence: monthly or quarterly check-in','Best touchpoints (a meme, an article, a question)','Who I\'ve been neglecting and should reach out to']},
+  {name:'Personal Working Style',space:'work',ring:5,type:'evergreen',activation:.58,summary:'Deep work patterns, peak hours, collaboration preferences.',notes:['Peak cognitive hours: 8–11am, second wind 4–6pm','Context-switching cost is high — batch similar tasks','I work better with loose structure than rigid schedules','What makes collaboration feel good vs draining']},
+  {name:'Mapletree VP',space:'work',ring:6,type:'slow',activation:.35,summary:'VP-level role at Mapletree — application, contacts, fit analysis.',notes:['Role: VP Asset Management, commercial portfolio','Application status and next steps','Key contacts at Mapletree worth nurturing','Strategic fit: yes on skills, question mark on culture']},
+  {name:'Mount Kinabalu',space:'leisure',ring:6,type:'slow',activation:.25,summary:'Climb completed. Route notes, gear, what to do differently.',notes:['Route: Summit trail via Laban Rata — 8.7km to summit','Gear: what I brought vs what I needed','Physical prep that worked and what I underestimated','Would I do it again? Yes. What would change?']},
+  {name:'Career Arc',space:'core',ring:8,type:'evergreen',activation:.68,summary:'Long-arc career vision — where I am, where I want to be.',notes:['Current chapter: transitioning from FM ops to tech/product','5-year target: building or leading a product with real traction','What I\'m optimising for at each stage: skills → leverage → ownership','The through-line: I want to build things that run without me']},
+  {name:'Core Values',space:'core',ring:8,type:'evergreen',activation:.75,summary:'Foundational values — what I stand for, what I won\'t compromise.',notes:['Integrity: I won\'t misrepresent myself or my work to get ahead','Ownership: if I said I\'d do it, it gets done','Curiosity: I stay genuinely interested in how things work','Presence: the people in front of me deserve my full attention']}
 ];
 
 // ── insights ──────────────────────────────────────────────
@@ -280,7 +306,7 @@ const ENTRIES=[
   const deepest=[...LOBE_NAMES].sort((a,b)=>(cnt[b].sumRing/cnt[b].total)-(cnt[a].sumRing/cnt[a].total))[0];
   document.getElementById('ic-active').innerHTML=`<div class="lbl">Most Active Space</div><div class="big" style="color:${LOBES[most].hex}">${most}</div><div class="sub">${cnt[most].recent} entries in last 3 weeks</div>`;
   let bars=`<div class="lbl">Memory Density</div>`;
-  for(const n of LOBE_NAMES){const pct=Math.round(cnt[n].total/maxT*100);bars+=`<div class="bar-row"><div class="bar-name" style="color:${LOBES[n].hex}">${n}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${LOBES[n].hex}40;border-right:2px solid ${LOBES[n].hex}80"></div></div><div class="bar-n">${cnt[n].total}</div></div>`;}
+  for(const n of LOBE_NAMES){const p=Math.round(cnt[n].total/maxT*100);bars+=`<div class="bar-row"><div class="bar-name" style="color:${LOBES[n].hex}">${n}</div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${LOBES[n].hex}40;border-right:2px solid ${LOBES[n].hex}80"></div></div><div class="bar-n">${cnt[n].total}</div></div>`;}
   document.getElementById('ic-density').innerHTML=bars;
   let r=`<div class="lbl">Fading Fast</div>`;
   if(!atRisk.length)r+=`<div class="sub">None at risk ✓</div>`;
@@ -289,19 +315,30 @@ const ENTRIES=[
   document.getElementById('ic-act-note').innerHTML=`<div class="lbl">Activation</div><div class="act-note">Node <strong style="color:#6050a8">brightness</strong> and <strong style="color:#6050a8">size</strong> reflect estimated activation. Live telemetry matures ~7 June.</div>`;
 })();
 
+// ── mobile: insights toggle ────────────────────────────────
+const insightsEl=document.getElementById('insights');
+const backdrop=document.getElementById('insightsBackdrop');
+document.getElementById('insightsToggle').addEventListener('click',()=>{
+  insightsEl.classList.toggle('open');
+  backdrop.classList.toggle('on');
+});
+backdrop.addEventListener('click',()=>{insightsEl.classList.remove('open');backdrop.classList.remove('on');});
+
 // ═══════════════════════════════════════════════════════════
 // THREE.JS
 // ═══════════════════════════════════════════════════════════
 const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.setClearColor(0x06060e,1);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.setClearColor(0x06060e,1);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,300);
 camera.position.set(0,0,28);
 scene.add(new THREE.AmbientLight(0xffffff,.35));
 const pt=new THREE.PointLight(0x8877ee,.42,90);pt.position.set(10,10,14);scene.add(pt);
 
-// ── Smooth Voronoi sphere shell (FrontSide only — no halo) ──
+// Voronoi sphere shell
 const allSeeds=[],allColors=[];
 for(const name of LOBE_NAMES){const L=LOBES[name],c=new THREE.Color(L.color);for(const s of L.seedsN){allSeeds.push(new THREE.Vector3(s[0],s[1],s[2]));allColors.push(new THREE.Vector3(c.r,c.g,c.b));}}
 const NS=allSeeds.length;
@@ -312,80 +349,41 @@ const shellMat=new THREE.ShaderMaterial({
   transparent:true,side:THREE.FrontSide,depthWrite:false
 });
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(BR,96,48),shellMat));
-// Very faint wire
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(BR,20,12),new THREE.MeshBasicMaterial({wireframe:true,transparent:true,depthWrite:false,color:0x1e1e55,opacity:.038})));
 
-// ── Lobe glow volumes ─────────────────────────────────────
-function makeGlowTex(r,g,b){
-  const S=256,cv=document.createElement('canvas');cv.width=S;cv.height=S;
-  const ctx=cv.getContext('2d');
-  const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
-  gr.addColorStop(0,`rgba(${r},${g},${b},.75)`);gr.addColorStop(.28,`rgba(${r},${g},${b},.30)`);
-  gr.addColorStop(.60,`rgba(${r},${g},${b},.06)`);gr.addColorStop(1,`rgba(${r},${g},${b},0)`);
-  ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);
-}
+// Lobe glows
+function makeGlowTex(r,g,b){const S=256,cv=document.createElement('canvas');cv.width=S;cv.height=S;const ctx=cv.getContext('2d');const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);gr.addColorStop(0,`rgba(${r},${g},${b},.75)`);gr.addColorStop(.28,`rgba(${r},${g},${b},.30)`);gr.addColorStop(.60,`rgba(${r},${g},${b},.06)`);gr.addColorStop(1,`rgba(${r},${g},${b},0)`);ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);}
 const lobeGlow={};
 for(const name of LOBE_NAMES){
   const L=LOBES[name];
   const mat=new THREE.SpriteMaterial({map:makeGlowTex(...L.rgb),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.26+L.activation*.15});
   const sp=new THREE.Sprite(mat);
-  const c=L.centroid,rr=BR*(.34+L.activation*.12);
-  sp.position.set(c[0]*rr,c[1]*rr,c[2]*rr);
+  const c=L.centroid,rr=BR*(.34+L.activation*.12);sp.position.set(c[0]*rr,c[1]*rr,c[2]*rr);
   const sz=BR*(1.38+L.activation*.44);sp.scale.setScalar(sz);
   sp._base={op:.26+L.activation*.15,sz};sp._spd=2*Math.PI/(2.6+(1-L.activation)*5.4);sp._ph=L.phase;
   lobeGlow[name]=sp;scene.add(sp);
 }
 
-// ── Node texture: single smooth falloff — no two-zone look ──
-// Key fix: remove the hard stop at 0.20; use a single clean Gaussian falloff
-function makeNodeTex(r,g,b){
-  const S=64,cv=document.createElement('canvas');cv.width=S;cv.height=S;
-  const ctx=cv.getContext('2d');
-  const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
-  // Smooth single-zone gradient — no secondary stop creating an inner disc
-  gr.addColorStop(0,  `rgba(${r},${g},${b},0.95)`);
-  gr.addColorStop(0.4,`rgba(${r},${g},${b},0.35)`);
-  gr.addColorStop(0.7,`rgba(${r},${g},${b},0.08)`);
-  gr.addColorStop(1,  `rgba(${r},${g},${b},0.00)`);
-  ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);
-}
-
+// Nodes
+function makeNodeTex(r,g,b){const S=64,cv=document.createElement('canvas');cv.width=S;cv.height=S;const ctx=cv.getContext('2d');const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);gr.addColorStop(0,`rgba(${r},${g},${b},.95)`);gr.addColorStop(.40,`rgba(${r},${g},${b},.35)`);gr.addColorStop(.70,`rgba(${r},${g},${b},.08)`);gr.addColorStop(1,`rgba(${r},${g},${b},0)`);ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);}
 function uh(n){let x=n^(n>>>16);x=Math.imul(x,0x45d9f3b);x^=x>>>16;return(x>>>0)/4294967295;}
-function coneDir(seed,deg,idx){
-  const[sx,sy,sz]=seed;
-  const th=Math.acos(Math.max(-1,Math.min(1,1-uh(idx*7+1)*(1-Math.cos(deg*Math.PI/180)))));
-  const ph=uh(idx*13+3)*2*Math.PI;
-  const up=Math.abs(sx)<.9?[0,1,0]:[1,0,0];
-  let tx=up[1]*sz-up[2]*sy,ty=up[2]*sx-up[0]*sz,tz=up[0]*sy-up[1]*sx;
-  const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1;tx/=tl;ty/=tl;tz/=tl;
-  const bx=sy*tz-sz*ty,by=sz*tx-sx*tz,bz=sx*ty-sy*tx;
-  const st=Math.sin(th),ct=Math.cos(th),sp2=Math.sin(ph),cp=Math.cos(ph);
-  return vN([tx*st*cp+bx*st*sp2+sx*ct,ty*st*cp+by*st*sp2+sy*ct,tz*st*cp+bz*st*sp2+sz*ct]);
-}
-
-const nodeMeshes=[];
-const nodeTex={};
+function coneDir(seed,deg,idx){const[sx,sy,sz]=seed;const th=Math.acos(Math.max(-1,Math.min(1,1-uh(idx*7+1)*(1-Math.cos(deg*Math.PI/180)))));const ph=uh(idx*13+3)*2*Math.PI;const up=Math.abs(sx)<.9?[0,1,0]:[1,0,0];let tx=up[1]*sz-up[2]*sy,ty=up[2]*sx-up[0]*sz,tz=up[0]*sy-up[1]*sx;const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1;tx/=tl;ty/=tl;tz/=tl;const bx=sy*tz-sz*ty,by=sz*tx-sx*tz,bz=sx*ty-sy*tx;const st=Math.sin(th),ct=Math.cos(th),sp2=Math.sin(ph),cp=Math.cos(ph);return vN([tx*st*cp+bx*st*sp2+sx*ct,ty*st*cp+by*st*sp2+sy*ct,tz*st*cp+bz*st*sp2+sz*ct]);}
+const nodeMeshes=[],nodeTex={};
 for(const n of LOBE_NAMES)nodeTex[n]=makeNodeTex(...LOBES[n].rgb);
 let gIdx=0;
 for(const name of LOBE_NAMES){
   const L=LOBES[name];
   ENTRIES.filter(e=>e.space===name).forEach((e,i)=>{
-    const seed=L.seedsN[i%L.seedsN.length];
-    const dir=coneDir(seed,30,gIdx++);
-    const rr=RINGS[e.ring].r*BR;
-    const alpha=PALPHA[e.type]*(.55+e.activation*.45);
-    const nsz=PSIZE[e.type];
+    const seed=L.seedsN[i%L.seedsN.length],dir=coneDir(seed,30,gIdx++),rr=RINGS[e.ring].r*BR;
+    const alpha=PALPHA[e.type]*(.55+e.activation*.45),nsz=PSIZE[e.type];
     const gMat=new THREE.SpriteMaterial({map:nodeTex[name],transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:alpha});
-    const gSp=new THREE.Sprite(gMat);
-    gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);
-    gSp.scale.setScalar(nsz*BR*(0.8+e.activation*.4));scene.add(gSp);
+    const gSp=new THREE.Sprite(gMat);gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);gSp.scale.setScalar(nsz*BR*(0.8+e.activation*.4));scene.add(gSp);
     const hit=new THREE.Mesh(new THREE.SphereGeometry(nsz*.48*BR,5,3),new THREE.MeshBasicMaterial({visible:false}));
-    hit.position.copy(gSp.position);hit.userData={entry:e,mat:gMat,alpha,sprite:gSp};
-    scene.add(hit);nodeMeshes.push(hit);
+    hit.position.copy(gSp.position);hit.userData={entry:e,mat:gMat,alpha,sprite:gSp};scene.add(hit);nodeMeshes.push(hit);
   });
 }
 
-// ── HTML labels ───────────────────────────────────────────
+// HTML labels
 const labelsDiv=document.getElementById('labels');
 const lobeLbls={};
 for(const name of LOBE_NAMES){const el=document.createElement('div');el.className='lobe-lbl';el.textContent=name;el.style.color=LOBES[name].hex;labelsDiv.appendChild(el);lobeLbls[name]=el;}
@@ -393,58 +391,35 @@ const nodeLbl=document.createElement('div');nodeLbl.className='node-lbl';labelsD
 function project(wp){const v=wp.clone();v.project(camera);return{x:(v.x+1)/2*innerWidth,y:-(v.y-1)/2*innerHeight};}
 
 // ═══════════════════════════════════════════════════════════
-// PANEL — accordion
+// PANEL — accordion builder
 // ═══════════════════════════════════════════════════════════
 function buildPanel(e,L){
-  const depthPct=Math.round((1-e.ring/8)*100);
-  const actPct=Math.round(e.activation*100);
+  const depthPct=Math.round((1-e.ring/8)*100),actPct=Math.round(e.activation*100);
   const noteItems=e.notes.map(n=>`<li>${n}</li>`).join('');
-  return `
-    <div class="p-section">
-      <div class="p-section-body">${e.summary}</div>
-    </div>
+  return `<div class="p-section"><div class="p-section-body">${e.summary}</div></div>
     <div class="p-acc open">
-      <div class="p-acc-head">
-        <span class="p-acc-title">Key Notes</span>
-        <span class="p-acc-arrow">›</span>
-      </div>
-      <div class="p-acc-body">
-        <ul class="p-notes">${noteItems}</ul>
-      </div>
+      <div class="p-acc-head"><span class="p-acc-title">Key Notes</span><span class="p-acc-arrow">›</span></div>
+      <div class="p-acc-body"><ul class="p-notes">${noteItems}</ul></div>
     </div>
     <div class="p-acc">
-      <div class="p-acc-head">
-        <span class="p-acc-title">Entry Details</span>
-        <span class="p-acc-arrow">›</span>
-      </div>
+      <div class="p-acc-head"><span class="p-acc-title">Entry Details</span><span class="p-acc-arrow">›</span></div>
       <div class="p-acc-body">
-        <div class="p-bar-wrap">
-          <div class="p-bar-lbl">Activation · ${actPct}%</div>
-          <div class="p-bar-track"><div class="p-bar-fill" style="width:${actPct}%;background:${L.hex}cc"></div></div>
-        </div>
-        <div class="p-bar-wrap">
-          <div class="p-bar-lbl">Recency (surface = recent)</div>
-          <div class="p-bar-track"><div class="p-bar-fill" style="width:${depthPct}%;background:${L.hex}77"></div></div>
-        </div>
+        <div class="p-bar-wrap"><div class="p-bar-lbl">Activation · ${actPct}%</div><div class="p-bar-track"><div class="p-bar-fill" style="width:${actPct}%;background:${L.hex}cc"></div></div></div>
+        <div class="p-bar-wrap"><div class="p-bar-lbl">Recency (surface = recent)</div><div class="p-bar-track"><div class="p-bar-fill" style="width:${depthPct}%;background:${L.hex}77"></div></div></div>
         <div class="p-meta-row"><span class="p-meta-key">Age</span><span class="p-meta-val">${RINGS[e.ring].label} ago</span></div>
         <div class="p-meta-row"><span class="p-meta-key">Decay</span><span class="p-meta-val">${DECAY_LABEL[e.type]}</span></div>
         <div class="p-meta-row"><span class="p-meta-key">Depth layer</span><span class="p-meta-val">${e.ring+1} of ${RINGS.length}</span></div>
       </div>
     </div>`;
 }
-
 function showPanel(hit){
   const e=hit.userData.entry,L=LOBES[e.space];
-  document.getElementById('pSp').textContent=e.space;
-  document.getElementById('pSp').style.color=L.hex;
+  document.getElementById('pSp').textContent=e.space;document.getElementById('pSp').style.color=L.hex;
   document.getElementById('pTi').textContent=e.name;
   document.getElementById('pScroll').innerHTML=buildPanel(e,L);
   document.getElementById('pLink').href='index.html?entry='+encodeURIComponent(e.name);
   document.getElementById('panel').classList.add('on');
-  // Wire accordion toggles
-  document.querySelectorAll('.p-acc-head').forEach(h=>{
-    h.addEventListener('click',()=>h.parentElement.classList.toggle('open'));
-  });
+  document.querySelectorAll('.p-acc-head').forEach(h=>h.addEventListener('click',()=>h.parentElement.classList.toggle('open')));
 }
 document.getElementById('pClose').addEventListener('click',()=>document.getElementById('panel').classList.remove('on'));
 
@@ -453,7 +428,7 @@ document.getElementById('pClose').addEventListener('click',()=>document.getEleme
 // ═══════════════════════════════════════════════════════════
 let autoRotate=true,rotX=.18,rotY=0,velX=0,velY=0,camZ=28,targetZ=28;
 let isDrag=false,lastX=0,lastY=0,didDrag=false,activeFilter='all',hoveredSpace=null;
-const AUTO_VEL=0.0030,FRICTION=0.88,DRAG_GAIN=0.0018,VEL_CAP=0.035;
+const AUTO_VEL=.0030,FRICTION=.88,DRAG_GAIN=.0018,VEL_CAP=.035;
 
 const resumeBtn=document.getElementById('resumeBtn');
 resumeBtn.addEventListener('click',()=>{autoRotate=true;resumeBtn.style.display='none';});
@@ -461,29 +436,43 @@ function stopAuto(){if(!autoRotate)return;autoRotate=false;resumeBtn.style.displ
 
 canvas.addEventListener('mousedown',e=>{isDrag=true;lastX=e.clientX;lastY=e.clientY;didDrag=false;stopAuto();});
 window.addEventListener('mousemove',e=>{
-  if(isDrag){
-    const dx=e.clientX-lastX,dy=e.clientY-lastY;
-    if(Math.abs(dx)+Math.abs(dy)>1)didDrag=true;
-    velY=Math.max(-VEL_CAP,Math.min(VEL_CAP,velY+dx*DRAG_GAIN));
-    velX=Math.max(-VEL_CAP,Math.min(VEL_CAP,velX+dy*DRAG_GAIN));
-    lastX=e.clientX;lastY=e.clientY;
-  }else{doHover(e.clientX,e.clientY);}
+  if(isDrag){const dx=e.clientX-lastX,dy=e.clientY-lastY;if(Math.abs(dx)+Math.abs(dy)>1)didDrag=true;velY=Math.max(-VEL_CAP,Math.min(VEL_CAP,velY+dx*DRAG_GAIN));velX=Math.max(-VEL_CAP,Math.min(VEL_CAP,velX+dy*DRAG_GAIN));lastX=e.clientX;lastY=e.clientY;}
+  else doHover(e.clientX,e.clientY);
 });
 window.addEventListener('mouseup',e=>{if(isDrag&&!didDrag)doClick(e.clientX,e.clientY);isDrag=false;});
 canvas.addEventListener('wheel',e=>{targetZ=Math.max(14,Math.min(50,targetZ+e.deltaY*.04));},{passive:true});
-let tX=0,tY=0;
-canvas.addEventListener('touchstart',e=>{tX=e.touches[0].clientX;tY=e.touches[0].clientY;stopAuto();},{passive:true});
+
+// Touch — separate drag vs tap tracking
+let tX=0,tY=0,tDidMove=false,tStart=0;
+canvas.addEventListener('touchstart',e=>{
+  const t=e.touches[0];tX=t.clientX;tY=t.clientY;tDidMove=false;tStart=Date.now();stopAuto();
+},{passive:true});
 canvas.addEventListener('touchmove',e=>{
-  const dx=e.touches[0].clientX-tX,dy=e.touches[0].clientY-tY;
+  e.preventDefault();
+  const t=e.touches[0],dx=t.clientX-tX,dy=t.clientY-tY;
+  if(Math.abs(dx)+Math.abs(dy)>4)tDidMove=true;
   velY=Math.max(-VEL_CAP,Math.min(VEL_CAP,velY+dx*DRAG_GAIN));
   velX=Math.max(-VEL_CAP,Math.min(VEL_CAP,velX+dy*DRAG_GAIN));
-  tX=e.touches[0].clientX;tY=e.touches[0].clientY;
-},{passive:true});
+  tX=t.clientX;tY=t.clientY;
+},{passive:false});
+canvas.addEventListener('touchend',e=>{
+  if(!tDidMove&&Date.now()-tStart<300){
+    // Treat as tap → click
+    const t=e.changedTouches[0];doClick(t.clientX,t.clientY);
+  }
+});
 
 const ray=new THREE.Raycaster();
+// Increase raycaster threshold on mobile for easier tap targets
+const isMobile=window.innerWidth<=600;
+if(isMobile)ray.params.Points={threshold:.5};
+
 function getHit(cx,cy){
   const rect=canvas.getBoundingClientRect();
   ray.setFromCamera(new THREE.Vector2(((cx-rect.left)/rect.width)*2-1,-((cy-rect.top)/rect.height)*2+1),camera);
+  // Use larger threshold on mobile
+  const threshold=isMobile?BR*.15:BR*.08;
+  ray.params.Mesh={};
   const hits=ray.intersectObjects(nodeMeshes);return hits.length?hits[0].object:null;
 }
 function applyFilter(){
@@ -494,25 +483,13 @@ function doHover(cx,cy){
   const hit=getHit(cx,cy);
   if(hit){
     const e=hit.userData.entry;canvas.style.cursor='pointer';
-    if(hoveredSpace!==e.space){
-      hoveredSpace=e.space;
-      for(const m of nodeMeshes){const same=m.userData.entry.space===e.space;const vis=activeFilter==='all'||m.userData.entry.space===activeFilter;m.userData.mat.opacity=(same&&vis)?m.userData.alpha:m.userData.alpha*.07;}
-    }
-    const sc=project(hit.position);
-    nodeLbl.style.left=sc.x+'px';nodeLbl.style.top=sc.y+'px';
-    nodeLbl.innerHTML=`${e.name}<span class="nl-sub">${RINGS[e.ring].label} ago · ${e.type}</span>`;
-    nodeLbl.classList.add('on');
-  }else{
-    canvas.style.cursor='default';
-    if(hoveredSpace){hoveredSpace=null;applyFilter();}
-    nodeLbl.classList.remove('on');
-  }
+    if(hoveredSpace!==e.space){hoveredSpace=e.space;for(const m of nodeMeshes){const same=m.userData.entry.space===e.space,vis=activeFilter==='all'||m.userData.entry.space===activeFilter;m.userData.mat.opacity=(same&&vis)?m.userData.alpha:m.userData.alpha*.07;}}
+    const sc=project(hit.position);nodeLbl.style.left=sc.x+'px';nodeLbl.style.top=sc.y+'px';
+    nodeLbl.innerHTML=`${e.name}<span class="nl-sub">${RINGS[e.ring].label} ago · ${e.type}</span>`;nodeLbl.classList.add('on');
+  }else{canvas.style.cursor='default';if(hoveredSpace){hoveredSpace=null;applyFilter();}nodeLbl.classList.remove('on');}
 }
 function doClick(cx,cy){const hit=getHit(cx,cy);if(hit)showPanel(hit);else document.getElementById('panel').classList.remove('on');}
-
-document.querySelectorAll('.fbtn').forEach(btn=>{
-  btn.addEventListener('click',()=>{activeFilter=btn.dataset.f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');hoveredSpace=null;applyFilter();});
-});
+document.querySelectorAll('.fbtn').forEach(btn=>{btn.addEventListener('click',()=>{activeFilter=btn.dataset.f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');hoveredSpace=null;applyFilter();});});
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 
 // ═══════════════════════════════════════════════════════════
@@ -528,30 +505,10 @@ function animate(){
   camera.position.y=Math.sin(rotX)*camZ;
   camera.position.z=Math.cos(rotY)*Math.cos(rotX)*camZ;
   camera.lookAt(0,0,0);
-  for(const name of LOBE_NAMES){
-    const sp=lobeGlow[name],b=Math.sin(t*sp._spd+sp._ph);
-    const vis=activeFilter==='all'||name===activeFilter;
-    sp.scale.setScalar(sp._base.sz*(1+b*.07));
-    sp.material.opacity=Math.min(.82,sp._base.op*(1+b*.22)*(vis?1:.06));
-  }
-  if(!hoveredSpace){
-    for(const m of nodeMeshes){
-      const{entry,mat,alpha}=m.userData;const vis=activeFilter==='all'||entry.space===activeFilter;
-      if(!vis){mat.opacity=alpha*.06;continue;}
-      let p=1;
-      if(entry.type==='single_use')p=.65+Math.sin(t*2.5+m.id*.9)*.35;
-      else if(entry.type==='fast') p=.82+Math.sin(t*1.4+m.id*.5)*.18;
-      mat.opacity=Math.min(1,alpha*p);
-    }
-  }
+  for(const name of LOBE_NAMES){const sp=lobeGlow[name],b=Math.sin(t*sp._spd+sp._ph),vis=activeFilter==='all'||name===activeFilter;sp.scale.setScalar(sp._base.sz*(1+b*.07));sp.material.opacity=Math.min(.82,sp._base.op*(1+b*.22)*(vis?1:.06));}
+  if(!hoveredSpace){for(const m of nodeMeshes){const{entry,mat,alpha}=m.userData,vis=activeFilter==='all'||entry.space===activeFilter;if(!vis){mat.opacity=alpha*.06;continue;}let p=1;if(entry.type==='single_use')p=.65+Math.sin(t*2.5+m.id*.9)*.35;else if(entry.type==='fast')p=.82+Math.sin(t*1.4+m.id*.5)*.18;mat.opacity=Math.min(1,alpha*p);}}
   const toCamera=camera.position.clone().normalize();
-  for(const name of LOBE_NAMES){
-    const c=LOBES[name].centroid,dot=toCamera.x*c[0]+toCamera.y*c[1]+toCamera.z*c[2];
-    const show=dot>0.28&&(activeFilter==='all'||activeFilter===name);
-    const el=lobeLbls[name];
-    if(show){const wp=new THREE.Vector3(c[0],c[1],c[2]).multiplyScalar(BR*1.06);const sc=project(wp);el.style.left=sc.x+'px';el.style.top=sc.y+'px';el.classList.add('on');}
-    else el.classList.remove('on');
-  }
+  for(const name of LOBE_NAMES){const c=LOBES[name].centroid,dot=toCamera.x*c[0]+toCamera.y*c[1]+toCamera.z*c[2],show=dot>0.28&&(activeFilter==='all'||activeFilter===name),el=lobeLbls[name];if(show){const wp=new THREE.Vector3(c[0],c[1],c[2]).multiplyScalar(BR*1.06),sc=project(wp);el.style.left=sc.x+'px';el.style.top=sc.y+'px';el.classList.add('on');}else el.classList.remove('on');}
   renderer.render(scene,camera);
 }
 animate();
