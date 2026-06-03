@@ -107,33 +107,65 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
   .node-lbl{font-size:15px !important;padding:8px 16px 9px !important;border-radius:10px !important;}
   .node-lbl .nl-sub{font-size:12px !important;margin-top:3px !important;}
 
-  /* insights — hidden by default, slides in as overlay */
+  /* insights — top strip, visible by default */
   #insights{
-    width:min(88vw,320px);
-    background:rgba(5,5,14,.97);
-    transform:translateX(-110%);
+    top:max(44px,env(safe-area-inset-top));
+    left:0;right:0;
+    width:100%;
+    height:auto;
+    flex-direction:row;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    padding:6px 10px 6px 12px;
+    gap:8px;
+    background:rgba(5,5,14,.88);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border-bottom:1px solid rgba(255,255,255,.07);
+    border-right:none;
+    box-shadow:none;
+    transform:translateY(0);
+    transition:transform .3s;
     pointer-events:all;
-    padding-top:max(56px,env(safe-area-inset-top));
-    z-index:40;
-    box-shadow:4px 0 32px rgba(0,0,0,.6);
-    border-right:1px solid rgba(255,255,255,.07);
+    z-index:25;
+    align-items:center;
   }
-  #insights.open{transform:translateX(0);}
+  #insights::-webkit-scrollbar{display:none;}
+  #insights.hidden{transform:translateY(-110%);}
+  /* "Brain State" header — becomes hide button on mobile */
+  #insights .ins-head{display:none;}
 
-  /* insights cards bigger text on mobile */
-  .ins-card .big{font-size:22px;}
-  .ins-card .sub{font-size:12px;}
-  .ins-card .lbl{font-size:10px;}
-  .bar-name{font-size:11px;}
-  .risk-item{font-size:12px;}
-  .act-note{font-size:11px;}
+  /* compact chips for each card */
+  #insights .ins-card{
+    flex-shrink:0;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:8px;
+    padding:5px 10px;
+    display:flex;
+    flex-direction:column;
+    gap:1px;
+    min-width:max-content;
+  }
+  .ins-card .lbl{font-size:9px;letter-spacing:.10em;color:#5858a8;margin-bottom:2px;}
+  .ins-card .big{font-size:15px;font-weight:700;line-height:1.1;}
+  .ins-card .sub{font-size:10px;color:#6868b0;}
+  .bar-row{margin-bottom:2px;}
+  .bar-name{font-size:10px;width:44px;}
+  .bar-track{height:2px;}
+  .risk-item{font-size:10px;}
+  .act-note{font-size:10px;max-width:160px;white-space:normal;}
+
+  /* hide toggle button in topbar on mobile — replaced by strip's own button */
+  #insightsToggle{display:block;}
 
   /* entry panel — bottom sheet instead of right sidebar */
   #panel{
     top:auto;right:0;bottom:0;left:0;
     transform:none;
     width:100%;
-    max-height:72vh;
+    max-height:45vh;
     border-radius:16px 16px 0 0;
     border:1px solid rgba(255,255,255,.09);
     border-bottom:none;
@@ -231,6 +263,7 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 
 <div id="insights">
   <div class="ins-head">Brain State</div>
+  <button id="insightsHide" style="display:none;flex-shrink:0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:6px;padding:4px 9px;font-size:11px;color:#6868b0;cursor:pointer;font-family:inherit;margin-right:4px;">Hide ↑</button>
   <div class="ins-card" id="ic-active"></div>
   <div class="ins-card" id="ic-density"></div>
   <div class="ins-card" id="ic-risk"></div>
@@ -344,14 +377,59 @@ const ENTRIES=[
   document.getElementById('ic-act-note').innerHTML=`<div class="lbl">Activation</div><div class="act-note">Node <strong style="color:#6050a8">brightness</strong> and <strong style="color:#6050a8">size</strong> reflect estimated activation. Live telemetry matures ~7 June.</div>`;
 })();
 
-// ── mobile: insights toggle ────────────────────────────────
+/// ── mobile: insights strip toggle ───────────────────────────
 const insightsEl=document.getElementById('insights');
 const backdrop=document.getElementById('insightsBackdrop');
-document.getElementById('insightsToggle').addEventListener('click',()=>{
-  insightsEl.classList.toggle('open');
-  backdrop.classList.toggle('on');
-});
-backdrop.addEventListener('click',()=>{insightsEl.classList.remove('open');backdrop.classList.remove('on');});
+const insightsHide=document.getElementById('insightsHide');
+const insightsToggle=document.getElementById('insightsToggle');
+
+function updateInsightsUI(){
+  if(!isMobile) return;
+  insightsHide.style.display='flex';
+}
+updateInsightsUI();
+
+function hideInsights(){
+  insightsEl.classList.add('hidden');
+  insightsToggle.textContent='Brain State ↓';
+}
+function showInsights(){
+  insightsEl.classList.remove('hidden');
+  insightsToggle.textContent='Hide ↑';
+}
+
+if(isMobile){
+  insightsToggle.textContent='Hide ↑'; // visible by default
+  insightsHide.addEventListener('click', hideInsights);
+  insightsToggle.addEventListener('click',()=>{
+    if(insightsEl.classList.contains('hidden')) showInsights();
+    else hideInsights();
+  });
+} else {
+  insightsToggle.addEventListener('click',()=>{
+    insightsEl.classList.toggle('open');
+    backdrop.classList.toggle('on');
+  });
+  backdrop.addEventListener('click',()=>{insightsEl.classList.remove('open');backdrop.classList.remove('on');});
+}
+
+// ── pinch-to-zoom ────────────────────────────────────────────
+let pinchDist0=null;
+const CAM_Z_MIN=16, CAM_Z_MAX=50;
+canvas.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    pinchDist0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+  }
+},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  if(e.touches.length===2 && pinchDist0!==null){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    const delta=pinchDist0-d; // positive = pinch in = zoom out
+    camera.position.z=Math.min(CAM_Z_MAX,Math.max(CAM_Z_MIN,camera.position.z+delta*0.05));
+    pinchDist0=d;
+  }
+},{passive:true});
+canvas.addEventListener('touchend',e=>{if(e.touches.length<2)pinchDist0=null;},{passive:true});
 
 // ═══════════════════════════════════════════════════════════
 // THREE.JS
