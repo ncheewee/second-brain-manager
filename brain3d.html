@@ -95,7 +95,8 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 #resumeBtn:hover{background:rgba(65,55,130,.20);color:#9080cc;}
 
 /* ── callout cards ── */
-.ccard{position:fixed;background:rgba(6,6,20,.45);border:none;border-radius:10px;padding:7px 11px;width:128px;pointer-events:none;z-index:19;opacity:0;transition:opacity .45s;}
+.ccard{position:fixed;background:rgba(6,6,20,.45);border:none;border-radius:10px;padding:7px 11px;width:128px;pointer-events:none;z-index:19;opacity:0;transition:opacity .45s;cursor:pointer;}
+.ccard.on{pointer-events:all;}
 .ccard.on{opacity:1;}
 .cc-name{font-size:13px;font-weight:600;color:#dde;line-height:1.25;}
 .cc-space{font-size:10px;margin-top:2px;text-transform:capitalize;letter-spacing:.06em;}
@@ -377,6 +378,8 @@ const ccards=[],clines=[];
 for(let i=0;i<MAX_CO;i++){
   const d=document.createElement('div');d.className='ccard';
   d.innerHTML='<div class="cc-name"></div><div class="cc-space"></div><div class="cc-ring"></div>';
+  d._mesh=null;
+  d.addEventListener('click',()=>{if(d._mesh)showPanel(d._mesh);});
   document.body.appendChild(d);ccards.push(d);
   const l=document.createElementNS('http://www.w3.org/2000/svg','path');
   l.setAttribute('stroke-width','1.5');l.setAttribute('fill','none');l.style.opacity='0';
@@ -415,6 +418,7 @@ function updateCallouts(){
     const card=ccards[i],line=clines[i],pick=picks[i];
     if(!pick){card.classList.remove('on');line.style.opacity='0';continue;}
     const e=pick.entry,L=LOBES[e.space];
+    card._mesh=pick.m;
     card.querySelector('.cc-name').textContent=e.name;
     card.querySelector('.cc-space').textContent=e.space;
     card.querySelector('.cc-space').style.color=L.hex;
