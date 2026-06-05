@@ -52,8 +52,8 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 
 /* ── entry panel — desktop right sidebar ── */
 #panel{
-  position:fixed;top:50%;right:20px;transform:translateY(-50%);
-  width:256px;max-height:86vh;
+  position:fixed;top:70px;right:20px;
+  width:256px;max-height:calc(100vh - 90px);
   background:rgba(6,6,18,.97);border:1px solid rgba(255,255,255,.08);
   border-radius:12px;overflow:hidden;display:flex;flex-direction:column;
   opacity:0;transition:opacity .25s;pointer-events:none;z-index:30;
@@ -379,7 +379,8 @@ for(let i=0;i<MAX_CO;i++){
   const d=document.createElement('div');d.className='ccard';
   d.innerHTML='<div class="cc-name"></div><div class="cc-space"></div><div class="cc-ring"></div>';
   d._mesh=null;
-  d.addEventListener('click',()=>{if(d._mesh)showPanel(d._mesh);});
+  d.addEventListener('click',e=>{e.stopPropagation();if(d._mesh)showPanel(d._mesh);});
+  d.addEventListener('touchend',e=>{e.stopPropagation();e.preventDefault();if(d._mesh)showPanel(d._mesh);},{passive:false});
   document.body.appendChild(d);ccards.push(d);
   const l=document.createElementNS('http://www.w3.org/2000/svg','path');
   l.setAttribute('stroke-width','1.5');l.setAttribute('fill','none');l.style.opacity='0';
@@ -513,6 +514,7 @@ canvas.addEventListener('touchmove',e=>{
   tX=t.clientX;tY=t.clientY;
 },{passive:false});
 canvas.addEventListener('touchend',e=>{
+  if(e.target.closest&&e.target.closest('.ccard'))return;
   if(!tDidMove&&Date.now()-tStart<300){const t=e.changedTouches[0];doClick(t.clientX,t.clientY);}
 });
 
