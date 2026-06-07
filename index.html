@@ -492,6 +492,59 @@ main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100
 .inbox-btn.success { color: var(--success); border-color: var(--success); }
 .inbox-btn.success:hover { background: var(--success); color: white; }
 
+/* ── MOBILE (Pixel 8 / phones) ──────────────── */
+@media (max-width: 640px) {
+  :root { --font-size: 14px; }
+
+  .codex-build-banner { padding: 6px 12px; font-size: .6rem; }
+
+  header { padding: 0 14px; height: auto; min-height: 52px; flex-wrap: wrap; row-gap: 6px; padding-top: 8px; padding-bottom: 8px; }
+  .header-title { font-size: 1rem; }
+  .header-left, .header-right { gap: 6px; }
+  .conn-label { display: none; }
+
+  .tabs { padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 10px 11px; font-size: .7rem; flex-shrink: 0; }
+
+  main { padding: 16px 12px; }
+
+  .setup-card { padding: 18px 16px; }
+
+  .search-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .search-mode-badge { align-self: flex-start; }
+
+  .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .toolbar-spacer { display: none; }
+  .filter-group { width: 100%; }
+  .toolbar > .btn { width: 100%; justify-content: center; }
+
+  .entry-card { grid-template-columns: 1fr; padding: 14px; }
+  .entry-card .entry-actions { grid-column: 1; grid-row: auto; flex-direction: row; align-items: center; justify-content: flex-end; margin-top: 6px; }
+  .entry-body-preview, .entry-meta { grid-column: 1; }
+
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal { max-width: 100%; width: 100%; max-height: 92vh; border-radius: 14px 14px 0 0; }
+  .modal-header, .modal-body, .modal-footer { padding-left: 16px; padding-right: 16px; }
+  .modal-footer { flex-wrap: wrap; }
+  .modal-footer .btn { flex: 1; justify-content: center; }
+
+  .field-row { grid-template-columns: 1fr; }
+
+  .audit-item { grid-template-columns: 1fr; }
+  .audit-item .audit-detail, .audit-item .rollback-btn { grid-column: 1; }
+  .rollback-btn { grid-row: auto; align-self: flex-start; margin-top: 6px; }
+
+  .proposal-header, .inbox-card-header { flex-wrap: wrap; }
+  .proposal-title-text, .inbox-card-title { width: 100%; order: -1; }
+
+  .toast-container { left: 12px; right: 12px; bottom: 12px; }
+  .toast { max-width: 100%; }
+
+  #tab-brainstate .bs-metrics { grid-template-columns: repeat(2, 1fr); }
+  #tab-brainstate .bs-two { grid-template-columns: 1fr; }
+}
+
 </style>
 </head>
 <body>
