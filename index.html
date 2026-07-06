@@ -1,2491 +1,607 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Second Brain Manager</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Second Brain — 3D View</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:#ccd;}
+#c{position:fixed;top:0;left:0;width:100vw;height:100vh;display:block;}
 
-/* ── TOKENS ─────────────────────────────────── */
-:root {
-  --bg:        #FAFAF7;
-  --bg2:       #F2F2ED;
-  --bg3:       #E8E8E2;
-  --border:    #D8D8D0;
-  --text:      #1A1A14;
-  --text2:     #5A5A50;
-  --text3:     #9A9A8E;
-  --accent:    #C17B2A;
-  --accent-bg: #FDF3E3;
-  --accent2:   #2A6B8A;
-  --danger:    #C0392B;
-  --success:   #2E7D52;
-  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
-  --radius:    10px;
-  --font-size: 15px;
-}
-[data-theme="dark"] {
-  --bg:        #12120E;
-  --bg2:       #1C1C16;
-  --bg3:       #28281E;
-  --border:    #3A3A2E;
-  --text:      #F0F0E8;
-  --text2:     #A8A898;
-  --text3:     #686858;
-  --accent:    #D4922E;
-  --accent-bg: #2A200E;
-  --accent2:   #4A9BBF;
-  --shadow:    0 1px 3px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.2);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,.4);
-}
+/* ── topbar ── */
+#topbar{position:fixed;top:0;left:0;right:0;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:30;pointer-events:none;padding-top:max(12px,env(safe-area-inset-top));}
+#topbar h1{font-size:11px;font-weight:600;color:#2e2e48;letter-spacing:.16em;text-transform:uppercase;}
+#topbar-right{display:flex;align-items:center;gap:10px;pointer-events:all;}
+#topbar a{color:#2e2e48;text-decoration:none;font-size:11px;transition:color .2s;}
+#topbar a:hover{color:#888;}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: var(--font-size); }
-body {
-  font-family: 'IBM Plex Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  line-height: 1.6;
-  transition: background .2s, color .2s;
-}
-button { cursor: pointer; font-family: inherit; }
-input, textarea, select { font-family: inherit; }
+/* ── filter bar (top, below topbar) ── */
+#filterbar{position:fixed;left:0;right:0;display:flex;gap:6px;align-items:center;z-index:29;pointer-events:all;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:6px 14px;background:linear-gradient(to bottom,rgba(6,6,14,.92) 60%,transparent 100%);}
+#filterbar::-webkit-scrollbar{display:none;}
+.fpill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:5px 12px;font-size:12px;color:#5a5a80;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;font-family:inherit;min-height:30px;}
+.fpill:hover,.fpill:active{background:rgba(255,255,255,.09);color:#aaa;}
+.fpill.on{color:#ccd;border-color:rgba(255,255,255,.24);background:rgba(255,255,255,.09);}
+.fpill-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.fpill-n{font-size:10px;opacity:.55;font-weight:400;}
 
-/* ── LAYOUT ─────────────────────────────────── */
-.app { display: flex; flex-direction: column; min-height: 100vh; }
+/* ── label overlay ── */
+#labels{position:fixed;inset:0;pointer-events:none;z-index:15;}
+.lobe-lbl{position:absolute;transform:translate(-50%,-50%);font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:0;transition:opacity .5s;white-space:nowrap;text-shadow:0 0 10px currentColor;font-size:11px;}
+.lobe-lbl.on{opacity:.78;}
+.node-lbl{position:absolute;transform:translate(-50%,-148%);font-weight:500;color:rgba(210,210,255,.92);background:rgba(5,5,18,.92);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:6px 13px 7px;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .15s;line-height:1.5;font-size:13px;}
+.node-lbl .nl-sub{display:block;font-size:10px;color:#484868;font-weight:400;margin-top:1px;}
+.node-lbl.on{opacity:1;}
 
-.codex-build-banner {
-  background: #102A3A;
-  color: #F7FBFD;
-  border-bottom: 1px solid rgba(255,255,255,.16);
-  padding: 8px 24px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: .72rem;
-  line-height: 1.4;
-  letter-spacing: .02em;
-  text-align: center;
-}
-.codex-build-banner strong { color: #F5B35C; font-weight: 700; }
+/* ── insights panel — desktop sidebar ── */
+#insights{position:fixed;top:0;left:0;width:272px;height:100vh;padding:90px 16px 16px;display:flex;flex-direction:column;gap:10px;z-index:28;pointer-events:none;background:linear-gradient(to right,rgba(5,5,14,.95) 66%,transparent 100%);transition:transform .3s;transform:translateX(-100%);}
+#insights.open{transform:translateX(0);}
+.ins-head{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#252540;margin-bottom:1px;}
+.ins-card{background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.048);border-radius:9px;padding:9px 11px;}
+.ins-card .lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#323252;margin-bottom:5px;}
+.ins-card .big{font-size:19px;font-weight:700;line-height:1;margin-bottom:3px;}
+.ins-card .sub{font-size:11px;color:#3e3e60;}
+.bar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.bar-name{font-size:10px;width:54px;text-transform:capitalize;}
+.bar-track{flex:1;height:3px;background:#0c0c1a;border-radius:2px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:2px;}
+.bar-n{font-size:10px;color:#323252;width:16px;text-align:right;}
+.risk-item{font-size:11px;color:#906050;margin-bottom:3px;display:flex;align-items:baseline;gap:6px;}
+.risk-item span{font-size:10px;color:#3e3e60;}
+.act-note{font-size:10px;color:#3e3e60;line-height:1.55;}
 
-header {
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 56px;
-  position: sticky; top: 0; z-index: 100;
+/* ── entry panel — desktop right sidebar ── */
+#panel{
+  position:fixed;top:70px;right:20px;
+  width:256px;max-height:calc(100vh - 90px);
+  background:rgba(6,6,18,.97);border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;overflow:hidden;display:flex;flex-direction:column;
+  opacity:0;transition:opacity .25s;pointer-events:none;z-index:30;
 }
-.header-left { display: flex; align-items: baseline; gap: 10px; }
-.header-title {
-  font-family: 'Lora', serif;
-  font-size: 1.15rem; font-weight: 700;
-  color: var(--text); letter-spacing: -.02em;
-}
-.version-badge {
-  font-size: .65rem; font-weight: 600;
-  color: var(--text3); background: var(--bg3);
-  border: 1px solid var(--border);
-  padding: 1px 6px; border-radius: 20px;
-  font-family: 'IBM Plex Mono', monospace; letter-spacing: .04em;
-}
-.header-right { display: flex; align-items: center; gap: 10px; }
-.conn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); transition: background .3s; }
-.conn-dot.connected { background: var(--success); }
-.conn-label { font-size: .75rem; color: var(--text3); }
-.theme-btn {
-  background: var(--bg3); border: 1px solid var(--border);
-  color: var(--text2); width: 32px; height: 32px;
-  border-radius: 8px; font-size: .9rem;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .15s;
-}
-.theme-btn:hover { background: var(--border); }
+#panel.on{opacity:1;pointer-events:all;}
+#panel .p-head{padding:13px 14px 10px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;}
+#panel .p-close{float:right;color:#363658;cursor:pointer;font-size:18px;line-height:1;padding:2px 4px;}
+#panel .p-close:hover{color:#888;}
+#panel .p-sp{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:4px;}
+#panel .p-ti{font-size:15px;font-weight:600;color:#dde;line-height:1.3;}
+#panel .p-scroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#1e1e38 transparent;-webkit-overflow-scrolling:touch;}
+.p-section{border-bottom:1px solid rgba(255,255,255,.05);}
+.p-section-body{padding:10px 14px 12px;font-size:12px;color:#6868a0;line-height:1.7;}
+.p-acc{border-bottom:1px solid rgba(255,255,255,.04);}
+.p-acc-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none;transition:background .15s;min-height:44px;}
+.p-acc-head:hover{background:rgba(255,255,255,.03);}
+.p-acc-title{font-size:10px;letter-spacing:.10em;text-transform:uppercase;color:#484868;}
+.p-acc-arrow{font-size:13px;color:#363658;transition:transform .25s;padding:0 2px;}
+.p-acc.open .p-acc-arrow{transform:rotate(90deg);}
+.p-acc-body{display:none;padding:0 14px 12px;}
+.p-acc.open .p-acc-body{display:block;}
+.p-notes{list-style:none;padding:0;}
+.p-notes li{font-size:12px;color:#6060a0;line-height:1.65;padding:3px 0;display:flex;gap:8px;}
+.p-notes li::before{content:'—';color:#303058;flex-shrink:0;}
+.p-meta-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.p-meta-key{font-size:9px;color:#303058;text-transform:uppercase;letter-spacing:.08em;}
+.p-meta-val{font-size:11px;color:#6868a0;}
+.p-bar-wrap{margin-bottom:10px;}
+.p-bar-lbl{font-size:9px;color:#303058;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+.p-bar-track{height:4px;background:#0c0c1a;border-radius:2px;overflow:hidden;}
+.p-bar-fill{height:100%;border-radius:2px;}
+#panel .p-foot{padding:9px 14px;border-top:1px solid rgba(255,255,255,.04);flex-shrink:0;}
+#panel .p-link{font-size:11px;color:#4a42a0;text-decoration:none;}
+#panel .p-link:hover{color:#7a70cc;}
 
-.tabs {
-  background: var(--bg2); border-bottom: 1px solid var(--border);
-  padding: 0 24px; display: flex;
-}
-.tab-btn {
-  background: none; border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text3); font-size: .8rem; font-weight: 500;
-  padding: 10px 14px; letter-spacing: .02em;
-  text-transform: uppercase; transition: color .15s, border-color .15s;
-  white-space: nowrap;
-}
-.tab-btn:hover { color: var(--text2); }
-.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+/* ── bottom controls ── */
+#bottom{position:fixed;bottom:0;left:0;right:0;padding:10px 16px max(12px,env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center;justify-content:center;z-index:30;}
+#resumeBtn{display:none;background:rgba(65,55,130,.11);border:1px solid rgba(85,75,160,.25);color:#6058a0;padding:6px 16px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;min-height:32px;}
+#resumeBtn:hover{background:rgba(65,55,130,.20);color:#9080cc;}
 
-main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100%; }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; animation: fadeIn .15s ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+/* ── callout cards ── */
+.ccard{position:fixed;background:rgba(6,6,20,.45);border:none;border-radius:10px;padding:7px 11px;width:128px;pointer-events:none;z-index:19;opacity:0;transition:opacity .45s;cursor:pointer;}
+.ccard.on{pointer-events:all;}
+.ccard.on{opacity:1;}
+.cc-name{font-size:13px;font-weight:600;color:#dde;line-height:1.25;}
+.cc-space{font-size:10px;margin-top:2px;text-transform:capitalize;letter-spacing:.06em;}
+.cc-ring{font-size:10px;color:#38385a;margin-top:1px;}
+#callout-svg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:18;}
 
-/* ── SETUP CARD ─────────────────────────────── */
-.setup-card {
-  background: var(--accent-bg); border: 1px solid var(--accent);
-  border-radius: var(--radius); padding: 28px 32px; margin-bottom: 28px;
-}
-.setup-card h2 { font-family: 'Lora', serif; font-size: 1.1rem; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
-.setup-card p { font-size: .85rem; color: var(--text2); margin-bottom: 14px; }
+/* ═══════════════════════════════════════════════════════
+   MOBILE  (≤ 600px)
+═══════════════════════════════════════════════════════ */
+@media(max-width:600px){
+  /* topbar */
+  #topbar h1{font-size:13px;color:#6060a0;}
+  #topbar a{font-size:13px;color:#6060a0;}
 
-/* ── SEMANTIC SEARCH BAR ────────────────────── */
-.search-bar {
-  display: flex; gap: 8px; align-items: center;
-  margin-bottom: 18px;
-}
-.search-input-wrap {
-  flex: 1; position: relative;
-}
-.search-input {
-  width: 100%;
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 10px; color: var(--text);
-  font-size: .88rem; padding: 9px 38px 9px 14px;
-  transition: border-color .15s;
-}
-.search-input:focus { outline: none; border-color: var(--accent); }
-.search-input::placeholder { color: var(--text3); }
-.search-clear {
-  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-  background: none; border: none; color: var(--text3);
-  font-size: .9rem; padding: 2px; display: none;
-}
-.search-clear:hover { color: var(--text); }
-.search-mode-badge {
-  font-size: .7rem; font-weight: 600;
-  padding: 3px 9px; border-radius: 12px;
-  white-space: nowrap; letter-spacing: .04em;
-  border: 1px solid var(--border); color: var(--text3);
-  background: var(--bg2);
-  transition: all .2s;
-}
-.search-mode-badge.semantic {
-  color: var(--accent2); border-color: var(--accent2);
-  background: #EDF4FA;
-}
-[data-theme="dark"] .search-mode-badge.semantic { background: #0E1E2A; }
+  /* filter bar bigger pills */
+  .fpill{font-size:14px;padding:6px 14px;min-height:36px;}
+  .fpill-dot{width:8px;height:8px;}
+  .fpill-n{font-size:12px;}
 
-/* ── TOOLBAR ────────────────────────────────── */
-.toolbar {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 20px; flex-wrap: wrap;
-}
-.toolbar-spacer { flex: 1; }
-.filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
-.filter-chip {
-  background: var(--bg2); border: 1px solid var(--border);
-  color: var(--text2); font-size: .75rem; font-weight: 500;
-  padding: 4px 10px; border-radius: 20px; cursor: pointer;
-  transition: all .15s; text-transform: capitalize;
-}
-.filter-chip:hover { border-color: var(--accent); color: var(--accent); }
-.filter-chip.active { background: var(--accent); border-color: var(--accent); color: white; }
+  /* lobe labels */
+  .lobe-lbl{font-size:15px !important;letter-spacing:.10em;}
+  .lobe-lbl.on{opacity:1 !important;}
 
-/* ── ENTRY CARDS ────────────────────────────── */
-.entries-grid { display: flex; flex-direction: column; gap: 10px; }
-.entry-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 16px 18px;
-  cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .1s;
-  display: grid; grid-template-columns: 1fr auto;
-  gap: 6px 12px; align-items: start;
-}
-.entry-card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-1px); }
-.entry-card.semantic-result { border-left: 3px solid var(--accent2); }
-.entry-title { font-family: 'Lora', serif; font-size: .95rem; font-weight: 600; color: var(--text); line-height: 1.3; }
-.entry-body-preview {
-  font-size: .8rem; color: var(--text2); grid-column: 1;
-  line-height: 1.5; overflow: hidden;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-}
-.entry-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; grid-column: 1; margin-top: 4px; }
-.entry-actions { grid-column: 2; grid-row: 1 / 4; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
-.similarity-bar {
-  width: 48px; height: 4px; background: var(--bg3);
-  border-radius: 2px; overflow: hidden; margin-top: 4px;
-}
-.similarity-fill { height: 100%; background: var(--accent2); border-radius: 2px; }
-.similarity-label { font-size: .67rem; color: var(--accent2); font-family: 'IBM Plex Mono', monospace; }
+  /* node tooltip */
+  .node-lbl{font-size:15px !important;padding:8px 16px 9px !important;color:rgba(230,230,255,.98) !important;background:rgba(5,5,20,.97) !important;}
+  .node-lbl .nl-sub{font-size:12px !important;color:#7878a8 !important;}
 
-/* ── CHIPS ──────────────────────────────────── */
-.chip {
-  font-size: .67rem; font-weight: 600; padding: 2px 7px;
-  border-radius: 12px; text-transform: uppercase;
-  letter-spacing: .04em; white-space: nowrap;
+  /* entry panel — bottom sheet */
+  #panel{
+    top:auto;right:0;bottom:0;left:0;
+    width:100%;max-height:45vh;
+    border-radius:16px 16px 0 0;
+    border:1px solid rgba(255,255,255,.09);border-bottom:none;
+    opacity:0;transform:translateY(100%);
+    transition:opacity .25s,transform .3s;
+  }
+  #panel.on{opacity:1;transform:translateY(0);pointer-events:all;}
+  #panel .p-head{padding:14px 18px 12px;}
+  #panel .p-sp{font-size:11px;}
+  #panel .p-ti{font-size:17px;}
+  #panel .p-close{font-size:22px;}
+  .p-section-body{font-size:14px !important;padding:12px 18px 14px !important;color:#9090c8 !important;}
+  .p-acc-head{padding:12px 18px;min-height:48px;}
+  .p-acc-title{font-size:12px;color:#7070b8 !important;}
+  .p-acc-arrow{color:#6060b0 !important;}
+  .p-acc-body{padding:0 18px 14px;}
+  .p-notes li{font-size:14px !important;color:#8888c0 !important;}
+  .p-notes li::before{color:#5050a0 !important;}
+  .p-meta-key{font-size:11px;color:#5050a0 !important;}
+  .p-meta-val{font-size:13px;color:#9090c8 !important;}
+  #panel .p-foot{padding:12px 18px;}
+  #panel .p-link{font-size:14px;}
+  #panel .p-head::before{content:'';display:block;width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 12px;}
+
+  /* bottom */
+  #bottom{padding:8px 16px max(10px,env(safe-area-inset-bottom));}
+  #resumeBtn{font-size:13px;padding:7px 18px;}
+
+  /* callout cards smaller on mobile */
+  .ccard{width:110px;}
+  .cc-name{font-size:12px;}
+  .cc-space{font-size:10px;}
+  .cc-ring{font-size:9px;}
 }
-.chip-space  { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
-.chip-layer  { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent); }
-.chip-perish { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
-.chip-perish.evergreen { color: var(--success); border-color: var(--success); background: #edf7f1; }
-.chip-perish.fast      { color: var(--danger); border-color: var(--danger); background: #fdf0ee; }
-.chip-perish.single_use { color: #8B4513; border-color: #C4A060; background: #FDF8F0; }
-[data-theme="dark"] .chip-perish.evergreen { background: #0E2A1A; }
-[data-theme="dark"] .chip-perish.fast      { background: #2A0E0E; }
-[data-theme="dark"] .chip-perish.single_use { background: #1E1408; }
-.chip-noembedding { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); font-size: .6rem; }
-
-.entry-date { font-size: .7rem; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
-.entry-archived { opacity: .5; }
-
-/* ── BUTTONS ────────────────────────────────── */
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: .8rem; font-weight: 500; padding: 7px 14px;
-  border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg2); color: var(--text2);
-  transition: all .15s; white-space: nowrap;
-}
-.btn:hover { background: var(--bg3); color: var(--text); }
-.btn-accent { background: var(--accent); border-color: var(--accent); color: white; }
-.btn-accent:hover { filter: brightness(1.1); color: white; }
-.btn-danger { color: var(--danger); border-color: var(--danger); }
-.btn-danger:hover { background: var(--danger); color: white; }
-.btn-sm { padding: 4px 10px; font-size: .75rem; }
-
-/* ── MODAL ──────────────────────────────────── */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.5);
-  z-index: 200; display: none; align-items: center;
-  justify-content: center; padding: 20px; backdrop-filter: blur(2px);
-}
-.modal-overlay.open { display: flex; }
-.modal {
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 14px; width: 100%; max-width: 600px;
-  max-height: 90vh; overflow-y: auto;
-  box-shadow: var(--shadow-lg); animation: slideUp .2s ease;
-}
-@keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.modal-title { font-family: 'Lora', serif; font-size: 1rem; font-weight: 600; }
-.modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
-.modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
-.close-btn { background: none; border: none; color: var(--text3); font-size: 1.2rem; padding: 2px 6px; border-radius: 6px; transition: color .15s; }
-.close-btn:hover { color: var(--text); }
-
-/* FORM FIELDS */
-.field { display: flex; flex-direction: column; gap: 5px; }
-.field label { font-size: .75rem; font-weight: 600; color: var(--text2); letter-spacing: .03em; text-transform: uppercase; }
-.field input, .field textarea, .field select {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-size: .88rem;
-  padding: 9px 12px; transition: border-color .15s; resize: vertical;
-}
-.field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--accent); }
-.field select option { background: var(--bg2); }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-/* ── AUDIT LOG ──────────────────────────────── */
-.audit-list { display: flex; flex-direction: column; gap: 8px; }
-.audit-item {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 12px 16px;
-  display: grid; grid-template-columns: auto 1fr auto;
-  gap: 8px 14px; align-items: start;
-}
-.audit-action-badge {
-  font-size: .67rem; font-weight: 600; padding: 2px 8px;
-  border-radius: 12px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
-}
-.badge-insert  { background: #EDF7F1; color: var(--success); border: 1px solid var(--success); }
-.badge-update  { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent); }
-.badge-delete  { background: #FDF0EE; color: var(--danger); border: 1px solid var(--danger); }
-.badge-archive { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
-.badge-restore { background: #EDF4FA; color: var(--accent2); border: 1px solid var(--accent2); }
-[data-theme="dark"] .badge-insert  { background: #0E2A1A; }
-[data-theme="dark"] .badge-update  { background: #2A200E; }
-[data-theme="dark"] .badge-delete  { background: #2A0E0E; }
-[data-theme="dark"] .badge-restore { background: #0E1E2A; }
-.audit-entry-title { font-size: .85rem; font-weight: 500; color: var(--text); }
-.audit-meta { font-size: .72rem; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
-.audit-detail { font-size: .78rem; color: var(--text2); grid-column: 2; }
-.rollback-btn { grid-column: 3; grid-row: 1 / 3; align-self: center; }
-
-/* ── SETTINGS ───────────────────────────────── */
-.settings-section {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 22px 24px; margin-bottom: 18px;
-}
-.settings-section h3 { font-family: 'Lora', serif; font-size: .95rem; font-weight: 600; margin-bottom: 16px; color: var(--text); }
-.font-slider-row { display: flex; align-items: center; gap: 14px; }
-.font-slider-row input[type=range] { flex: 1; accent-color: var(--accent); }
-
-/* ── EXPORT ─────────────────────────────────── */
-.export-box {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 20px 24px; margin-bottom: 14px;
-}
-.export-box h3 { font-family: 'Lora', serif; font-size: .95rem; font-weight: 600; margin-bottom: 6px; }
-.export-box p { font-size: .82rem; color: var(--text2); margin-bottom: 14px; line-height: 1.5; }
-
-/* ── EMPTY STATE ────────────────────────────── */
-.empty { text-align: center; padding: 60px 20px; color: var(--text3); }
-.empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
-.empty h3 { font-family: 'Lora', serif; font-size: 1rem; font-weight: 600; margin-bottom: 6px; color: var(--text2); }
-.empty p { font-size: .82rem; }
-
-/* ── SEARCH RESULTS HEADER ──────────────────── */
-.results-header {
-  font-size: .78rem; color: var(--text3); margin-bottom: 12px;
-  display: flex; align-items: center; gap: 8px;
-}
-.results-header strong { color: var(--text2); }
-
-/* ── TOAST ──────────────────────────────────── */
-.toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
-.toast {
-  background: var(--text); color: var(--bg); font-size: .8rem;
-  padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow-lg);
-  animation: toastIn .2s ease; max-width: 280px;
-}
-.toast.error   { background: var(--danger); }
-.toast.success { background: var(--success); }
-.toast.info    { background: var(--accent2); }
-@keyframes toastIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-.spinner {
-  display: inline-block; width: 14px; height: 14px;
-  border: 2px solid var(--border); border-top-color: var(--accent);
-  border-radius: 50%; animation: spin .7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.section-heading {
-  font-family: 'Lora', serif; font-size: 1.1rem; font-weight: 700;
-  margin-bottom: 20px; color: var(--text);
-}
-.count-badge {
-  font-size: .7rem; background: var(--bg3); border: 1px solid var(--border);
-  color: var(--text3); padding: 1px 7px; border-radius: 12px;
-  font-family: 'IBM Plex Mono', monospace; margin-left: 8px; font-weight: 400;
-}
-
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-/* ── IMPORT TAB ─────────────────────────────── */
-.import-info {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px;
-}
-.import-info p { font-size: .83rem; color: var(--text2); line-height: 1.6; }
-.import-label { font-size: .75rem; font-weight: 600; color: var(--text2); letter-spacing: .03em; text-transform: uppercase; display: block; margin-bottom: 8px; }
-.import-source-row { margin-bottom: 16px; }
-
-/* PROPOSAL CARDS */
-.proposals-header {
-  font-size: .78rem; color: var(--text3); margin-bottom: 14px;
-  display: flex; align-items: center; gap: 8px;
-}
-.proposal-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); margin-bottom: 12px;
-  overflow: hidden; transition: border-color .15s;
-}
-.proposal-card.approved { border-color: var(--success); }
-.proposal-card.skipped  { opacity: .45; }
-.proposal-header {
-  padding: 13px 16px; display: flex; align-items: center;
-  gap: 10px; cursor: pointer;
-  border-bottom: 1px solid var(--border);
-}
-.proposal-header:hover { background: var(--bg3); }
-.proposal-num {
-  font-size: .7rem; font-weight: 600;
-  font-family: 'IBM Plex Mono', monospace;
-  color: var(--text3); min-width: 24px;
-}
-.proposal-title-text { font-family: 'Lora', serif; font-size: .9rem; font-weight: 600; flex: 1; }
-.proposal-chips { display: flex; gap: 5px; flex-wrap: wrap; }
-.proposal-body {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.proposal-body-text { font-size: .83rem; color: var(--text2); line-height: 1.6; white-space: pre-wrap; }
-.proposal-field { font-size: .75rem; color: var(--text3); margin-bottom: 4px; }
-.proposal-field strong { color: var(--text2); }
-.proposal-actions {
-  padding: 10px 16px; display: flex; gap: 8px; align-items: center;
-  background: var(--bg3);
-}
-.proposal-edit {
-  width: 100%; background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 6px; color: var(--text); font-size: .82rem;
-  padding: 8px 10px; resize: vertical; margin-bottom: 8px;
-  font-family: 'IBM Plex Sans', sans-serif; line-height: 1.5;
-}
-.proposal-edit:focus { outline: none; border-color: var(--accent); }
-
-
-/* ── INBOX TAB ──────────────────────────────── */
-.inbox-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); margin-bottom: 12px; overflow: hidden;
-}
-.inbox-card.conflict { border-left: 3px solid var(--danger); }
-.inbox-card.decay    { border-left: 3px solid var(--accent); }
-.inbox-card.proposal { border-left: 3px solid var(--accent2); }
-.inbox-card.resolved { opacity: .5; }
-
-.inbox-card-header {
-  padding: 13px 16px; display: flex; align-items: center; gap: 10px;
-  cursor: pointer;
-}
-.inbox-card-header:hover { background: var(--bg3); }
-.inbox-type-icon { font-size: 1rem; }
-.inbox-card-title { font-family: 'Lora', serif; font-size: .88rem; font-weight: 600; flex: 1; }
-.inbox-deadline {
-  font-size: .68rem; font-family: 'IBM Plex Mono', monospace;
-  color: var(--text3); white-space: nowrap;
-}
-.inbox-deadline.urgent { color: var(--danger); font-weight: 600; }
-
-.inbox-card-body { padding: 14px 16px; border-top: 1px solid var(--border); }
-.inbox-desc { font-size: .83rem; color: var(--text2); margin-bottom: 12px; line-height: 1.5; }
-.inbox-entry-preview {
-  background: var(--bg3); border-radius: 8px; padding: 10px 12px;
-  font-size: .78rem; color: var(--text2); margin-bottom: 12px; line-height: 1.5;
-}
-.inbox-entry-preview strong { color: var(--text); display: block; margin-bottom: 2px; }
-.coherence-meta {
-  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
-}
-.coherence-pill {
-  font-size: .64rem; font-family: 'IBM Plex Mono', monospace;
-  text-transform: uppercase; letter-spacing: .03em;
-  color: var(--text2); background: var(--bg3);
-  border: 1px solid var(--border); border-radius: 999px; padding: 3px 7px;
-}
-.merge-proposal {
-  background: var(--bg2); border: 1px solid var(--accent);
-  border-radius: 8px; padding: 11px 12px; margin: 12px 0;
-}
-.merge-proposal-title {
-  font-size: .72rem; font-weight: 700; color: var(--accent);
-  text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px;
-}
-.merge-field {
-  width: 100%; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 6px; color: var(--text); font-size: .8rem;
-  padding: 8px 9px; margin-bottom: 8px; font-family: inherit;
-}
-.merge-field.body { min-height: 126px; resize: vertical; line-height: 1.5; }
-.inbox-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.inbox-btn {
-  font-size: .75rem; font-weight: 500; padding: 5px 12px;
-  border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg2); color: var(--text2); cursor: pointer;
-  transition: all .15s; font-family: inherit;
-}
-.inbox-btn:hover { background: var(--bg3); color: var(--text); }
-.inbox-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
-.inbox-btn.primary:hover { filter: brightness(1.1); }
-.inbox-btn.danger { color: var(--danger); border-color: var(--danger); }
-.inbox-btn.danger:hover { background: var(--danger); color: white; }
-.inbox-btn.success { color: var(--success); border-color: var(--success); }
-.inbox-btn.success:hover { background: var(--success); color: white; }
-
-/* ── MOBILE (Pixel 8 / phones) ──────────────── */
-@media (max-width: 640px) {
-  :root { --font-size: 14px; }
-
-  .codex-build-banner { padding: 6px 12px; font-size: .6rem; }
-
-  header { padding: 0 14px; height: auto; min-height: 52px; flex-wrap: wrap; row-gap: 6px; padding-top: 8px; padding-bottom: 8px; }
-  .header-title { font-size: 1rem; }
-  .header-left, .header-right { gap: 6px; }
-  .conn-label { display: none; }
-
-  .tabs { padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab-btn { padding: 10px 11px; font-size: .7rem; flex-shrink: 0; }
-
-  main { padding: 16px 12px; }
-
-  .setup-card { padding: 18px 16px; }
-
-  .search-bar { flex-direction: column; align-items: stretch; gap: 8px; }
-  .search-mode-badge { align-self: flex-start; }
-
-  .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
-  .toolbar-spacer { display: none; }
-  .filter-group { width: 100%; }
-  .toolbar > .btn { width: 100%; justify-content: center; }
-
-  .entry-card { grid-template-columns: 1fr; padding: 14px; }
-  .entry-card .entry-actions { grid-column: 1; grid-row: auto; flex-direction: row; align-items: center; justify-content: flex-end; margin-top: 6px; }
-  .entry-body-preview, .entry-meta { grid-column: 1; }
-
-  .modal-overlay { padding: 0; align-items: flex-end; }
-  .modal { max-width: 100%; width: 100%; max-height: 92vh; border-radius: 14px 14px 0 0; }
-  .modal-header, .modal-body, .modal-footer { padding-left: 16px; padding-right: 16px; }
-  .modal-footer { flex-wrap: wrap; }
-  .modal-footer .btn { flex: 1; justify-content: center; }
-
-  .field-row { grid-template-columns: 1fr; }
-
-  .audit-item { grid-template-columns: 1fr; }
-  .audit-item .audit-detail, .audit-item .rollback-btn { grid-column: 1; }
-  .rollback-btn { grid-row: auto; align-self: flex-start; margin-top: 6px; }
-
-  .proposal-header, .inbox-card-header { flex-wrap: wrap; }
-  .proposal-title-text, .inbox-card-title { width: 100%; order: -1; }
-
-  .toast-container { left: 12px; right: 12px; bottom: 12px; }
-  .toast { max-width: 100%; }
-
-  #tab-brainstate .bs-metrics { grid-template-columns: repeat(2, 1fr); }
-  #tab-brainstate .bs-two { grid-template-columns: 1fr; }
-}
-
 </style>
 </head>
 <body>
-<div class="app">
 
-  <div class="codex-build-banner">
-    <strong>CODEX BUILD</strong> · branch: codex-import-compare-debug · Import compare debugging
-  </div>
-
-  <!-- HEADER -->
-  <header>
-    <div class="header-left">
-      <span class="header-title">⬡ Second Brain Manager</span>
-      <span class="version-badge">v6.6-codex</span>
-    </div>
-    <div class="header-right">
-      <span class="conn-dot" id="connDot"></span>
-      <span class="conn-label" id="connLabel">Not connected</span>
-      <button class="theme-btn" id="themeBtn" title="Toggle theme">☀</button>
-    </div>
-  </header>
-
-  <!-- TABS -->
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="entries">Entries</button>
-    <button class="tab-btn" data-tab="inbox">Inbox <span id="inboxBadge" style="display:none;background:var(--danger);color:white;font-size:.6rem;padding:1px 5px;border-radius:8px;margin-left:4px;"></span></button>
-    <button class="tab-btn" data-tab="audit">Audit Log</button>
-    <button class="tab-btn" data-tab="import">Import</button>
-    <button class="tab-btn" data-tab="export">Export</button>
-    <button class="tab-btn" data-tab="settings">Settings</button>
-    <button class="tab-btn" data-tab="brainstate">Brain State</button>
-  </nav>
-
-  <main>
-
-    <!-- ── ENTRIES TAB ── -->
-    <div class="tab-panel active" id="tab-entries">
-
-      <div id="setupBanner" class="setup-card" style="display:none">
-        <h2>Connect your database</h2>
-        <p>Enter your Supabase credentials in Settings to start managing your second brain.</p>
-        <button class="btn btn-accent" onclick="switchTab('settings')">Go to Settings →</button>
-      </div>
-
-      <!-- SEMANTIC SEARCH -->
-      <div class="search-bar">
-        <div class="search-input-wrap">
-          <input
-            type="text" id="searchInput"
-            class="search-input"
-            placeholder="Search by meaning… e.g. 'stakeholder communication preferences'"
-            oninput="onSearchInput()"
-          />
-          <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
-        </div>
-        <span class="search-mode-badge" id="searchModeBadge">Filter mode</span>
-      </div>
-
-      <!-- FILTER TOOLBAR (hidden during semantic search) -->
-      <div class="toolbar" id="filterToolbar">
-        <div class="filter-group" id="spaceFilters"></div>
-        <div class="toolbar-spacer"></div>
-        <div class="filter-group" id="layerFilters"></div>
-        <button class="btn btn-sm" id="toggleArchived" onclick="toggleArchived()">Show archived</button>
-        <button class="btn btn-accent btn-sm" onclick="openNewEntry()">+ New Entry</button>
-      </div>
-
-      <!-- ADD ENTRY BUTTON during search -->
-      <div id="searchToolbar" style="display:none; margin-bottom:16px; text-align:right;">
-        <button class="btn btn-accent btn-sm" onclick="openNewEntry()">+ New Entry</button>
-      </div>
-
-      <div id="entriesContainer">
-        <div class="empty"><div class="empty-icon">◈</div><h3>No entries yet</h3><p>Connect your database and add your first memory.</p></div>
-      </div>
-    </div>
-
-    <!-- ── AUDIT TAB ── -->
-    <div class="tab-panel" id="tab-audit">
-      <div class="section-heading">Audit Log <span class="count-badge" id="auditCount">0</span></div>
-      <div id="auditContainer">
-        <div class="empty"><div class="empty-icon">◈</div><h3>No edits yet</h3><p>All writes appear here automatically.</p></div>
-      </div>
-    </div>
-
-    <!-- ── INBOX TAB ── -->
-    <div class="tab-panel" id="tab-inbox">
-      <div class="section-heading">
-        Review Inbox
-        <span class="count-badge" id="inboxCount">0</span>
-      </div>
-
-      <div id="inboxEmpty" class="empty" style="display:none">
-        <div class="empty-icon">✓</div>
-        <h3>Inbox clear</h3>
-        <p>No pending items. Your second brain is coherent and up to date.</p>
-      </div>
-
-      <div class="filter-group" style="margin-bottom:18px;" id="inboxFilters">
-        <button class="filter-chip active" onclick="setInboxFilter('all')">All</button>
-        <button class="filter-chip" onclick="setInboxFilter('coherence_conflict')">🔴 Conflicts</button>
-        <button class="filter-chip" onclick="setInboxFilter('decay_review')">🟡 Decay</button>
-        <button class="filter-chip" onclick="setInboxFilter('memory_proposal')">🔵 Proposals</button>
-      </div>
-
-      <div id="inboxContainer"></div>
-
-    </div>
-
-    <!-- ── IMPORT TAB ── -->
-    <div class="tab-panel" id="tab-import">
-      <div class="section-heading">Import from Text</div>
-
-      <div class="import-info">
-        <p>Paste any freeform text — a Grok or Gemini session, meeting notes, a document, voice memo transcript.
-        Claude will extract structured memory proposals for you to review before anything saves.</p>
-      </div>
-
-      <div class="import-source-row">
-        <label class="import-label">Source</label>
-        <div class="filter-group">
-          <button class="filter-chip active" id="src-grok" onclick="setSource('grok')">Grok session</button>
-          <button class="filter-chip" id="src-gemini" onclick="setSource('gemini')">Gemini session</button>
-          <button class="filter-chip" id="src-notes" onclick="setSource('notes')">Meeting notes</button>
-          <button class="filter-chip" id="src-doc" onclick="setSource('doc')">Document</button>
-          <button class="filter-chip" id="src-other" onclick="setSource('other')">Other</button>
-        </div>
-      </div>
-
-      <div class="field" style="margin-bottom:14px;">
-        <label>Paste text here</label>
-        <textarea id="importText" rows="10"
-          placeholder="Paste your text here — conversation transcript, notes, document excerpt..."
-          style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.85rem;padding:12px;resize:vertical;line-height:1.6;"></textarea>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:24px;">
-        <button class="btn btn-accent" onclick="extractEntries()" id="extractBtn">✦ Extract</button>
-        <button class="btn" onclick="compareExtract()" id="compareBtn">⇄ Compare LLMs</button>
-        <button class="btn btn-sm" onclick="clearImport()">Clear</button>
-        <span id="extractStatus" style="font-size:.78rem;color:var(--text3);"></span>
-      </div>
-
-      <!-- PROPOSALS AREA -->
-      <div id="proposalsContainer"></div>
-
-      <!-- BATCH APPROVE -->
-      <div id="batchBar" style="display:none;position:sticky;bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 20px;display:none;align-items:center;gap:12px;box-shadow:var(--shadow-lg);margin-top:16px;">
-        <span id="approvedCount" style="font-size:.85rem;font-weight:600;color:var(--text);flex:1;"></span>
-        <button class="btn btn-sm" onclick="skipAll()">Skip all</button>
-        <button class="btn btn-accent" onclick="saveApproved()" id="saveApprovedBtn">Save approved entries</button>
-      </div>
-    </div>
-
-    <!-- ── EXPORT TAB ── -->
-    <div class="tab-panel" id="tab-export">
-      <div class="section-heading">Export</div>
-      <div class="export-box">
-        <h3>📄 Context Bundle (Markdown)</h3>
-        <p>All active entries organised by space and layer. Paste at the start of any AI session as a fallback when MCP is unavailable.</p>
-        <button class="btn btn-accent" onclick="exportMarkdown()">Export CONTEXT_SUMMARY.md</button>
-      </div>
-      <div class="export-box">
-        <h3>🗂 Audit Log (JSON)</h3>
-        <p>Full audit trail with before/after snapshots. Use to migrate between BYOC setups or reconstruct your database.</p>
-        <button class="btn" onclick="exportAuditJSON()">Export audit_log.json</button>
-      </div>
-    </div>
-
-    <!-- ── SETTINGS TAB ── -->
-    <div class="tab-panel" id="tab-settings">
-      <div class="section-heading">Settings</div>
-
-      <div class="settings-section">
-        <h3>Connection</h3>
-        <div class="field">
-          <label>Supabase URL</label>
-          <input type="text" id="settingSupabaseUrl" placeholder="https://your-project.supabase.co" />
-        </div>
-        <div class="field" style="margin-top:10px;">
-          <label>Supabase publishable key</label>
-          <input type="password" id="settingSupabaseKey" placeholder="sb_publishable_..." />
-        </div>
-        <div class="field" style="margin-top:10px;">
-          <label>Supabase email</label>
-          <input type="email" id="settingSupabaseEmail" placeholder="you@example.com" />
-        </div>
-        <div class="field" style="margin-top:10px;">
-          <label>Supabase password</label>
-          <input type="password" id="settingSupabasePassword" placeholder="Password" />
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-          <button class="btn btn-accent btn-sm" onclick="saveAndConnect()">Save & connect</button>
-          <span id="connectStatus" style="font-size:.82rem;color:var(--text3);"></span>
-          <button class="btn btn-danger btn-sm" onclick="clearCredentials()">Clear</button>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <h3>Font Size</h3>
-        <div class="font-slider-row">
-          <span style="font-size:.75rem;color:var(--text3)">A</span>
-          <input type="range" id="fontSlider" min="13" max="19" value="15" oninput="updateFontSize(this.value)">
-          <span style="font-size:1rem;color:var(--text3)">A</span>
-          <span id="fontPreview" style="font-size:.82rem;color:var(--text3);">15px</span>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <h3>Notifications</h3>
-        <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px;line-height:1.5;">
-          Weekly digest emails are sent by Resend from the backend. EmailJS below is kept for browser-side test emails only.
-        </p>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="field">
-            <label>Your Email</label>
-            <input type="email" id="settingEmail" placeholder="you@email.com" />
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label>EmailJS Service ID</label>
-              <input type="text" id="settingEjsService" placeholder="service_..." />
-            </div>
-            <div class="field">
-              <label>EmailJS Template ID</label>
-              <input type="text" id="settingEjsTemplate" placeholder="template_..." />
-            </div>
-          </div>
-          <div class="field">
-            <label>EmailJS Public Key</label>
-            <input type="text" id="settingEjsKey" placeholder="Your EmailJS public key" />
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <button class="btn btn-accent btn-sm" onclick="saveEmailSettings()">Save</button>
-            <button class="btn btn-sm" onclick="sendTestEmail()">✉ Send test email</button>
-            <button class="btn btn-sm" onclick="runScanNow()">⟳ Run scan now</button>
-            <button class="btn btn-sm" onclick="sendDigestNow()">✉ Send weekly digest now</button>
-            <span id="emailSettingStatus" style="font-size:.78rem;color:var(--text3);"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <h3>Import LLM Keys</h3>
-        <div class="field">
-          <label>DeepSeek API Key <span style="font-weight:400;color:var(--text3);font-size:.78rem;">— used for Extract</span></label>
-          <input type="password" id="settingDeepSeekKey" placeholder="sk-..." />
-        </div>
-        <div class="field" style="margin-top:10px;">
-          <label>Groq API Key <span style="font-weight:400;color:var(--text3);font-size:.78rem;">— optional, only for Compare</span></label>
-          <input type="password" id="settingGroqKey" placeholder="gsk_..." />
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-accent btn-sm" onclick="saveImportKeys()">Save</button>
-          <span id="importKeyStatus" style="font-size:.78rem;color:var(--text3);align-self:center;"></span>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <h3>Manage Spaces</h3>
-        <div id="spacesList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
-        <div style="display:flex;gap:8px;">
-          <input type="text" id="newSpaceName" placeholder="New space name"
-            style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 11px;color:var(--text);font-size:.85rem;flex:1;">
-          <button class="btn btn-sm btn-accent" onclick="addSpace()">Add Space</button>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <h3>Semantic Search</h3>
-        <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px;line-height:1.5;">
-          Semantic search uses vector embeddings — each entry is automatically embedded when saved.
-          Entries saved before Phase 2.5 won't appear in semantic results until re-saved.
-          Search finds meaning, not just keywords.
-        </p>
-        <button class="btn btn-sm" onclick="reembedAll()">Re-embed all entries</button>
-        <span id="reembedStatus" style="font-size:.78rem;color:var(--text3);margin-left:10px;"></span>
-      </div>
-    </div>
-
-    <!-- ── BRAIN STATE TAB ── -->
-    <div class="tab-panel" id="tab-brainstate">
-
-      <style>
-        .bs-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:22px; }
-        .bs-metric { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
-        .bs-metric-label { font-size:.72rem; color:var(--text3); margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em; }
-        .bs-metric-value { font-size:1.5rem; font-weight:600; color:var(--text); }
-        .bs-metric-sub { font-size:.72rem; color:var(--text3); margin-top:2px; }
-        .bs-two { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
-        .bs-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
-        .bs-card-title { font-size:.78rem; font-weight:600; color:var(--text2); margin-bottom:12px; text-transform:uppercase; letter-spacing:.04em; }
-        .bs-space-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
-        .bs-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-        .bs-space-name { font-size:.82rem; color:var(--text); width:62px; flex-shrink:0; }
-        .bs-bar-track { flex:1; background:var(--bg3); border-radius:4px; height:5px; overflow:hidden; }
-        .bs-bar-fill { height:100%; border-radius:4px; }
-        .bs-count { font-size:.78rem; color:var(--text3); min-width:24px; text-align:right; }
-        .bs-entry-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); }
-        .bs-entry-row:last-child { border-bottom:none; }
-        .bs-entry-name { font-size:.82rem; color:var(--text); flex:1; }
-        .bs-space-pill { font-size:.68rem; padding:2px 7px; border-radius:4px; flex-shrink:0; }
-        .bs-dots { font-size:.8rem; min-width:32px; text-align:right; }
-        .bs-status-row { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); }
-        .bs-status-row:last-child { border-bottom:none; }
-        .bs-status-name { font-size:.82rem; color:var(--text); flex:1; }
-        .bs-badge { font-size:.68rem; padding:2px 8px; border-radius:4px; }
-        .bs-decay-row { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; }
-        .bs-decay-label { font-size:.78rem; color:var(--text3); width:68px; flex-shrink:0; padding-top:2px; }
-        .bs-pills { display:flex; gap:4px; flex-wrap:wrap; flex:1; }
-        .bs-pill { font-size:.68rem; padding:2px 8px; border-radius:20px; white-space:nowrap; }
-        .bs-heat { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-        .bs-heat-cell { aspect-ratio:1; border-radius:3px; }
-        .bs-full { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; }
-        .bs-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
-        .bs-link { font-size:.78rem; color:var(--accent2); background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:5px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; }
-        .bs-link:hover { background:var(--border); }
-        .heat-legend { display:flex; align-items:center; gap:12px; margin-top:10px; }
-        .heat-legend-item { display:flex; align-items:center; gap:4px; font-size:.7rem; color:var(--text3); }
-        .heat-legend-swatch { width:10px; height:10px; border-radius:2px; }
-      </style>
-
-      <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;">
-        Brain State
-        <a href="brain3d.html" class="bs-link" target="_blank">🧠 3D view ↗</a>
-      </div>
-
-      <div class="bs-metrics">
-        <div class="bs-metric">
-          <div class="bs-metric-label">Active entries</div>
-          <div class="bs-metric-value">37</div>
-          <div class="bs-metric-sub">↓8 pruned 24 May</div>
-        </div>
-        <div class="bs-metric">
-          <div class="bs-metric-label">Cited this week</div>
-          <div class="bs-metric-value">12</div>
-          <div class="bs-metric-sub">tier1 loads</div>
-        </div>
-        <div class="bs-metric">
-          <div class="bs-metric-label">Never cited 30d</div>
-          <div class="bs-metric-value">9</div>
-          <div class="bs-metric-sub">candidates to prune</div>
-        </div>
-        <div class="bs-metric">
-          <div class="bs-metric-label">Inbox</div>
-          <div class="bs-metric-value">0</div>
-          <div class="bs-metric-sub">pending items</div>
-        </div>
-      </div>
-
-      <div class="bs-two">
-        <div class="bs-card">
-          <div class="bs-card-title">Entries by space</div>
-          <div class="bs-space-row"><div class="bs-dot" style="background:#534AB7"></div><div class="bs-space-name">work</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:100%;background:#534AB7"></div></div><div class="bs-count">12</div></div>
-          <div class="bs-space-row"><div class="bs-dot" style="background:#1D9E75"></div><div class="bs-space-name">personal</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:83%;background:#1D9E75"></div></div><div class="bs-count">10</div></div>
-          <div class="bs-space-row"><div class="bs-dot" style="background:#D85A30"></div><div class="bs-space-name">family</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:42%;background:#D85A30"></div></div><div class="bs-count">5</div></div>
-          <div class="bs-space-row"><div class="bs-dot" style="background:#378ADD"></div><div class="bs-space-name">leisure</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:42%;background:#378ADD"></div></div><div class="bs-count">5</div></div>
-          <div class="bs-space-row"><div class="bs-dot" style="background:#888780"></div><div class="bs-space-name">core</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:25%;background:#888780"></div></div><div class="bs-count">3</div></div>
-        </div>
-
-        <div class="bs-card">
-          <div class="bs-card-title">Top activated entries</div>
-          <div class="bs-entry-row"><div class="bs-entry-name">Career Arc</div><span class="bs-space-pill" style="background:#EEEDFE;color:#3C3489">core</span><div class="bs-dots" style="color:#534AB7">●●●</div></div>
-          <div class="bs-entry-row"><div class="bs-entry-name">Core Values</div><span class="bs-space-pill" style="background:#EEEDFE;color:#3C3489">core</span><div class="bs-dots" style="color:#534AB7">●●●</div></div>
-          <div class="bs-entry-row"><div class="bs-entry-name">Personal Working Style</div><span class="bs-space-pill" style="background:#EEEDFE;color:#3C3489">core</span><div class="bs-dots" style="color:#534AB7">●●○</div></div>
-          <div class="bs-entry-row"><div class="bs-entry-name">How I Build</div><span class="bs-space-pill" style="background:#F1EFE8;color:#444441">work</span><div class="bs-dots" style="color:#5F5E5A">●●○</div></div>
-          <div class="bs-entry-row"><div class="bs-entry-name">Career Transition Target</div><span class="bs-space-pill" style="background:#F1EFE8;color:#444441">work</span><div class="bs-dots" style="color:#5F5E5A">●○○</div></div>
-          <div class="bs-entry-row"><div class="bs-entry-name">100 Ideas Portfolio</div><span class="bs-space-pill" style="background:#F1EFE8;color:#444441">work</span><div class="bs-dots" style="color:#5F5E5A">●○○</div></div>
-        </div>
-      </div>
-
-      <div class="bs-two">
-        <div class="bs-card">
-          <div class="bs-card-title">Decay profile</div>
-          <div class="bs-decay-row"><div class="bs-decay-label">evergreen</div><div class="bs-pills"><span class="bs-pill" style="background:#EAF3DE;color:#27500A">Career Arc</span><span class="bs-pill" style="background:#EAF3DE;color:#27500A">Core Values</span><span class="bs-pill" style="background:#EAF3DE;color:#27500A">Inner Circle</span></div></div>
-          <div class="bs-decay-row"><div class="bs-decay-label">slow</div><div class="bs-pills"><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">InspectPro</span><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">MetrIQ</span><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">SplitLah</span><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">+9 more</span></div></div>
-          <div class="bs-decay-row"><div class="bs-decay-label">fast 90d</div><div class="bs-pills"><span class="bs-pill" style="background:#FAEEDA;color:#633806">BMW COE</span><span class="bs-pill" style="background:#FAEEDA;color:#633806">Motorcycle</span><span class="bs-pill" style="background:#FAEEDA;color:#633806">Cost of Living</span></div></div>
-          <div class="bs-decay-row"><div class="bs-decay-label">single use</div><div class="bs-pills"><span class="bs-pill" style="background:#FCEBEB;color:#791F1F">JB Trip ↓ Jun 10</span><span class="bs-pill" style="background:#FCEBEB;color:#791F1F">Shanghai ↓ Oct 20</span></div></div>
-        </div>
-
-        <div class="bs-card">
-          <div class="bs-card-title">Engine status</div>
-          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">Activation telemetry</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">live</span></div>
-          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">Weekly decay scan</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">running</span></div>
-          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">Coherence scan (0.85)</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">running</span></div>
-          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">cite_entries tool</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">live</span></div>
-          <div class="bs-status-row"><div class="bs-dot" style="background:#D4922E"></div><div class="bs-status-name">Phase C — synthesis</div><span class="bs-badge" style="background:#FDF3E3;color:#7A5020">not started</span></div>
-          <div class="bs-status-row"><div class="bs-dot" style="background:#9A9A8E"></div><div class="bs-status-name">3D visualisation</div><span class="bs-badge" style="background:#F2F2ED;color:#5A5A50">deferred Jun</span></div>
-        </div>
-      </div>
-
-      <div class="bs-full">
-        <div class="bs-card-title">Activation heatmap — last 30 days</div>
-        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
-          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 1</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div></div></div>
-          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 2</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#534AB7"></div></div></div>
-          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 3</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#7F77DD"></div></div></div>
-          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 4 (live)</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:var(--bg3)"></div><div class="bs-heat-cell" style="background:var(--bg3)"></div><div class="bs-heat-cell" style="background:var(--bg3)"></div></div></div>
-          <div style="margin-left:auto;padding-top:18px"><div class="heat-legend"><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:#534AB7"></div>high</div><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:#AFA9EC"></div>mid</div><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:#EEEDFE"></div>low</div><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:var(--bg3)"></div>none</div></div></div>
-        </div>
-        <p style="font-size:.72rem;color:var(--text3);margin-top:10px">Wires to live <code>entry_activation_stats</code> data ~7 June once 2wk telemetry matures.</p>
-      </div>
-
-      <div class="bs-actions">
-        <a class="bs-link" href="../brain3d.html" target="_blank">🧠 Open 3D Brain View</a>
-        <a class="bs-link" href="../activation_dashboard.html" target="_blank">📊 Activation Dashboard</a>
-      </div>
-
-    </div>
-
-  </main>
+<!-- ── Second Brain password gate (client-side deterrent; data itself is protected by Supabase auth) ── -->
+<div id="sb-gate" style="position:fixed;inset:0;z-index:2147483647;background:#06060e;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;">
+  <form id="sb-gate-form" style="display:flex;flex-direction:column;gap:14px;width:min(320px,86vw);padding:30px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:16px;">
+    <div style="color:#ccd;font-size:12px;letter-spacing:.16em;text-transform:uppercase;text-align:center;">Second Brain</div>
+    <input id="sb-gate-input" type="password" autocomplete="current-password" placeholder="Password" style="padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#eee;font-size:15px;outline:none;" />
+    <button type="submit" style="padding:12px;border-radius:10px;border:none;background:#4a4af0;color:#fff;font-size:14px;cursor:pointer;">Enter</button>
+    <div id="sb-gate-err" style="color:#f66;font-size:12px;text-align:center;min-height:14px;"></div>
+  </form>
 </div>
-
-<!-- ENTRY MODAL -->
-<div class="modal-overlay" id="entryModal">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="modalTitle">New Entry</span>
-      <button class="close-btn" onclick="closeModal('entryModal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="field">
-        <label>Title</label>
-        <input type="text" id="fTitle" placeholder="Short, memorable label for this memory" />
-      </div>
-      <div class="field">
-        <label>Body</label>
-        <textarea id="fBody" rows="5" placeholder="The context itself — be specific and self-contained"></textarea>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Space</label>
-          <select id="fSpace"></select>
-        </div>
-        <div class="field">
-          <label>Layer</label>
-          <select id="fLayer">
-            <option value="domain">Domain</option>
-            <option value="workflow">Workflow</option>
-            <option value="behavioural">Behavioural</option>
-            <option value="artifact">Artifact</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Perishability</label>
-          <select id="fPerish">
-            <option value="evergreen">Evergreen</option>
-            <option value="slow" selected>Slow</option>
-            <option value="fast">Fast</option>
-            <option value="single_use">Single-use</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Tags (comma-separated)</label>
-          <input type="text" id="fTags" placeholder="e.g. strategy, q2, reporting" />
-        </div>
-      </div>
-      <div class="field">
-        <label>Source Tool</label>
-        <input type="text" id="fTool" placeholder="e.g. manual, claude, chatgpt" value="manual" />
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" id="archiveBtn" style="margin-right:auto;display:none" onclick="archiveEntry()">Archive</button>
-      <button class="btn" onclick="closeModal('entryModal')">Cancel</button>
-      <button class="btn btn-accent" id="saveEntryBtn" onclick="saveEntry()">Save Entry</button>
-    </div>
-  </div>
-</div>
-
-<!-- ROLLBACK MODAL -->
-<div class="modal-overlay" id="rollbackModal">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-header">
-      <span class="modal-title">Confirm Rollback</span>
-      <button class="close-btn" onclick="closeModal('rollbackModal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:.85rem;color:var(--text2);">This restores the entry to its previous state. Current content will be overwritten and logged in the audit trail.</p>
-      <div class="field">
-        <label>Previous state preview</label>
-        <textarea id="rollbackPreview" rows="5" readonly style="background:var(--bg3);font-size:.78rem;font-family:'IBM Plex Mono',monospace;"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('rollbackModal')">Cancel</button>
-      <button class="btn btn-accent" onclick="confirmRollback()">Restore this version</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast-container" id="toastContainer"></div>
-
 <script>
-// ── HARDCODED CONFIG ──────────────────────────
-const GROQ_KEY_DEFAULT  = ''; // Set via Settings → Import
-const DEEPSEEK_MODEL    = 'deepseek-v4-pro';
-const EJS_SERVICE   = 'service_pkta469';
-const EJS_TEMPLATE  = 'template_ijdn4y8';
-const EJS_KEY       = 'FCXGhGYhKSY8mzokZ';
-const EJS_EMAIL     = '';
-
-// ── STATE ─────────────────────────────────────
-let supabase = null;
-let currentUser = null;
-let userJwt = null;
-let currentSupabaseUrl = '';
-let currentSupabaseKey = '';
-let entries = [];
-let spaces = [];
-let auditLog = [];
-let activeSpaceFilter = 'all';
-let activeLayerFilter = 'all';
-let showArchived = false;
-let editingId = null;
-let rollbackTarget = null;
-let searchMode = 'filter';
-let searchTimeout = null;
-
-const LAYERS = ['domain','workflow','behavioural','artifact'];
-const PERISH_LABELS = { evergreen:'Evergreen', slow:'Slow', fast:'Fast', single_use:'Single-use' };
-const VALID_TABS = ['entries','inbox','audit','import','export','settings'];
-
-// ── INIT ──────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  loadSettings();
-  const initialTab = getRequestedTab();
-  const creds = getSavedCreds();
-  if (creds.url && creds.key && creds.email && creds.password) {
-    initSupabase(creds.url, creds.key, creds.email, creds.password, initialTab);
-  } else {
-    showSetupBanner(true);
-    if (initialTab !== 'entries') switchTab(initialTab, false);
+(function(){
+  var HASH="9d8e84f07fca07771e6ba133b5dd0259c9bc79245c4c7d3c622a1c50a808fa5b", KEY="sb_gate_ok";
+  var gate=document.getElementById("sb-gate");
+  if(sessionStorage.getItem(KEY)==="1"){ gate.remove(); return; }
+  document.documentElement.style.overflow="hidden";
+  var form=document.getElementById("sb-gate-form"),
+      inp=document.getElementById("sb-gate-input"),
+      err=document.getElementById("sb-gate-err");
+  setTimeout(function(){ inp.focus(); },50);
+  async function sha256(s){
+    var buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return Array.prototype.map.call(new Uint8Array(buf), function(b){ return b.toString(16).padStart(2,"0"); }).join("");
   }
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  form.addEventListener("submit", async function(e){
+    e.preventDefault(); err.textContent="";
+    try{
+      var h=await sha256(inp.value);
+      if(h===HASH){
+        sessionStorage.setItem(KEY,"1");
+        document.documentElement.style.overflow="";
+        gate.remove();
+      } else { err.textContent="Incorrect password"; inp.value=""; inp.focus(); }
+    }catch(ex){ err.textContent="Secure context (https) required"; }
   });
-  document.getElementById('themeBtn').addEventListener('click', toggleTheme);
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeModal('entryModal'); closeModal('rollbackModal'); }
-  });
+})();
+</script>
+<!-- ── end gate ── -->
+<canvas id="c"></canvas>
+<div id="labels"></div>
+<svg id="callout-svg"></svg>
+
+<div id="topbar">
+  <h1>Second Brain · 3D</h1>
+  <div id="topbar-right">
+    <a href="manager.html">← Manager</a>
+  </div>
+</div>
+
+<div id="filterbar">
+  <!-- populated by JS -->
+</div>
+
+<div id="panel">
+  <div class="p-head">
+    <span class="p-close" id="pClose">×</span>
+    <div class="p-sp" id="pSp"></div>
+    <div class="p-ti" id="pTi"></div>
+  </div>
+  <div class="p-scroll" id="pScroll"></div>
+  <div class="p-foot"><a class="p-link" id="pLink">Open in Manager ↗</a></div>
+</div>
+
+<div id="bottom">
+  <button id="resumeBtn">↺ Resume</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════
+const BR = 10;
+const LOBES = {
+  work:    {color:0x6655c2,rgb:[102,85,194], activation:.85,phase:0.0, seeds:[[.70,.20,.50],[.50,-.20,.80],[.80,.50,.10],[.30,.40,.70]]},
+  personal:{color:0x28a87a,rgb:[40,168,122], activation:.55,phase:1.1, seeds:[[-.60,.30,.50],[-.50,.50,.40],[-.70,.00,.45]]},
+  family:  {color:0xcc6040,rgb:[204,96,64],  activation:.38,phase:2.3, seeds:[[.40,-.60,.40],[.65,-.38,-.22]]},
+  leisure: {color:0x4090cc,rgb:[64,144,204], activation:.32,phase:3.7, seeds:[[-.40,-.58,.32],[-.52,-.42,-.32]]},
+  core:    {color:0x9990ee,rgb:[153,144,238],activation:.72,phase:0.8, seeds:[[-.08,.55,-.72]]}
+};
+const LOBE_NAMES = Object.keys(LOBES);
+function vN(v){const l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];}
+function vAN(a){const s=[0,0,0];a.forEach(v=>{s[0]+=v[0];s[1]+=v[1];s[2]+=v[2];});return vN([s[0]/a.length,s[1]/a.length,s[2]/a.length]);}
+for(const n of LOBE_NAMES){LOBES[n].seedsN=LOBES[n].seeds.map(vN);LOBES[n].centroid=vAN(LOBES[n].seeds);LOBES[n].hex='#'+new THREE.Color(LOBES[n].color).getHexString();}
+
+const RINGS=[
+  {label:'2 days',r:.965},{label:'1 week',r:.905},{label:'3 weeks',r:.840},
+  {label:'2 months',r:.755},{label:'4 months',r:.650},{label:'8 months',r:.525},
+  {label:'1.5 yrs',r:.390},{label:'4 years',r:.250},{label:'10+ yrs',r:.115}
+];
+const PALPHA={evergreen:.80,slow:.54,fast:.34,single_use:.20};
+const PSIZE ={evergreen:.23,slow:.17,fast:.14,single_use:.11};
+const DECAY_LABEL={evergreen:'Never decays',slow:'Slow decay',fast:'Fast decay',single_use:'One-time use'};
+
+const ENTRIES=[
+  {name:'Anniversary Trip',space:'leisure',ring:0,type:'single_use',activation:.90,summary:'Planning notes and itinerary for upcoming trip with Cheryl.',notes:['Dates, flights, and accommodation shortlist','Restaurants and experiences to try','Budget allocation per day','Things Cheryl specifically wants to do']},
+  {name:'Shanghai Masters',space:'leisure',ring:0,type:'single_use',activation:.85,summary:'Tennis tournament attendance — schedule, tickets, logistics.',notes:['Session times and court assignments','Getting there from accommodation','Key matches to catch','Food and transport around the venue']},
+  {name:'Coca-Cola Outcome',space:'work',ring:1,type:'fast',activation:.75,summary:'Debrief from the Coca-Cola application process.',notes:['Final decision and reasoning','What I could have done differently','Relationships worth maintaining','What this confirms about target role fit']},
+  {name:'Motorcycle Choice',space:'personal',ring:1,type:'slow',activation:.65,summary:'Decision framework for choosing the next bike.',notes:['Model shortlist with pros/cons','COE timing and budget ceiling','Insurance and running cost estimates','What riding style I\'m optimising for']},
+  {name:'BMW COE',space:'personal',ring:2,type:'fast',activation:.50,summary:'COE bidding status and key deadlines for the BMW.',notes:['Current COE premium trajectory','Bid strategy and ceiling price','Fallback: hold or switch model','Timeline milestones to watch']},
+  {name:'Cost of Living',space:'personal',ring:2,type:'slow',activation:.55,summary:'2026 personal budget: monthly targets, actuals, adjustments.',notes:['Fixed costs breakdown (housing, insurance, subscriptions)','Variable spend categories and limits','Year-to-date variance from plan','Areas where I\'m overspending consistently']},
+  {name:'South Korea',space:'leisure',ring:2,type:'fast',activation:.60,summary:'Trip research for Seoul and Busan.',notes:['Must-eat list across both cities','Accommodation options and neighbourhoods','Getting around (KTX, subway cards)','Visa requirements and travel window']},
+  {name:'Career Transition',space:'work',ring:2,type:'slow',activation:.80,summary:'Thinking through the pivot — FM industry vs tech-adjacent roles.',notes:['Where my edge is vs where I want to be','Roles that bridge both worlds','Timeline and financial runway required','People to talk to for signal']},
+  {name:'Second Brain Security',space:'core',ring:2,type:'slow',activation:.70,summary:'Access controls, backup, and incident response for the Second Brain.',notes:['Who has access to what','Backup schedule and verification steps','What to do if Cloudflare or GitHub goes down','Recovery procedure from scratch']},
+  {name:'Weekly Codex Scan',space:'core',ring:2,type:'fast',activation:.88,summary:'Weekly ritual: review inbox, promote entries, trigger synthesis.',notes:['Scan frequency: every Sunday evening','What triggers an entry promotion','How to handle stale fast-decay items','Link to the codex manager tool']},
+  {name:'100 Ideas',space:'personal',ring:3,type:'slow',activation:.45,summary:'Running list of ideas across products, systems, and life.',notes:['Product ideas (apps, tools, services)','Life experiments worth trying','Systems to improve or automate','Ideas flagged for deeper exploration']},
+  {name:'Technical Environment',space:'work',ring:3,type:'slow',activation:.55,summary:'Dev tooling, hardware setup, shell config, preferred stack.',notes:['Machine spec and OS config','Terminal, editor, and key extensions','Preferred languages and frameworks by context','How I set up a new project']},
+  {name:'Local LLM',space:'work',ring:3,type:'slow',activation:.50,summary:'Running models locally — Ollama, hardware limits, use cases.',notes:['Hardware limitations and what fits in VRAM','Best models for each task type','When local beats API (latency, privacy, cost)','Current setup and how to replicate it']},
+  {name:'Cheryl',space:'personal',ring:3,type:'evergreen',activation:.72,summary:'Evergreen profile: background, interests, relationship context.',notes:['Personal history and formative experiences','What matters most to her right now','How she prefers to spend time together','Things I want to remember to do / say']},
+  {name:'Ryan',space:'family',ring:3,type:'slow',activation:.35,summary:'Context on Ryan — shared history and current chapter.',notes:['Background and how we met','What he\'s working on now','Best ways to stay connected','Things he cares about that I should ask about']},
+  {name:'Jake',space:'family',ring:3,type:'slow',activation:.30,summary:'Context on Jake — background, interests, how to stay in touch.',notes:['Background and relationship history','Current life situation','Shared interests and touchpoints','Cadence of contact that works']},
+  {name:'InspectPro',space:'work',ring:4,type:'slow',activation:.42,summary:'Property inspection app — problem space, MVP, target market.',notes:['Core problem: manual inspection reports are slow and inconsistent','MVP: mobile photo capture + auto-generated report','Target: licensed property agents in SG','Competitive landscape and differentiation']},
+  {name:'SplitLah',space:'work',ring:4,type:'slow',activation:.40,summary:'Bill-splitting app for SG context.',notes:['Core differentiation from Splitwise: SG payment rails (PayNow)','Target: groups who eat out regularly','MVP feature set','Monetisation approach']},
+  {name:'CV Design',space:'work',ring:4,type:'fast',activation:.55,summary:'CV structure, design choices, and narrative arc.',notes:['Which version of the CV for which role type','Key achievements that have proven to land','Format decisions (length, layout, typography)','What to update when applying to FM vs tech roles']},
+  {name:'Evenings Out',space:'leisure',ring:4,type:'fast',activation:.38,summary:'Log of social evenings — venues, company, energy level.',notes:['Pattern: I recharge best with 2–4 people, not large groups','Favourite venue types and why','Evenings that felt worth the effort vs drained','What I want more / less of socially']},
+  {name:'Motorcycle Touring',space:'leisure',ring:4,type:'slow',activation:.35,summary:'Multi-day touring — routes, gear, logistics.',notes:['Route ideas: Peninsula, Borneo, Thailand north','Gear checklist and what I\'d do differently','Packing strategy for multi-day','Riding pace and daily distance that feels right']},
+  {name:'Music',space:'leisure',ring:4,type:'slow',activation:.28,summary:'Listening patterns, albums of note, occasional guitar log.',notes:['Albums I keep returning to and why','Guitar practice — what I\'m working on','Concerts or shows I want to see','Music that fits different moods / contexts']},
+  {name:'EnigmaPrint',space:'work',ring:4,type:'slow',activation:.48,summary:'Daily mystery print side project — concept, fulfilment, subscribers.',notes:['Core concept: daily 3D print puzzle delivered to subscribers','Current subscriber count and growth rate','Fulfilment: BambuStudio → A1 Mini → shipping','Next milestone and what\'s blocking it']},
+  {name:'Health',space:'personal',ring:4,type:'evergreen',activation:.60,summary:'Evergreen health principles: sleep, training, nutrition baselines.',notes:['Sleep: target 7.5h, blackout room, no screens 45min before','Training: 3–4x/week, mix of strength and cardio','Nutrition: no hard rules, but watch alcohol and late eating','Deviations to notice and what they usually signal']},
+  {name:'How I Build',space:'work',ring:5,type:'evergreen',activation:.65,summary:'Personal product philosophy — how I scope, validate, ship.',notes:['Principle: smallest thing that tests the riskiest assumption','I overweight polish too early — watch for this','My validation sequence: problem → user → revenue → build','What "done" means at each stage']},
+  {name:'MetrIQ',space:'work',ring:5,type:'slow',activation:.45,summary:'Analytics app for facilities managers — metrics, persona, build status.',notes:['Core pain: FM teams lack real-time visibility into asset performance','Target persona: FM director at mid-size commercial property firm','Key metrics to surface: uptime, SLA adherence, cost per sqft','Current build status and next milestone']},
+  {name:'FM Industry',space:'work',ring:5,type:'slow',activation:.40,summary:'Facilities management landscape — players, pain points, macro trends.',notes:['Key players: Jones Lang LaSalle, CBRE, local operators','Biggest pain: fragmented data, manual processes, reactive culture','Macro tailwinds: sustainability mandates, smart building tech','Where software is winning and where it isn\'t yet']},
+  {name:'On Investments',space:'personal',ring:5,type:'slow',activation:.38,summary:'Personal investment philosophy and SG-specific constraints.',notes:['Risk tolerance: moderate, 10yr+ horizon on core positions','Vehicles: CPF OA, SRS, brokerage (IBKR)','What I won\'t touch: individual stocks, leverage, crypto speculation','Review cadence: quarterly rebalance check']},
+  {name:'How I Roll',space:'personal',ring:5,type:'evergreen',activation:.55,summary:'Evergreen operating principles — how I work, decide, manage energy.',notes:['Deep work: mornings are protected, meetings after lunch','Decision-making: I default to reversible options when uncertain','Energy: I need at least one unscheduled day per week','Communication: I prefer async for complex topics, sync for relationship']},
+  {name:'Travel',space:'leisure',ring:5,type:'slow',activation:.30,summary:'General travel philosophy, packing system, wishlist destinations.',notes:['Philosophy: depth over breadth — fewer places, longer stays','Packing: carry-on only, neutral colours, one pair of shoes','Wishlist: Japan (rural), Portugal, Patagonia, Bhutan','What makes a trip feel worth it vs a waste of time']},
+  {name:'Inner Circle A',space:'personal',ring:5,type:'evergreen',activation:.50,summary:'First-tier relationships — how to show up for the people who matter most.',notes:['Who\'s in this tier and why','What each person needs from me to feel valued','Cadence of deep contact I\'m aiming for','Things I want to ask them about next time we talk']},
+  {name:'Inner Circle B',space:'personal',ring:5,type:'evergreen',activation:.48,summary:'Second-tier relationships — warm contacts, staying meaningfully in touch.',notes:['Who\'s in this tier: close enough to matter, not daily contact','Target cadence: monthly or quarterly check-in','Best touchpoints (a meme, an article, a question)','Who I\'ve been neglecting and should reach out to']},
+  {name:'Personal Working Style',space:'work',ring:5,type:'evergreen',activation:.58,summary:'Deep work patterns, peak hours, collaboration preferences.',notes:['Peak cognitive hours: 8–11am, second wind 4–6pm','Context-switching cost is high — batch similar tasks','I work better with loose structure than rigid schedules','What makes collaboration feel good vs draining']},
+  {name:'Mapletree VP',space:'work',ring:6,type:'slow',activation:.35,summary:'VP-level role at Mapletree — application, contacts, fit analysis.',notes:['Role: VP Asset Management, commercial portfolio','Application status and next steps','Key contacts at Mapletree worth nurturing','Strategic fit: yes on skills, question mark on culture']},
+  {name:'Mount Kinabalu',space:'leisure',ring:6,type:'slow',activation:.25,summary:'Climb completed. Route notes, gear, what to do differently.',notes:['Route: Summit trail via Laban Rata — 8.7km to summit','Gear: what I brought vs what I needed','Physical prep that worked and what I underestimated','Would I do it again? Yes. What would change?']},
+  {name:'Career Arc',space:'core',ring:8,type:'evergreen',activation:.68,summary:'Long-arc career vision — where I am, where I want to be.',notes:['Current chapter: transitioning from FM ops to tech/product','5-year target: building or leading a product with real traction','What I\'m optimising for at each stage: skills → leverage → ownership','The through-line: I want to build things that run without me']},
+  {name:'Core Values',space:'core',ring:8,type:'evergreen',activation:.75,summary:'Foundational values — what I stand for, what I won\'t compromise.',notes:['Integrity: I won\'t misrepresent myself or my work to get ahead','Ownership: if I said I\'d do it, it gets done','Curiosity: I stay genuinely interested in how things work','Presence: the people in front of me deserve my full attention']}
+];
+
+// ── early constants ──────────────────────────────────────────
+const canvas=document.getElementById('c');
+const isMobile=window.innerWidth<=600;
+
+// ── filter bar — pill buttons with entry counts ──────────────
+(function(){
+  const cnt={};for(const n of LOBE_NAMES)cnt[n]=0;for(const e of ENTRIES)cnt[e.space]++;
+  const fb=document.getElementById('filterbar');
+  const allBtn=document.createElement('button');
+  allBtn.className='fpill on';allBtn.dataset.f='all';
+  allBtn.innerHTML=`All <span class="fpill-n">${ENTRIES.length}</span>`;
+  fb.appendChild(allBtn);
+  for(const n of LOBE_NAMES){
+    const L=LOBES[n];
+    const b=document.createElement('button');
+    b.className='fpill';b.dataset.f=n;
+    b.innerHTML=`<span class="fpill-dot" style="background:${L.hex}"></span><span style="color:${L.hex}">${n[0].toUpperCase()+n.slice(1)}</span> <span class="fpill-n">${cnt[n]}</span>`;
+    fb.appendChild(b);
+  }
+})();
+
+// Position filterbar below topbar
+(function(){
+  const tb=document.getElementById('topbar');
+  const tbH=tb.getBoundingClientRect().height||44;
+  const safeTop=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')||'0')||0;
+  document.getElementById('filterbar').style.top=(tbH)+'px';
+})();
+
+// ── pinch-to-zoom ────────────────────────────────────────────
+let pinchDist0=null;
+const CAM_Z_MIN=16, CAM_Z_MAX=50;
+canvas.addEventListener('touchstart',e=>{
+  if(e.touches.length===2) pinchDist0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  if(e.touches.length===2&&pinchDist0!==null){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    targetZ=Math.min(CAM_Z_MAX,Math.max(CAM_Z_MIN,targetZ+(pinchDist0-d)*0.08));
+    pinchDist0=d;
+  }
+},{passive:true});
+canvas.addEventListener('touchend',e=>{if(e.touches.length<2)pinchDist0=null;},{passive:true});
+
+// ═══════════════════════════════════════════════════════════
+// THREE.JS
+// ═══════════════════════════════════════════════════════════
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.setClearColor(0x06060e,1);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(isMobile?72:50,innerWidth/innerHeight,.1,300);
+camera.position.set(0,0,28);
+scene.add(new THREE.AmbientLight(0xffffff,.35));
+const pt=new THREE.PointLight(0x8877ee,.42,90);pt.position.set(10,10,14);scene.add(pt);
+
+// Voronoi sphere shell
+const allSeeds=[],allColors=[];
+for(const name of LOBE_NAMES){const L=LOBES[name],c=new THREE.Color(L.color);for(const s of L.seedsN){allSeeds.push(new THREE.Vector3(s[0],s[1],s[2]));allColors.push(new THREE.Vector3(c.r,c.g,c.b));}}
+const NS=allSeeds.length;
+const shellMat=new THREE.ShaderMaterial({
+  uniforms:{seeds:{value:allSeeds},seedColors:{value:allColors}},
+  vertexShader:`varying vec3 vPos,vNorm;void main(){vPos=normalize(position);vNorm=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`#define NS ${NS}\nuniform vec3 seeds[NS],seedColors[NS];varying vec3 vPos,vNorm;\nvoid main(){vec3 d=normalize(vPos);float wts[NS];float tot=0.;for(int i=0;i<NS;i++){float dd=1.-clamp(dot(d,normalize(seeds[i])),-1.,1.);float w=exp(-9.*dd*dd);wts[i]=w;tot+=w;}vec3 col=vec3(0.);for(int i=0;i<NS;i++)col+=(wts[i]/tot)*seedColors[i];float rim=1.-abs(dot(normalize(vNorm),vec3(0.,0.,1.)));gl_FragColor=vec4(col*(0.30+rim*.50),(0.035+rim*.065));}`,
+  transparent:true,side:THREE.FrontSide,depthWrite:false
 });
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(BR,96,48),shellMat));
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(BR,20,12),new THREE.MeshBasicMaterial({wireframe:true,transparent:true,depthWrite:false,color:0x1e1e55,opacity:.038})));
 
-// ── CREDENTIALS ──────────────────────────────
-function getSavedCreds() {
-  return {
-    url:      localStorage.getItem('byoc_supabase_url') || '',
-    key:      localStorage.getItem('byoc_supabase_key') || '',
-    email:    localStorage.getItem('byoc_supabase_email') || '',
-    password: localStorage.getItem('byoc_supabase_password') || ''
-  };
-}
-function clearCredentials() {
-  if (!confirm('Clear all saved credentials?')) return;
-  [
-    'byoc_supabase_url',
-    'byoc_supabase_key',
-    'byoc_supabase_email',
-    'byoc_supabase_password',
-    'byoc_password'
-  ].forEach(k => localStorage.removeItem(k));
-  populateCredentialFields();
-  supabase = null; currentUser = null; userJwt = null; currentSupabaseUrl = ''; currentSupabaseKey = '';
-  setConnStatus(false); showSetupBanner(true); toast('Credentials cleared');
+// Lobe glows
+function makeGlowTex(r,g,b){const S=256,cv=document.createElement('canvas');cv.width=S;cv.height=S;const ctx=cv.getContext('2d');const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);gr.addColorStop(0,`rgba(${r},${g},${b},.75)`);gr.addColorStop(.28,`rgba(${r},${g},${b},.30)`);gr.addColorStop(.60,`rgba(${r},${g},${b},.06)`);gr.addColorStop(1,`rgba(${r},${g},${b},0)`);ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);}
+const lobeGlow={};
+for(const name of LOBE_NAMES){
+  const L=LOBES[name];
+  const lobeOpacity=isMobile?Math.min(1,(.26+L.activation*.15)*1.8):.26+L.activation*.15;
+  const mat=new THREE.SpriteMaterial({map:makeGlowTex(...L.rgb),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:lobeOpacity});
+  const sp=new THREE.Sprite(mat);
+  const c=L.centroid,rr=BR*(.34+L.activation*.12);sp.position.set(c[0]*rr,c[1]*rr,c[2]*rr);
+  const sz=BR*(1.38+L.activation*.44);sp.scale.setScalar(sz);
+  sp._base={op:.26+L.activation*.15,sz};sp._spd=2*Math.PI/(2.6+(1-L.activation)*5.4);sp._ph=L.phase;
+  lobeGlow[name]=sp;scene.add(sp);
 }
 
-// ── SUPABASE ──────────────────────────────────
-async function initSupabase(url, key, email, password, initialTab = 'entries') {
-  try {
-    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-    supabase = createClient(url, key);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    currentUser = data.user;
-    userJwt = data.session.access_token;
-    currentSupabaseUrl = url;
-    currentSupabaseKey = key;
-    setConnStatus(true);
-    showSetupBanner(false);
-    await Promise.all([loadSpaces(), loadEntries(), loadAudit(), loadInbox(), loadEmailSettings()]);
-    if (initialTab !== 'entries') switchTab(initialTab, false);
-  } catch(e) {
-    setConnStatus(false); showSetupBanner(true);
-    toast('Connection failed: ' + e.message, 'error');
-    document.getElementById('connectStatus').textContent = '⚠ ' + e.message;
-  }
-}
-
-async function saveAndConnect() {
-  const url = document.getElementById('settingSupabaseUrl').value.trim();
-  const key = document.getElementById('settingSupabaseKey').value.trim();
-  const email = document.getElementById('settingSupabaseEmail').value.trim();
-  const pw = document.getElementById('settingSupabasePassword').value;
-
-  if (!url || !key || !email || !pw) {
-    toast('Enter all Supabase connection fields', 'error');
-    return;
-  }
-
-  localStorage.setItem('byoc_supabase_url', url);
-  localStorage.setItem('byoc_supabase_key', key);
-  localStorage.setItem('byoc_supabase_email', email);
-  localStorage.setItem('byoc_supabase_password', pw);
-  document.getElementById('connectStatus').textContent = 'Connecting…';
-  await initSupabase(url, key, email, pw);
-}
-
-// ── DATA LOADERS ──────────────────────────────
-async function loadSpaces() {
-  const { data, error } = await supabase.from('spaces').select('*').order('is_core', { ascending: false });
-  if (error) { toast('Error loading spaces', 'error'); return; }
-  spaces = data;
-  renderSpaceFilters(); renderSpaceSelect(); renderSpacesList();
-}
-
-async function loadEntries() {
-  let q = supabase.from('entries').select('*').order('updated_at', { ascending: false });
-  if (!showArchived) q = q.eq('status', 'active');
-  const { data, error } = await q;
-  if (error) { toast('Error loading entries', 'error'); return; }
-  entries = data;
-  renderEntries();
-}
-
-async function loadAudit() {
-  const { data, error } = await supabase.from('context_edits').select('*').order('timestamp', { ascending: false }).limit(100);
-  if (error) return;
-  auditLog = data;
-  renderAudit();
-}
-
-// ── SEMANTIC SEARCH ───────────────────────────
-function onSearchInput() {
-  const q = document.getElementById('searchInput').value.trim();
-  document.getElementById('searchClear').style.display = q ? '' : 'none';
-
-  if (!q) {
-    exitSearchMode();
-    return;
-  }
-
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => runSemanticSearch(q), 600);
-}
-
-async function runSemanticSearch(query) {
-  if (!supabase || !userJwt) return;
-
-  // Enter search UI mode
-  document.getElementById('filterToolbar').style.display = 'none';
-  document.getElementById('searchToolbar').style.display = '';
-  document.getElementById('searchModeBadge').textContent = '⟳ Searching…';
-  document.getElementById('searchModeBadge').className = 'search-mode-badge';
-
-  try {
-    const sbUrl = currentSupabaseUrl;
-    const sbKey = currentSupabaseKey;
-
-    const resp = await fetch(`${sbUrl}/functions/v1/search-entries`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': sbKey,
-        'Authorization': `Bearer ${userJwt}`
-      },
-      body: JSON.stringify({
-        query,
-        user_id: currentUser.id,
-        spaces: activeSpaceFilter !== 'all' ? [activeSpaceFilter] : null,
-        threshold: 0.35,
-        limit: 15
-      })
-    });
-
-    const data = await resp.json();
-
-    if (data.error) throw new Error(data.error);
-
-    searchMode = 'semantic';
-    document.getElementById('searchModeBadge').textContent = '◈ Semantic';
-    document.getElementById('searchModeBadge').className = 'search-mode-badge semantic';
-    renderSemanticResults(data.results || [], query);
-
-  } catch(e) {
-    // Fallback to keyword filter if edge function not yet deployed
-    searchMode = 'filter';
-    document.getElementById('searchModeBadge').textContent = 'Keyword filter';
-    document.getElementById('searchModeBadge').className = 'search-mode-badge';
-    renderKeywordResults(query);
-  }
-}
-
-function renderSemanticResults(results, query) {
-  const container = document.getElementById('entriesContainer');
-  if (!results.length) {
-    container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><h3>No similar entries found</h3><p>Try different keywords, or add entries that cover this topic.</p></div>`;
-    return;
-  }
-  const header = `<div class="results-header"><strong>${results.length}</strong> entries similar to "${esc(query)}"</div>`;
-  const cards = results.map(r => entryCard(r, true)).join('');
-  container.innerHTML = header + `<div class="entries-grid">${cards}</div>`;
-}
-
-function renderKeywordResults(query) {
-  const q = query.toLowerCase();
-  const filtered = entries.filter(e =>
-    e.title.toLowerCase().includes(q) ||
-    e.body.toLowerCase().includes(q) ||
-    (e.tags||[]).some(t => t.toLowerCase().includes(q))
-  );
-  const container = document.getElementById('entriesContainer');
-  if (!filtered.length) {
-    container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><h3>No matches</h3><p>No entries match "${esc(query)}".</p></div>`;
-    return;
-  }
-  const header = `<div class="results-header"><strong>${filtered.length}</strong> keyword matches for "${esc(query)}" <span style="color:var(--text3)">(semantic search unavailable — deploy Edge Functions first)</span></div>`;
-  container.innerHTML = header + `<div class="entries-grid">${filtered.map(e => entryCard(e)).join('')}</div>`;
-}
-
-function clearSearch() {
-  document.getElementById('searchInput').value = '';
-  document.getElementById('searchClear').style.display = 'none';
-  exitSearchMode();
-}
-
-function exitSearchMode() {
-  searchMode = 'filter';
-  document.getElementById('filterToolbar').style.display = '';
-  document.getElementById('searchToolbar').style.display = 'none';
-  document.getElementById('searchModeBadge').textContent = 'Filter mode';
-  document.getElementById('searchModeBadge').className = 'search-mode-badge';
-  renderEntries();
-}
-
-// ── RENDER ENTRIES ────────────────────────────
-function renderEntries() {
-  const filtered = entries.filter(e => {
-    const spaceOk = activeSpaceFilter === 'all' || e.space === activeSpaceFilter;
-    const layerOk = activeLayerFilter === 'all' || e.layer === activeLayerFilter;
-    return spaceOk && layerOk;
+// Nodes
+function makeNodeTex(r,g,b){const S=64,cv=document.createElement('canvas');cv.width=S;cv.height=S;const ctx=cv.getContext('2d');const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);gr.addColorStop(0,`rgba(${r},${g},${b},.95)`);gr.addColorStop(.40,`rgba(${r},${g},${b},.35)`);gr.addColorStop(.70,`rgba(${r},${g},${b},.08)`);gr.addColorStop(1,`rgba(${r},${g},${b},0)`);ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);}
+function uh(n){let x=n^(n>>>16);x=Math.imul(x,0x45d9f3b);x^=x>>>16;return(x>>>0)/4294967295;}
+function coneDir(seed,deg,idx){const[sx,sy,sz]=seed;const th=Math.acos(Math.max(-1,Math.min(1,1-uh(idx*7+1)*(1-Math.cos(deg*Math.PI/180)))));const ph=uh(idx*13+3)*2*Math.PI;const up=Math.abs(sx)<.9?[0,1,0]:[1,0,0];let tx=up[1]*sz-up[2]*sy,ty=up[2]*sx-up[0]*sz,tz=up[0]*sy-up[1]*sx;const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1;tx/=tl;ty/=tl;tz/=tl;const bx=sy*tz-sz*ty,by=sz*tx-sx*tz,bz=sx*ty-sy*tx;const st=Math.sin(th),ct=Math.cos(th),sp2=Math.sin(ph),cp=Math.cos(ph);return vN([tx*st*cp+bx*st*sp2+sx*ct,ty*st*cp+by*st*sp2+sy*ct,tz*st*cp+bz*st*sp2+sz*ct]);}
+const nodeMeshes=[],nodeTex={};
+for(const n of LOBE_NAMES)nodeTex[n]=makeNodeTex(...LOBES[n].rgb);
+let gIdx=0;
+for(const name of LOBE_NAMES){
+  const L=LOBES[name];
+  ENTRIES.filter(e=>e.space===name).forEach((e,i)=>{
+    const seed=L.seedsN[i%L.seedsN.length],dir=coneDir(seed,30,gIdx++),rr=RINGS[e.ring].r*BR;
+    const mobileBright=isMobile?1.6:1.0;
+    const alpha=Math.min(1,PALPHA[e.type]*(.55+e.activation*.45)*mobileBright),nsz=PSIZE[e.type];
+    const gMat=new THREE.SpriteMaterial({map:nodeTex[name],transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:alpha});
+    const gSp=new THREE.Sprite(gMat);gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);gSp.scale.setScalar(nsz*BR*(0.8+e.activation*.4));scene.add(gSp);
+    const hit=new THREE.Mesh(new THREE.SphereGeometry(nsz*.48*BR,5,3),new THREE.MeshBasicMaterial({visible:false}));
+    hit.position.copy(gSp.position);hit.userData={entry:e,mat:gMat,alpha,sprite:gSp};scene.add(hit);nodeMeshes.push(hit);
   });
-  const container = document.getElementById('entriesContainer');
-  if (!filtered.length) {
-    container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><h3>No entries found</h3><p>Try a different filter or add a new memory.</p></div>`;
-    return;
-  }
-  container.innerHTML = `<div class="entries-grid">${filtered.map(e => entryCard(e)).join('')}</div>`;
 }
 
-function entryCard(e, isSemantic = false) {
-  const date = new Date(e.updated_at).toLocaleDateString('en-SG', { day:'numeric', month:'short', year:'2-digit' });
-  const tags = e.tags?.length ? e.tags.map(t => `<span class="chip chip-space">${esc(t)}</span>`).join('') : '';
-  const noEmbed = !e.embedding ? '<span class="chip chip-noembedding" title="No embedding yet — re-save to index">no embed</span>' : '';
+// HTML labels
+const labelsDiv=document.getElementById('labels');
+const lobeLbls={};
+for(const name of LOBE_NAMES){const el=document.createElement('div');el.className='lobe-lbl';el.textContent=name;el.style.color=LOBES[name].hex;labelsDiv.appendChild(el);lobeLbls[name]=el;}
+const nodeLbl=document.createElement('div');nodeLbl.className='node-lbl';labelsDiv.appendChild(nodeLbl);
+function project(wp){const v=wp.clone();v.project(camera);return{x:(v.x+1)/2*innerWidth,y:-(v.y-1)/2*innerHeight};}
 
-  let similarityEl = '';
-  if (isSemantic && e.similarity != null) {
-    const pct = Math.round(e.similarity * 100);
-    similarityEl = `
-      <div class="similarity-bar"><div class="similarity-fill" style="width:${pct}%"></div></div>
-      <span class="similarity-label">${pct}%</span>`;
+// ── callout system ───────────────────────────────────────────
+const MAX_CO=isMobile?2:3;
+const csvg=document.getElementById('callout-svg');
+const ccards=[],clines=[];
+for(let i=0;i<MAX_CO;i++){
+  const d=document.createElement('div');d.className='ccard';
+  d.innerHTML='<div class="cc-name"></div><div class="cc-space"></div><div class="cc-ring"></div>';
+  d._mesh=null;
+  d.addEventListener('click',e=>{e.stopPropagation();if(d._mesh)showPanel(d._mesh);});
+  d.addEventListener('touchend',e=>{e.stopPropagation();e.preventDefault();if(d._mesh)showPanel(d._mesh);},{passive:false});
+  document.body.appendChild(d);ccards.push(d);
+  const l=document.createElementNS('http://www.w3.org/2000/svg','path');
+  l.setAttribute('stroke-width','1.5');l.setAttribute('fill','none');l.style.opacity='0';
+  l.style.transition='opacity .45s';csvg.appendChild(l);clines.push(l);
+}
+const CARD_W=isMobile?110:128,CARD_H=54;
+let calloutActive=[];
+
+function updateCallouts(){
+  if(!autoRotate||isDrag){
+    ccards.forEach(c=>c.classList.remove('on'));
+    clines.forEach(l=>{l.style.opacity='0';});
+    return;
+  }
+  // Project visible nodes to screen space
+  const visible=nodeMeshes.filter(m=>activeFilter==='all'||m.userData.entry.space===activeFilter);
+  const proj=[];
+  for(const m of visible){
+    const v=m.position.clone();v.project(camera);
+    if(v.z>1.0)continue; // behind camera
+    const sx=(v.x+1)/2*innerWidth,sy=-(v.y-1)/2*innerHeight;
+    if(sx<0||sx>innerWidth||sy<0||sy>innerHeight)continue;
+    proj.push({m,entry:m.userData.entry,sx,sy,ndcZ:v.z});
+  }
+  proj.sort((a,b)=>a.ndcZ-b.ndcZ); // lowest ndcZ = closest
+
+  // Pick top MAX_CO with minimum screen distance between them
+  const picks=[];
+  const MIN_DIST=isMobile?90:110;
+  for(const p of proj){
+    if(picks.length>=MAX_CO)break;
+    if(!picks.some(q=>Math.hypot(p.sx-q.sx,p.sy-q.sy)<MIN_DIST))picks.push(p);
   }
 
-  return `
-  <div class="entry-card ${e.status==='archived'?'entry-archived':''} ${isSemantic?'semantic-result':''}" onclick="openEditEntry('${e.id}')">
-    <div class="entry-title">${esc(e.title)}</div>
-    <div class="entry-actions">
-      <span class="chip chip-layer">${e.layer}</span>
-      ${similarityEl}
+  for(let i=0;i<MAX_CO;i++){
+    const card=ccards[i],line=clines[i],pick=picks[i];
+    if(!pick){card.classList.remove('on');line.style.opacity='0';continue;}
+    const e=pick.entry,L=LOBES[e.space];
+    card._mesh=pick.m;
+    card.querySelector('.cc-name').textContent=e.name;
+    card.querySelector('.cc-space').textContent=e.space;
+    card.querySelector('.cc-space').style.color=L.hex;
+    card.querySelector('.cc-ring').textContent=RINGS[e.ring].label+' ago';
+    // Card: left/right of bubble, placed ABOVE (so y always differs from bubble.y)
+    const onLeft=pick.sx>innerWidth*0.5;
+    const cx=onLeft?pick.sx-CARD_W-20:pick.sx+20;
+    const putBelow=pick.sy<140;
+    const cy=putBelow
+      ? Math.min(pick.sy+36,innerHeight-CARD_H-16)
+      : Math.max(60,pick.sy-CARD_H-36);
+    card.style.left=cx+'px';card.style.top=cy+'px';
+    card.classList.add('on');
+    // Elbow: horizontal arm from bubble → diagonal to card's nearest y-edge
+    const cardEdgeX=onLeft?cx+CARD_W:cx;
+    const cardConnY=putBelow?cy:cy+CARD_H;
+    const armX=pick.sx+(onLeft?-22:22);
+    const yDist=Math.abs(pick.sy-cardConnY); // vertical span → use as horizontal span for 45°
+    const elbowX=onLeft?cardEdgeX+yDist:cardEdgeX-yDist;
+    line.setAttribute('d',`M ${pick.sx} ${pick.sy} L ${elbowX} ${cardConnY} L ${cardEdgeX} ${cardConnY}`);
+    line.setAttribute('stroke',L.hex+'cc');
+    line.setAttribute('stroke-width','1.5');
+    line.removeAttribute('stroke-dasharray');
+    line.style.opacity='1';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// PANEL
+// ═══════════════════════════════════════════════════════════
+function buildPanel(e,L){
+  const depthPct=Math.round((1-e.ring/8)*100),actPct=Math.round(e.activation*100);
+  const noteItems=e.notes.map(n=>`<li>${n}</li>`).join('');
+  return `<div class="p-section"><div class="p-section-body">${e.summary}</div></div>
+    <div class="p-acc open">
+      <div class="p-acc-head"><span class="p-acc-title">Key Notes</span><span class="p-acc-arrow">›</span></div>
+      <div class="p-acc-body"><ul class="p-notes">${noteItems}</ul></div>
     </div>
-    <div class="entry-body-preview">${esc(e.body)}</div>
-    <div class="entry-meta">
-      <span class="chip chip-space">${e.space}</span>
-      <span class="chip chip-perish ${e.perishability}">${PERISH_LABELS[e.perishability]||e.perishability}</span>
-      ${tags}
-      ${noEmbed}
-      <span class="entry-date">${date}</span>
-    </div>
-  </div>`;
-}
-
-function renderSpaceFilters() {
-  const all = [{name:'all'}, ...spaces];
-  document.getElementById('spaceFilters').innerHTML = all.map(s =>
-    `<button class="filter-chip ${activeSpaceFilter===s.name?'active':''}" onclick="setSpaceFilter('${s.name}')">${s.name==='all'?'All spaces':s.name}</button>`
-  ).join('');
-}
-
-function renderLayerFilters() {
-  const all = ['all', ...LAYERS];
-  document.getElementById('layerFilters').innerHTML = all.map(l =>
-    `<button class="filter-chip ${activeLayerFilter===l?'active':''}" onclick="setLayerFilter('${l}')">${l==='all'?'All layers':l}</button>`
-  ).join('');
-}
-
-function renderSpaceSelect() {
-  document.getElementById('fSpace').innerHTML = spaces.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
-}
-
-function renderSpacesList() {
-  document.getElementById('spacesList').innerHTML = spaces.map(s => `
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
-      <span style="flex:1;font-size:.85rem;">${esc(s.name)}</span>
-      ${s.is_core ? '<span class="chip chip-layer">core</span>' : ''}
-      ${!s.is_core ? `<button class="btn btn-sm btn-danger" onclick="deleteSpace('${s.id}','${s.name}')">Remove</button>` : ''}
-    </div>`).join('');
-}
-
-// ── RENDER AUDIT ──────────────────────────────
-function renderAudit() {
-  document.getElementById('auditCount').textContent = auditLog.length;
-  const container = document.getElementById('auditContainer');
-  if (!auditLog.length) {
-    container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><h3>No edits yet</h3></div>`;
-    return;
-  }
-  container.innerHTML = `<div class="audit-list">${auditLog.map(auditItem).join('')}</div>`;
-}
-
-function auditItem(a) {
-  const date = new Date(a.timestamp).toLocaleString('en-SG', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-  const before = a.entry_before ? (typeof a.entry_before==='string'?JSON.parse(a.entry_before):a.entry_before) : null;
-  const after  = a.entry_after  ? (typeof a.entry_after==='string' ?JSON.parse(a.entry_after) :a.entry_after)  : null;
-  const title = esc(after?.title || before?.title || 'Untitled');
-  const canRollback = a.action === 'update' && before;
-  return `
-  <div class="audit-item">
-    <span class="audit-action-badge badge-${a.action}">${a.action}</span>
-    <span class="audit-entry-title">${title}</span>
-    <span class="audit-meta">${date}</span>
-    <span class="audit-detail">${a.space||''} · ${a.ai_tool||'manual'}</span>
-    ${canRollback ? `<button class="btn btn-sm rollback-btn" onclick="openRollback('${a.id}')">↩ Rollback</button>` : '<span></span>'}
-  </div>`;
-}
-
-// ── FILTERS ───────────────────────────────────
-function setSpaceFilter(s) { activeSpaceFilter = s; renderSpaceFilters(); renderEntries(); }
-function setLayerFilter(l) { activeLayerFilter = l; renderLayerFilters(); renderEntries(); }
-function toggleArchived() {
-  showArchived = !showArchived;
-  document.getElementById('toggleArchived').textContent = showArchived ? 'Hide archived' : 'Show archived';
-  loadEntries();
-}
-
-// ── ENTRY MODAL ───────────────────────────────
-function openNewEntry() {
-  if (!supabase) { switchTab('settings'); return; }
-  editingId = null;
-  document.getElementById('modalTitle').textContent = 'New Entry';
-  document.getElementById('fTitle').value = '';
-  document.getElementById('fBody').value = '';
-  document.getElementById('fTags').value = '';
-  document.getElementById('fPerish').value = 'slow';
-  document.getElementById('fTool').value = 'manual';
-  document.getElementById('archiveBtn').style.display = 'none';
-  renderSpaceSelect();
-  openModal('entryModal');
-}
-
-function openEditEntry(id) {
-  const e = entries.find(x => x.id === id) ||
-            document.querySelector(`[onclick="openEditEntry('${id}')"]`);
-  // Try from global entries array; if semantic result, find by id
-  const entry = entries.find(x => x.id === id);
-  if (!entry) {
-    // Entry might be a semantic result not in filtered list — re-fetch
-    loadEntryById(id); return;
-  }
-  _populateModal(entry);
-}
-
-async function loadEntryById(id) {
-  const { data } = await supabase.from('entries').select('*').eq('id', id).single();
-  if (data) _populateModal(data);
-}
-
-function _populateModal(e) {
-  editingId = e.id;
-  document.getElementById('modalTitle').textContent = 'Edit Entry';
-  document.getElementById('fTitle').value = e.title;
-  document.getElementById('fBody').value = e.body;
-  document.getElementById('fTags').value = (e.tags||[]).join(', ');
-  document.getElementById('fPerish').value = e.perishability || 'slow';
-  document.getElementById('fTool').value = e.created_by_tool || 'manual';
-  document.getElementById('archiveBtn').style.display = e.status === 'archived' ? 'none' : '';
-  renderSpaceSelect();
-  document.getElementById('fSpace').value = e.space;
-  document.getElementById('fLayer').value = e.layer;
-  openModal('entryModal');
-}
-
-async function saveEntry() {
-  const title = document.getElementById('fTitle').value.trim();
-  const body  = document.getElementById('fBody').value.trim();
-  if (!title || !body) { toast('Title and body are required', 'error'); return; }
-
-  const btn = document.getElementById('saveEntryBtn');
-  btn.innerHTML = '<span class="spinner"></span>';
-  btn.disabled = true;
-
-  const payload = {
-    title, body,
-    space:           document.getElementById('fSpace').value,
-    layer:           document.getElementById('fLayer').value,
-    perishability:   document.getElementById('fPerish').value,
-    tags:            document.getElementById('fTags').value.split(',').map(t=>t.trim()).filter(Boolean),
-    created_by_tool: document.getElementById('fTool').value || 'manual',
-    user_id:         currentUser.id
-  };
-
-  let error, savedId;
-  if (editingId) {
-    ({ error } = await supabase.from('entries').update(payload).eq('id', editingId));
-    savedId = editingId;
-  } else {
-    const { data, error: e } = await supabase.from('entries').insert(payload).select().single();
-    error = e; savedId = data?.id;
-  }
-
-  btn.innerHTML = 'Save Entry';
-  btn.disabled = false;
-
-  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
-
-  toast(editingId ? 'Entry updated' : 'Entry saved', 'success');
-  closeModal('entryModal');
-  await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
-
-  // Fire-and-forget embedding generation
-  if (savedId) generateEmbedding(savedId, `${payload.title} ${payload.body} ${payload.tags.join(' ')}`);
-}
-
-// ── EMBEDDING GENERATION ──────────────────────
-async function generateEmbedding(entry_id, text) {
-  try {
-    const sbUrl = currentSupabaseUrl;
-    const sbKey = currentSupabaseKey;
-    await fetch(`${sbUrl}/functions/v1/embed-entry`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': sbKey,
-        'Authorization': `Bearer ${userJwt}`
-      },
-      body: JSON.stringify({ entry_id, text })
-    });
-    // Silent success — no toast needed
-  } catch(e) {
-    // Silent failure — entry saved, embedding can be generated later via re-embed
-    console.warn('Embedding generation failed (deploy Edge Functions to enable):', e.message);
-  }
-}
-
-// Re-embed all entries (for entries saved before Phase 2.5)
-async function reembedAll() {
-  const btn = document.querySelector('[onclick="reembedAll()"]');
-  const status = document.getElementById('reembedStatus');
-  if (!entries.length) { toast('No entries to re-embed', 'error'); return; }
-
-  btn.innerHTML = '<span class="spinner"></span> Re-embedding…';
-  btn.disabled = true;
-
-  let done = 0;
-  for (const e of entries.filter(x => x.status === 'active')) {
-    await generateEmbedding(e.id, `${e.title} ${e.body} ${(e.tags||[]).join(' ')}`);
-    done++;
-    status.textContent = `${done}/${entries.filter(x=>x.status==='active').length}`;
-    await new Promise(r => setTimeout(r, 100)); // small delay to avoid rate limit
-  }
-
-  btn.innerHTML = 'Re-embed all entries';
-  btn.disabled = false;
-  status.textContent = `Done — ${done} entries embedded`;
-  toast('All entries re-embedded', 'success');
-  await loadEntries();
-}
-
-// ── ARCHIVE ───────────────────────────────────
-async function archiveEntry() {
-  if (!editingId) return;
-  const { error } = await supabase.from('entries').update({ status: 'archived' }).eq('id', editingId);
-  if (error) { toast('Archive failed', 'error'); return; }
-  toast('Entry archived');
-  closeModal('entryModal');
-  await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
-}
-
-// ── ROLLBACK ──────────────────────────────────
-function openRollback(auditId) {
-  const a = auditLog.find(x => x.id === auditId);
-  if (!a || !a.entry_before) return;
-  rollbackTarget = a;
-  const before = typeof a.entry_before==='string' ? JSON.parse(a.entry_before) : a.entry_before;
-  document.getElementById('rollbackPreview').value =
-    `Title: ${before.title}\nSpace: ${before.space} | Layer: ${before.layer}\nBody:\n${before.body}`;
-  openModal('rollbackModal');
-}
-
-async function confirmRollback() {
-  if (!rollbackTarget) return;
-  const before = typeof rollbackTarget.entry_before==='string'
-    ? JSON.parse(rollbackTarget.entry_before) : rollbackTarget.entry_before;
-  const { error } = await supabase.from('entries').update({
-    title: before.title, body: before.body, space: before.space,
-    layer: before.layer, perishability: before.perishability,
-    tags: before.tags, created_by_tool: 'rollback'
-  }).eq('id', rollbackTarget.entry_id);
-  if (error) { toast('Rollback failed: ' + error.message, 'error'); return; }
-  toast('Entry restored', 'success');
-  closeModal('rollbackModal');
-  await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
-  // Re-embed after rollback
-  generateEmbedding(rollbackTarget.entry_id, `${before.title} ${before.body}`);
-}
-
-// ── SPACES ────────────────────────────────────
-async function addSpace() {
-  const name = document.getElementById('newSpaceName').value.trim().toLowerCase().replace(/\s+/g,'-');
-  if (!name) return;
-  const { error } = await supabase.from('spaces').insert({ name, user_id: currentUser.id });
-  if (error) { toast('Failed: ' + error.message, 'error'); return; }
-  document.getElementById('newSpaceName').value = '';
-  toast('Space added');
-  await loadSpaces();
-}
-
-async function deleteSpace(id, name) {
-  if (!confirm(`Remove space "${name}"? Entries tagged with it will not be deleted.`)) return;
-  const { error } = await supabase.from('spaces').delete().eq('id', id);
-  if (error) { toast('Failed: ' + error.message, 'error'); return; }
-  toast('Space removed');
-  await loadSpaces();
-}
-
-// ── EXPORT ────────────────────────────────────
-async function exportMarkdown() {
-  if (!entries.length) { toast('No entries to export', 'error'); return; }
-  const active = entries.filter(e => e.status === 'active');
-  const bySpace = {};
-  active.forEach(e => {
-    if (!bySpace[e.space]) bySpace[e.space] = {};
-    if (!bySpace[e.space][e.layer]) bySpace[e.space][e.layer] = [];
-    bySpace[e.space][e.layer].push(e);
-  });
-  let md = `# CONTEXT_SUMMARY\n_Generated: ${new Date().toLocaleString('en-SG')}_\n\n`;
-  md += `> Portable AI context bundle. Paste at the start of any AI session.\n\n---\n\n`;
-  for (const [space, layers] of Object.entries(bySpace)) {
-    md += `## Space: ${space}\n\n`;
-    for (const [layer, items] of Object.entries(layers)) {
-      md += `### ${layer}\n\n`;
-      items.forEach(e => {
-        md += `**${e.title}**  \n${e.body}\n`;
-        if (e.tags?.length) md += `_Tags: ${e.tags.join(', ')}_\n`;
-        md += `\n`;
-      });
-    }
-  }
-  downloadFile('CONTEXT_SUMMARY.md', md, 'text/markdown');
-  toast('Exported CONTEXT_SUMMARY.md', 'success');
-}
-
-async function exportAuditJSON() {
-  if (!auditLog.length) { toast('No audit entries', 'error'); return; }
-  downloadFile('audit_log.json', JSON.stringify(auditLog, null, 2), 'application/json');
-  toast('Exported audit_log.json', 'success');
-}
-
-function downloadFile(name, content, type) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([content], { type }));
-  a.download = name; a.click();
-}
-
-// ── UI HELPERS ────────────────────────────────
-function getRequestedTab() {
-  const fromQuery = new URLSearchParams(window.location.search).get('tab');
-  const fromHash = window.location.hash.replace('#', '');
-  const requested = fromQuery || fromHash || 'entries';
-  return VALID_TABS.includes(requested) ? requested : 'entries';
-}
-
-function switchTab(name, updateUrl = true) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
-  if (name === 'entries') renderLayerFilters();
-  if (name === 'inbox') renderInbox();
-  if (updateUrl) {
-    const url = new URL(window.location.href);
-    if (name === 'entries') {
-      url.searchParams.delete('tab');
-      url.hash = '';
-    } else {
-      url.searchParams.set('tab', name);
-      url.hash = '';
-    }
-    history.replaceState(null, '', url);
-  }
-}
-
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-function setConnStatus(ok) {
-  document.getElementById('connDot').className = 'conn-dot' + (ok?' connected':'');
-  document.getElementById('connLabel').textContent = ok ? 'Connected' : 'Not connected';
-}
-
-function showSetupBanner(show) {
-  document.getElementById('setupBanner').style.display = show ? '' : 'none';
-}
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const dark = html.dataset.theme === 'dark';
-  html.dataset.theme = dark ? 'light' : 'dark';
-  document.getElementById('themeBtn').textContent = dark ? '☀' : '☾';
-  localStorage.setItem('byoc_theme', html.dataset.theme);
-}
-
-function loadSettings() {
-  const theme = localStorage.getItem('byoc_theme') || 'light';
-  document.documentElement.dataset.theme = theme;
-  document.getElementById('themeBtn').textContent = theme==='dark'?'☾':'☀';
-  const fs = localStorage.getItem('byoc_fontsize') || '15';
-  document.getElementById('fontSlider').value = fs;
-  updateFontSize(fs, false);
-  populateCredentialFields();
-  // Pre-fill import keys from localStorage
-  const savedDeepSeekKey = localStorage.getItem('byoc_deepseek_key');
-  if (savedDeepSeekKey) document.getElementById('settingDeepSeekKey').value = savedDeepSeekKey;
-  const savedGroqKey = localStorage.getItem('byoc_groq_key');
-  if (savedGroqKey) document.getElementById('settingGroqKey').value = savedGroqKey;
-  // Pre-fill EmailJS fields from localStorage or baked-in defaults
-  document.getElementById('settingEjsService').value  = localStorage.getItem('byoc_ejs_service')  || EJS_SERVICE;
-  document.getElementById('settingEjsTemplate').value = localStorage.getItem('byoc_ejs_template') || EJS_TEMPLATE;
-  document.getElementById('settingEjsKey').value      = localStorage.getItem('byoc_ejs_key')      || EJS_KEY;
-  renderLayerFilters();
-}
-
-function populateCredentialFields() {
-  const creds = getSavedCreds();
-  const urlField = document.getElementById('settingSupabaseUrl');
-  const keyField = document.getElementById('settingSupabaseKey');
-  const emailField = document.getElementById('settingSupabaseEmail');
-  const passwordField = document.getElementById('settingSupabasePassword');
-  if (!urlField || !keyField || !emailField || !passwordField) return;
-  urlField.value = creds.url;
-  keyField.value = creds.key;
-  emailField.value = creds.email;
-  passwordField.value = creds.password;
-}
-
-function updateFontSize(val, save=true) {
-  document.documentElement.style.setProperty('--font-size', val+'px');
-  document.getElementById('fontPreview').textContent = val+'px';
-  if (save) localStorage.setItem('byoc_fontsize', val);
-}
-
-function toast(msg, type='') {
-  const c = document.getElementById('toastContainer');
-  const t = document.createElement('div');
-  t.className = 'toast'+(type?' '+type:'');
-  t.textContent = msg; c.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
-}
-
-function esc(str) {
-  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ── IMPORT FROM TEXT ─────────────────────────
-
-let importSource = 'grok';
-let proposals = []; // {id, title, body, space, layer, perishability, tags, rationale, status: 'pending'|'approved'|'skipped', expanded: bool}
-
-function setSource(src) {
-  importSource = src;
-  document.querySelectorAll('[id^="src-"]').forEach(b => b.classList.remove('active'));
-  document.getElementById('src-' + src).classList.add('active');
-}
-
-function clearImport() {
-  document.getElementById('importText').value = '';
-  document.getElementById('extractStatus').textContent = '';
-  proposals = [];
-  document.getElementById('proposalsContainer').innerHTML = '';
-  document.getElementById('batchBar').style.display = 'none';
-}
-
-async function extractEntries() {
-  const text = document.getElementById('importText').value.trim();
-  if (!text) { toast('Paste some text first', 'error'); return; }
-  const deepSeekKey = localStorage.getItem('byoc_deepseek_key');
-  if (!deepSeekKey) { toast('Add your DeepSeek API key in Settings → Import', 'error'); return; }
-
-  const btn = document.getElementById('extractBtn');
-  const status = document.getElementById('extractStatus');
-  btn.innerHTML = '<span class="spinner"></span> Extracting…'; btn.disabled = true;
-  status.textContent = '';
-
-  try {
-    const { entries: extracted, meta } = await extractWithModel(
-      'https://api.deepseek.com/chat/completions', deepSeekKey, DEEPSEEK_MODEL, text, {
-        jsonMode: true,
-        thinking: { type: 'disabled' }
-      }
-    );
-
-    if (!Array.isArray(extracted) || extracted.length === 0) {
-      status.textContent = `No memory-worthy entries found in this text. (${meta.model}: ${meta.finishReason || 'unknown finish'})`;
-      btn.innerHTML = '✦ Extract Entries'; btn.disabled = false;
-      return;
-    }
-
-    proposals = extracted.map((e, i) => ({
-      ...e,
-      id: `prop_${Date.now()}_${i}`,
-      status: 'approved', // default approved, user can skip
-      expanded: true
-    }));
-
-    renderProposals();
-    status.textContent = `${proposals.length} entr${proposals.length === 1 ? 'y' : 'ies'} extracted · ${meta.model}`;
-
-  } catch(e) {
-    toast('Extraction failed: ' + e.message, 'error');
-    status.textContent = '';
-  }
-
-  btn.innerHTML = '✦ Extract'; btn.disabled = false;
-}
-
-// ── SHARED EXTRACTION HELPER ──────────────────────────────
-async function extractWithModel(apiUrl, apiKey, model, text, options = {}) {
-  const spaceNames = spaces.map(s => s.name).join(', ');
-  const systemPrompt = `You are a second brain assistant. Extract structured memory entries from the provided text.
-Available spaces: ${spaceNames}
-Available layers: domain, workflow, behavioural, artifact
-
-Return ONLY valid JSON with this shape: {"entries":[...]}.
-Each object must have: title (string), body (string, full context — never truncate), space (string), layer (string), perishability (evergreen|slow|fast|single_use), tags (string[]), rationale (string — why this is worth saving).
-
-Rules:
-- Only extract genuinely reusable, durable knowledge — not temporary task outputs
-- body must be complete and self-contained — never a summary or placeholder
-- Assign the most specific matching space
-- evergreen = timeless personal traits; slow = stable facts; fast = time-bound priorities; single_use = one-off
-- If the text contains stable user preferences, project facts, workflow decisions, architecture notes, credentials setup steps, or recurring goals, extract them
-- Return {"entries":[]} only if there is truly nothing worth saving`;
-
-  const requestBody = {
-    model,
-    temperature: 0.2,
-    max_tokens: 4000,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: 'Source: ' + importSource + '\n\n' + text }
-    ]
-  };
-
-  if (options.jsonMode) requestBody.response_format = { type: 'json_object' };
-  if (options.thinking) requestBody.thinking = options.thinking;
-
-  const res = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify(requestBody)
-  });
-  if (!res.ok) {
-    let message = res.statusText;
-    try {
-      const e = await res.json();
-      message = e.error?.message || e.message || message;
-    } catch(_) {}
-    throw new Error(`${model}: ${message}`);
-  }
-  const data = await res.json();
-  const choice = data.choices?.[0] || {};
-  const raw = choice.message?.content || '';
-  const parsed = parseExtractionPayload(raw);
-  return {
-    entries: normalizeExtractedEntries(parsed),
-    raw,
-    meta: {
-      model,
-      finishReason: choice.finish_reason,
-      usage: data.usage || null
-    }
-  };
-}
-
-function parseExtractionPayload(raw) {
-  const cleaned = String(raw || '').replace(/```json|```/g, '').trim();
-  if (!cleaned) return { entries: [] };
-  try {
-    return JSON.parse(cleaned);
-  } catch (_) {
-    const startObj = cleaned.indexOf('{');
-    const endObj = cleaned.lastIndexOf('}');
-    if (startObj !== -1 && endObj > startObj) return JSON.parse(cleaned.slice(startObj, endObj + 1));
-    const startArr = cleaned.indexOf('[');
-    const endArr = cleaned.lastIndexOf(']');
-    if (startArr !== -1 && endArr > startArr) return JSON.parse(cleaned.slice(startArr, endArr + 1));
-    throw new Error('Model returned non-JSON content: ' + cleaned.slice(0, 180));
-  }
-}
-
-function normalizeExtractedEntries(parsed) {
-  const list = Array.isArray(parsed)
-    ? parsed
-    : parsed?.entries || parsed?.memories || parsed?.proposals || [];
-
-  if (!Array.isArray(list)) return [];
-
-  const validSpaces = new Set(spaces.map(s => s.name));
-  const validLayers = new Set(LAYERS);
-  const validPerish = new Set(Object.keys(PERISH_LABELS));
-
-  return list
-    .filter(e => e && e.title && e.body)
-    .map(e => ({
-      title: String(e.title).trim(),
-      body: String(e.body).trim(),
-      space: validSpaces.has(e.space) ? e.space : 'core',
-      layer: validLayers.has(e.layer) ? e.layer : 'artifact',
-      perishability: validPerish.has(e.perishability) ? e.perishability : 'slow',
-      tags: Array.isArray(e.tags) ? e.tags.map(t => String(t).trim()).filter(Boolean) : [],
-      rationale: e.rationale ? String(e.rationale).trim() : 'Extracted as reusable context.'
-    }));
-}
-
-// ── COMPARE MODE ──────────────────────────────────────────
-async function compareExtract() {
-  const text = document.getElementById('importText').value.trim();
-  if (!text) { toast('Paste some text first', 'error'); return; }
-  const deepSeekKey = localStorage.getItem('byoc_deepseek_key');
-  const groqKey = localStorage.getItem('byoc_groq_key') || GROQ_KEY_DEFAULT;
-  if (!deepSeekKey || !groqKey) { toast('Add both DeepSeek and Groq keys in Settings → Import to compare', 'error'); return; }
-
-  const btn = document.getElementById('compareBtn');
-  const status = document.getElementById('extractStatus');
-  btn.innerHTML = '<span class="spinner"></span> Comparing…'; btn.disabled = true;
-  document.getElementById('extractBtn').disabled = true;
-  status.textContent = 'Running both models in parallel…';
-
-  try {
-    const [groqRun, dsRun] = await Promise.all([
-      extractWithModel('https://api.groq.com/openai/v1/chat/completions', groqKey, 'llama-3.3-70b-versatile', text),
-      extractWithModel('https://api.deepseek.com/chat/completions', deepSeekKey, DEEPSEEK_MODEL, text, {
-        jsonMode: true,
-        thinking: { type: 'disabled' }
-      })
-    ]);
-
-    renderComparison(groqRun, dsRun);
-    status.textContent = `Groq: ${groqRun.entries.length} entries · DeepSeek V4 Pro: ${dsRun.entries.length} entries`;
-  } catch(e) {
-    toast('Compare failed: ' + e.message, 'error');
-    status.textContent = '';
-  }
-  btn.innerHTML = '⇄ Compare LLMs'; btn.disabled = false;
-  document.getElementById('extractBtn').disabled = false;
-}
-
-function renderComparison(groqRun, dsRun) {
-  const groqEntries = groqRun.entries || [];
-  const dsEntries = dsRun.entries || [];
-  const perishColor = { evergreen: '#4caf50', slow: '#2196f3', fast: '#ff9800', single_use: '#9e9e9e' };
-  const renderMeta = (run) => {
-    const finish = run.meta?.finishReason || 'unknown';
-    const tokens = run.meta?.usage?.total_tokens ? ` · ${run.meta.usage.total_tokens} tokens` : '';
-    const rawNote = !run.raw ? ' · empty content' : '';
-    return `<div style="font-size:.72rem;color:var(--text3);margin:-6px 0 10px;">finish: ${esc(finish)}${tokens}${rawNote}</div>`;
-  };
-  const renderCol = (entries, colId) => {
-    if (!entries.length) return `<p style="color:var(--text3);font-size:.85rem;">No entries extracted.</p>`;
-    return entries.map((e, i) => `
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
-          <strong style="font-size:.88rem;color:var(--text);line-height:1.4;">${esc(e.title)}</strong>
-          <span style="font-size:.72rem;background:${perishColor[e.perishability]||'#888'};color:#fff;border-radius:4px;padding:2px 7px;white-space:nowrap;flex-shrink:0;">${esc(e.perishability)}</span>
-        </div>
-        <div style="font-size:.78rem;color:var(--text3);margin-bottom:6px;">[${esc(e.space)}] · ${esc(e.layer)}</div>
-        <div style="font-size:.82rem;color:var(--text2);line-height:1.5;margin-bottom:8px;">${esc(e.body)}</div>
-        <div style="font-size:.75rem;color:var(--text3);font-style:italic;margin-bottom:10px;">${esc(e.rationale)}</div>
-        <button class="btn btn-accent btn-sm" onclick="saveCompareEntry('${colId}',${i}, event)">+ Save to Brain</button>
-      </div>`).join('');
-  };
-
-  window._compareGroq = groqEntries;
-  window._compareDS   = dsEntries;
-
-  document.getElementById('proposalsContainer').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
-      <div>
-        <div style="font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
-          🟣 Groq · Llama 3.3 70B <span style="font-weight:400;color:var(--text3);">(${groqEntries.length} entries)</span>
-        </div>
-        ${renderMeta(groqRun)}
-        ${renderCol(groqEntries, 'groq')}
-      </div>
-      <div>
-        <div style="font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
-          🔵 DeepSeek V4 Pro <span style="font-weight:400;color:var(--text3);">(${dsEntries.length} entries)</span>
-        </div>
-        ${renderMeta(dsRun)}
-        ${renderCol(dsEntries, 'ds')}
+    <div class="p-acc">
+      <div class="p-acc-head"><span class="p-acc-title">Entry Details</span><span class="p-acc-arrow">›</span></div>
+      <div class="p-acc-body">
+        <div class="p-bar-wrap"><div class="p-bar-lbl">Activation · ${actPct}%</div><div class="p-bar-track"><div class="p-bar-fill" style="width:${actPct}%;background:${L.hex}cc"></div></div></div>
+        <div class="p-bar-wrap"><div class="p-bar-lbl">Recency (surface = recent)</div><div class="p-bar-track"><div class="p-bar-fill" style="width:${depthPct}%;background:${L.hex}77"></div></div></div>
+        <div class="p-meta-row"><span class="p-meta-key">Age</span><span class="p-meta-val">${RINGS[e.ring].label} ago</span></div>
+        <div class="p-meta-row"><span class="p-meta-key">Decay</span><span class="p-meta-val">${DECAY_LABEL[e.type]}</span></div>
+        <div class="p-meta-row"><span class="p-meta-key">Depth layer</span><span class="p-meta-val">${e.ring+1} of ${RINGS.length}</span></div>
       </div>
     </div>`;
 }
-
-async function saveCompareEntry(col, idx, evt) {
-  const entry = col === 'groq' ? window._compareGroq[idx] : window._compareDS[idx];
-  if (!supabase || !currentUser) { toast('Not connected', 'error'); return; }
-  const btn = evt?.currentTarget;
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-  try {
-    const { data, error } = await supabase.from('entries').insert({
-      title: entry.title, body: entry.body,
-      space: entry.space, layer: entry.layer, perishability: entry.perishability,
-      tags: entry.tags || [], user_id: currentUser.id,
-      created_by_tool: col === 'groq' ? 'import-compare-groq' : 'import-compare-deepseek',
-      status: 'active'
-    }).select().single();
-    if (error) throw error;
-    if (data?.id) generateEmbedding(data.id, `${entry.title} ${entry.body} ${(entry.tags||[]).join(' ')}`);
-    toast(`Saved: ${entry.title}`, 'success');
-    if (btn) btn.textContent = '✓ Saved';
-  } catch(e) {
-    if (btn) { btn.textContent = '+ Save to Brain'; btn.disabled = false; }
-    toast('Save failed: ' + e.message, 'error');
-  }
+function showPanel(hit){
+  const e=hit.userData.entry,L=LOBES[e.space];
+  document.getElementById('pSp').textContent=e.space;document.getElementById('pSp').style.color=L.hex;
+  document.getElementById('pTi').textContent=e.name;
+  document.getElementById('pScroll').innerHTML=buildPanel(e,L);
+  document.getElementById('pLink').href='manager.html?entry='+encodeURIComponent(e.name);
+  document.getElementById('panel').classList.add('on');
+  document.querySelectorAll('.p-acc-head').forEach(h=>h.addEventListener('click',()=>h.parentElement.classList.toggle('open')));
 }
+document.getElementById('pClose').addEventListener('click',()=>document.getElementById('panel').classList.remove('on'));
 
-function renderProposals() {
-  const container = document.getElementById('proposalsContainer');
-  if (!proposals.length) { container.innerHTML = ''; return; }
+// ═══════════════════════════════════════════════════════════
+// INTERACTION
+// ═══════════════════════════════════════════════════════════
+let autoRotate=true,rotX=.18,rotY=0,velX=0,velY=0,camZ=28,targetZ=28;
+let isDrag=false,lastX=0,lastY=0,didDrag=false,activeFilter='all',hoveredSpace=null;
+const AUTO_VEL=.0030,FRICTION=.88,DRAG_GAIN=.0018,VEL_CAP=.035;
 
-  const approved = proposals.filter(p => p.status === 'approved').length;
-  const html = [
-    `<div class="proposals-header"><strong>${proposals.length}</strong> proposals extracted — <strong>${approved}</strong> approved</div>`,
-    ...proposals.map((p, i) => proposalCard(p, i))
-  ].join('');
+const resumeBtn=document.getElementById('resumeBtn');
+resumeBtn.addEventListener('click',()=>{autoRotate=true;resumeBtn.style.display='none';});
+function stopAuto(){if(!autoRotate)return;autoRotate=false;resumeBtn.style.display='block';}
 
-  container.innerHTML = html;
+canvas.addEventListener('mousedown',e=>{isDrag=true;lastX=e.clientX;lastY=e.clientY;didDrag=false;stopAuto();});
+window.addEventListener('mousemove',e=>{
+  if(isDrag){const dx=e.clientX-lastX,dy=e.clientY-lastY;if(Math.abs(dx)+Math.abs(dy)>1)didDrag=true;velY=Math.max(-VEL_CAP,Math.min(VEL_CAP,velY+dx*DRAG_GAIN));velX=Math.max(-VEL_CAP,Math.min(VEL_CAP,velX+dy*DRAG_GAIN));lastX=e.clientX;lastY=e.clientY;}
+  else doHover(e.clientX,e.clientY);
+});
+window.addEventListener('mouseup',e=>{if(isDrag&&!didDrag)doClick(e.clientX,e.clientY);isDrag=false;});
+canvas.addEventListener('wheel',e=>{targetZ=Math.max(14,Math.min(50,targetZ+e.deltaY*.04));},{passive:true});
 
-  // Show/hide batch bar
-  const bar = document.getElementById('batchBar');
-  bar.style.display = approved > 0 ? 'flex' : 'none';
-  document.getElementById('approvedCount').textContent =
-    `${approved} of ${proposals.length} entr${proposals.length === 1 ? 'y' : 'ies'} approved`;
+let tX=0,tY=0,tDidMove=false,tStart=0;
+canvas.addEventListener('touchstart',e=>{
+  const t=e.touches[0];tX=t.clientX;tY=t.clientY;tDidMove=false;tStart=Date.now();
+  if(e.touches.length===1)stopAuto();
+},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length>=2)return;
+  const t=e.touches[0],dx=t.clientX-tX,dy=t.clientY-tY;
+  if(Math.abs(dx)+Math.abs(dy)>4)tDidMove=true;
+  velY=Math.max(-VEL_CAP,Math.min(VEL_CAP,velY+dx*DRAG_GAIN));
+  velX=Math.max(-VEL_CAP,Math.min(VEL_CAP,velX+dy*DRAG_GAIN));
+  tX=t.clientX;tY=t.clientY;
+},{passive:false});
+canvas.addEventListener('touchend',e=>{
+  if(e.target.closest&&e.target.closest('.ccard'))return;
+  if(!tDidMove&&Date.now()-tStart<300){const t=e.changedTouches[0];doClick(t.clientX,t.clientY);}
+});
+
+const ray=new THREE.Raycaster();
+if(isMobile)ray.params.Points={threshold:.5};
+function getHit(cx,cy){
+  const rect=canvas.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((cx-rect.left)/rect.width)*2-1,-((cy-rect.top)/rect.height)*2+1),camera);
+  const threshold=isMobile?BR*.15:BR*.08;ray.params.Mesh={};
+  const hits=ray.intersectObjects(nodeMeshes);return hits.length?hits[0].object:null;
 }
-
-function proposalCard(p, i) {
-  const statusClass = p.status === 'approved' ? 'approved' : p.status === 'skipped' ? 'skipped' : '';
-  const statusIcon = p.status === 'approved' ? '✓' : p.status === 'skipped' ? '✕' : '○';
-  const statusColor = p.status === 'approved' ? 'var(--success)' : p.status === 'skipped' ? 'var(--danger)' : 'var(--text3)';
-
-  return `
-<div class="proposal-card ${statusClass}" id="pcard_${p.id}">
-  <div class="proposal-header" onclick="toggleProposal('${p.id}')">
-    <span class="proposal-num">#${i+1}</span>
-    <span class="proposal-title-text">${esc(p.title)}</span>
-    <div class="proposal-chips">
-      <span class="chip chip-space">${p.space}</span>
-      <span class="chip chip-layer">${p.layer}</span>
-      <span class="chip chip-perish ${p.perishability}">${PERISH_LABELS[p.perishability]||p.perishability}</span>
-    </div>
-    <span style="font-size:.9rem;font-weight:600;color:${statusColor};min-width:18px;">${statusIcon}</span>
-  </div>
-  ${p.expanded ? `
-  <div class="proposal-body">
-    <div class="proposal-field"><strong>Body:</strong></div>
-    <textarea class="proposal-edit" id="pbody_${p.id}" rows="4" onchange="updateProposalBody('${p.id}', this.value)">${esc(p.body)}</textarea>
-    <div class="proposal-field"><strong>Tags:</strong> ${(p.tags||[]).join(', ') || '—'}</div>
-    <div class="proposal-field"><strong>Why:</strong> ${esc(p.rationale||'—')}</div>
-  </div>
-  <div class="proposal-actions">
-    ${p.status !== 'approved'
-      ? `<button class="btn btn-sm btn-accent" onclick="setProposalStatus('${p.id}','approved')">✓ Approve</button>`
-      : `<button class="btn btn-sm" style="color:var(--success);border-color:var(--success);" onclick="setProposalStatus('${p.id}','approved')">✓ Approved</button>`
-    }
-    ${p.status !== 'skipped'
-      ? `<button class="btn btn-sm btn-danger" onclick="setProposalStatus('${p.id}','skipped')">✕ Skip</button>`
-      : `<button class="btn btn-sm" onclick="setProposalStatus('${p.id}','pending')">↩ Undo</button>`
-    }
-    <span style="font-size:.75rem;color:var(--text3);margin-left:auto;">${p.space} · ${p.layer} · ${p.perishability}</span>
-  </div>` : ''}
-</div>`;
+function applyFilter(){
+  for(const m of nodeMeshes){const vis=activeFilter==='all'||m.userData.entry.space===activeFilter;m.userData.mat.opacity=vis?m.userData.alpha:m.userData.alpha*.06;}
+  for(const n of LOBE_NAMES){const vis=activeFilter==='all'||n===activeFilter;lobeGlow[n].material.opacity=vis?lobeGlow[n]._base.op:lobeGlow[n]._base.op*.06;}
 }
-
-function toggleProposal(id) {
-  const p = proposals.find(x => x.id === id);
-  if (p) { p.expanded = !p.expanded; renderProposals(); }
+function doHover(cx,cy){
+  const hit=getHit(cx,cy);
+  if(hit){
+    const e=hit.userData.entry;canvas.style.cursor='pointer';
+    if(hoveredSpace!==e.space){hoveredSpace=e.space;for(const m of nodeMeshes){const same=m.userData.entry.space===e.space,vis=activeFilter==='all'||m.userData.entry.space===activeFilter;m.userData.mat.opacity=(same&&vis)?m.userData.alpha:m.userData.alpha*.07;}}
+    const sc=project(hit.position);nodeLbl.style.left=sc.x+'px';nodeLbl.style.top=sc.y+'px';
+    nodeLbl.innerHTML=`${e.name}<span class="nl-sub">${RINGS[e.ring].label} ago · ${e.type}</span>`;nodeLbl.classList.add('on');
+  }else{canvas.style.cursor='default';if(hoveredSpace){hoveredSpace=null;applyFilter();}nodeLbl.classList.remove('on');}
 }
+function doClick(cx,cy){const hit=getHit(cx,cy);if(hit)showPanel(hit);else document.getElementById('panel').classList.remove('on');}
+document.querySelectorAll('.fpill').forEach(btn=>{btn.addEventListener('click',()=>{activeFilter=btn.dataset.f;document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');hoveredSpace=null;applyFilter();});});
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 
-function setProposalStatus(id, status) {
-  const p = proposals.find(x => x.id === id);
-  if (p) { p.status = status; renderProposals(); }
+// ═══════════════════════════════════════════════════════════
+// RENDER LOOP
+// ═══════════════════════════════════════════════════════════
+function animate(){
+  requestAnimationFrame(animate);const t=Date.now()*.001;
+  if(autoRotate){velY+=(AUTO_VEL-velY)*.04;velX+=(0-velX)*.04;}
+  else if(!isDrag){velY*=FRICTION;velX*=FRICTION;}
+  rotY+=velY;rotX+=velX;rotX=Math.max(-1.4,Math.min(1.4,rotX));
+  camZ+=(targetZ-camZ)*.065;
+  camera.position.x=Math.sin(rotY)*Math.cos(rotX)*camZ;
+  camera.position.y=Math.sin(rotX)*camZ;
+  camera.position.z=Math.cos(rotY)*Math.cos(rotX)*camZ;
+  camera.lookAt(0,0,0);
+  for(const name of LOBE_NAMES){const sp=lobeGlow[name],b=Math.sin(t*sp._spd+sp._ph),vis=activeFilter==='all'||name===activeFilter;sp.scale.setScalar(sp._base.sz*(1+b*.07));sp.material.opacity=Math.min(.82,sp._base.op*(1+b*.22)*(vis?1:.06));}
+  if(!hoveredSpace){for(const m of nodeMeshes){const{entry,mat,alpha}=m.userData,vis=activeFilter==='all'||entry.space===activeFilter;if(!vis){mat.opacity=alpha*.06;continue;}let p=1;if(entry.type==='single_use')p=.65+Math.sin(t*2.5+m.id*.9)*.35;else if(entry.type==='fast')p=.82+Math.sin(t*1.4+m.id*.5)*.18;mat.opacity=Math.min(1,alpha*p);}}
+  const toCamera=camera.position.clone().normalize();
+  for(const name of LOBE_NAMES){const c=LOBES[name].centroid,dot=toCamera.x*c[0]+toCamera.y*c[1]+toCamera.z*c[2],show=dot>0.28&&(activeFilter==='all'||activeFilter===name),el=lobeLbls[name];if(show){const wp=new THREE.Vector3(c[0],c[1],c[2]).multiplyScalar(BR*1.06),sc=project(wp);el.style.left=sc.x+'px';el.style.top=sc.y+'px';el.classList.add('on');}else el.classList.remove('on');}
+  updateCallouts();
+  renderer.render(scene,camera);
 }
-
-function updateProposalBody(id, val) {
-  const p = proposals.find(x => x.id === id);
-  if (p) p.body = val;
-}
-
-function skipAll() {
-  proposals.forEach(p => p.status = 'skipped');
-  renderProposals();
-}
-
-async function saveApproved() {
-  const toSave = proposals.filter(p => p.status === 'approved');
-  if (!toSave.length) { toast('No approved entries to save', 'error'); return; }
-  if (!supabase) { toast('Not connected', 'error'); return; }
-
-  const btn = document.getElementById('saveApprovedBtn');
-  btn.innerHTML = '<span class="spinner"></span>';
-  btn.disabled = true;
-
-  let saved = 0;
-  for (const p of toSave) {
-    try {
-      const { data, error } = await supabase.from('entries').insert({
-        title: p.title, body: p.body,
-        space: p.space, layer: p.layer,
-        perishability: p.perishability,
-        tags: p.tags || [],
-        user_id: currentUser.id,
-        created_by_tool: importSource,
-        status: 'active'
-      }).select().single();
-      if (error) throw error;
-      // Fire and forget embedding
-      generateEmbedding(data.id, `${p.title} ${p.body} ${(p.tags||[]).join(' ')}`);
-      p.status = 'saved';
-      saved++;
-    } catch(e) {
-      toast(`Failed to save "${p.title}": ${e.message}`, 'error');
-    }
-  }
-
-  btn.innerHTML = 'Save approved entries'; btn.disabled = false;
-
-  if (saved) {
-    toast(`${saved} entr${saved===1?'y':'ies'} saved to second brain`, 'success');
-    await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
-    renderProposals();
-    document.getElementById('batchBar').style.display = 'none';
-  }
-}
-
-
-
-// ── INBOX ─────────────────────────────────────
-
-let inboxItems = [];
-let inboxFilter = 'all';
-
-function parseInboxPayload(item) {
-  if (!item?.payload) return {};
-  return typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
-}
-
-function truncateText(text, max = 160) {
-  const clean = String(text || '').replace(/\s+/g, ' ').trim();
-  return clean.length > max ? clean.slice(0, max - 1).trim() + '…' : clean;
-}
-
-function coherenceLabel(value) {
-  return String(value || 'review').replace(/_/g, ' ');
-}
-
-async function loadInbox() {
-  if (!supabase) return;
-  const { data, error } = await supabase
-    .from('review_inbox')
-    .select('*')
-    .eq('status', 'pending')
-    .order('deadline', { ascending: true });
-  if (error) return;
-  inboxItems = data || [];
-  updateInboxBadge();
-  if (document.getElementById('tab-inbox').classList.contains('active')) renderInbox();
-}
-
-function updateInboxBadge() {
-  const count = inboxItems.length;
-  const badge = document.getElementById('inboxBadge');
-  const countEl = document.getElementById('inboxCount');
-  badge.style.display = count > 0 ? '' : 'none';
-  badge.textContent = count;
-  if (countEl) countEl.textContent = count;
-}
-
-function setInboxFilter(f) {
-  inboxFilter = f;
-  document.querySelectorAll('#inboxFilters .filter-chip').forEach((b, i) => {
-    const filters = ['all','coherence_conflict','decay_review','memory_proposal'];
-    b.classList.toggle('active', filters[i] === f);
-  });
-  renderInbox();
-}
-
-function renderInbox() {
-  const filtered = inboxFilter === 'all'
-    ? inboxItems
-    : inboxItems.filter(i => i.type === inboxFilter);
-
-  const container = document.getElementById('inboxContainer');
-  const empty = document.getElementById('inboxEmpty');
-
-  if (!filtered.length) {
-    container.innerHTML = '';
-    empty.style.display = '';
-    return;
-  }
-  empty.style.display = 'none';
-  container.innerHTML = filtered.map(inboxCard).join('');
-}
-
-function inboxCard(item) {
-  const icon = item.type === 'coherence_conflict' ? '🔴'
-             : item.type === 'decay_review' ? '🟡' : '🔵';
-  const typeClass = item.type === 'coherence_conflict' ? 'conflict'
-                  : item.type === 'decay_review' ? 'decay' : 'proposal';
-
-  const deadline = new Date(item.deadline);
-  const daysLeft = Math.ceil((deadline - Date.now()) / 86400000);
-  const deadlineStr = deadline.toLocaleDateString('en-SG', { day:'numeric', month:'short' });
-  const urgent = daysLeft <= 3;
-
-  let actionsHtml = '';
-  let previewHtml = '';
-
-  if (item.payload) {
-    const p = parseInboxPayload(item);
-    if (item.type === 'coherence_conflict' && p.entry_a && p.entry_b) {
-      const isV2 = p.version === 2;
-      const similarity = p.similarity != null ? Math.round(p.similarity * 100) + '% match' : '';
-      const merge = p.merge_candidate || {};
-      const recommendation = coherenceLabel(p.recommendation || 'review');
-      const classification = coherenceLabel(p.classification || 'possible overlap');
-      const confidence = coherenceLabel(p.confidence || 'unknown confidence');
-      previewHtml = `
-        ${isV2 ? `
-          <div class="coherence-meta">
-            <span class="coherence-pill">${esc(classification)}</span>
-            <span class="coherence-pill">${esc(confidence)}</span>
-            ${similarity ? `<span class="coherence-pill">${esc(similarity)}</span>` : ''}
-            <span class="coherence-pill">${esc(recommendation)}</span>
-          </div>
-          <p class="inbox-desc">${esc(p.rationale || '')}</p>
-        ` : ''}
-        <div class="inbox-entry-preview"><strong>A · ${esc(p.entry_a.title)}</strong>${esc(truncateText(p.entry_a.body, 180))}</div>
-        <div class="inbox-entry-preview"><strong>B · ${esc(p.entry_b.title)}</strong>${esc(truncateText(p.entry_b.body, 180))}</div>
-        ${isV2 && merge.title ? `
-          <div class="merge-proposal">
-            <div class="merge-proposal-title">Proposed merged memory</div>
-            <input class="merge-field" id="mergeTitle_${item.id}" value="${esc(merge.title || '')}" />
-            <textarea class="merge-field body" id="mergeBody_${item.id}">${esc(merge.body || '')}</textarea>
-            <input class="merge-field" id="mergeTags_${item.id}" value="${esc((merge.tags || []).join(', '))}" placeholder="tags" />
-          </div>
-        ` : ''}`;
-      actionsHtml = isV2 ? `
-        ${merge.title ? `<button class="inbox-btn primary" onclick="applyMergeProposal('${item.id}')">Create merged memory</button>` : ''}
-        <button class="inbox-btn" onclick="resolveInbox('${item.id}','supersede_a')">Keep A</button>
-        <button class="inbox-btn" onclick="resolveInbox('${item.id}','supersede_b')">Keep B</button>
-        <button class="inbox-btn success" onclick="resolveInbox('${item.id}','coexist')">Keep both distinct</button>
-        <button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`
-      : `
-        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_a')">Keep A, archive B</button>
-        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_b')">Keep B, archive A</button>
-        <button class="inbox-btn success" onclick="resolveInbox('${item.id}','coexist')">Both valid</button>
-        <button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`;
-    } else if (item.type === 'decay_review' && p.title) {
-      previewHtml = `<div class="inbox-entry-preview"><strong>${esc(p.title)}</strong>${esc(p.body?.slice(0,160))}…</div>`;
-      actionsHtml = `
-        <button class="inbox-btn success" onclick="resolveInbox('${item.id}','still_relevant')">Still relevant</button>
-        <button class="inbox-btn" onclick="openEditEntry('${item.entry_id_a}');resolveInbox('${item.id}','update')">Update entry</button>
-        <button class="inbox-btn danger" onclick="archiveDecayEntry('${item.id}','${item.entry_id_a}')">Archive entry</button>`;
-    }
-  }
-  if (!actionsHtml) {
-    actionsHtml = `<button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`;
-  }
-
-  return `
-<div class="inbox-card ${typeClass}" id="icard_${item.id}">
-  <div class="inbox-card-header" onclick="toggleInboxCard('${item.id}')">
-    <span class="inbox-type-icon">${icon}</span>
-    <span class="inbox-card-title">${esc(item.title)}</span>
-    <span class="chip chip-space" style="font-size:.6rem">${item.space||''}</span>
-    <span class="inbox-deadline ${urgent?'urgent':''}">${daysLeft}d · ${deadlineStr}</span>
-  </div>
-  <div class="inbox-card-body" id="ibody_${item.id}" style="display:none">
-    <p class="inbox-desc">${esc(item.description)}</p>
-    ${previewHtml}
-    <div class="inbox-actions">${actionsHtml}</div>
-  </div>
-</div>`;
-}
-
-function toggleInboxCard(id) {
-  const body = document.getElementById('ibody_' + id);
-  if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
-}
-
-async function resolveInbox(id, resolution) {
-  const item = inboxItems.find(i => i.id === id);
-  const resolvedAt = new Date().toISOString();
-
-  if (item?.type === 'coherence_conflict') {
-    const archiveId = resolution === 'supersede_a'
-      ? item.entry_id_b
-      : resolution === 'supersede_b'
-        ? item.entry_id_a
-        : null;
-    if (archiveId) {
-      const { error: archiveError } = await supabase
-        .from('entries')
-        .update({ status: 'archived' })
-        .eq('id', archiveId);
-      if (archiveError) { toast('Failed to archive superseded entry', 'error'); return; }
-    }
-  }
-
-  if (item?.type === 'decay_review' && resolution === 'still_relevant' && item.entry_id_a) {
-    const { error: reviewError } = await supabase
-      .from('entries')
-      .update({ last_reviewed_at: resolvedAt })
-      .eq('id', item.entry_id_a);
-    if (reviewError) { toast('Failed to update review timestamp', 'error'); return; }
-  }
-
-  const nextStatus = resolution === 'dismiss' ? 'dismissed' : 'resolved';
-  const { error } = await supabase
-    .from('review_inbox')
-    .update({ status: nextStatus, resolution, resolved_at: resolvedAt })
-    .eq('id', id);
-  if (error) { toast('Failed to resolve', 'error'); return; }
-  const message = resolution === 'supersede_a' ? 'Resolved — archived B'
-    : resolution === 'supersede_b' ? 'Resolved — archived A'
-    : resolution === 'still_relevant' ? 'Marked still relevant'
-    : resolution === 'dismiss' ? 'Dismissed'
-    : 'Resolved';
-  toast(message);
-  inboxItems = inboxItems.filter(i => i.id !== id);
-  updateInboxBadge();
-  renderInbox();
-  await loadEntries();
-}
-
-async function applyMergeProposal(id) {
-  const item = inboxItems.find(i => i.id === id);
-  if (!item) return;
-  const p = parseInboxPayload(item);
-  const merge = p.merge_candidate || {};
-  const title = document.getElementById('mergeTitle_' + id)?.value.trim() || merge.title;
-  const body = document.getElementById('mergeBody_' + id)?.value.trim() || merge.body;
-  const tags = (document.getElementById('mergeTags_' + id)?.value || (merge.tags || []).join(','))
-    .split(',').map(t => t.trim()).filter(Boolean);
-
-  if (!title || !body) { toast('Merged title and body are required', 'error'); return; }
-
-  const payload = {
-    title,
-    body,
-    space: merge.space || item.space || p.entry_a?.space,
-    layer: merge.layer || item.layer || p.entry_a?.layer,
-    perishability: merge.perishability || p.entry_a?.perishability || 'slow',
-    tags,
-    created_by_tool: 'coherence-v2-merge',
-    user_id: currentUser.id
-  };
-
-  const { data, error } = await supabase.from('entries').insert(payload).select().single();
-  if (error) { toast('Merge failed: ' + error.message, 'error'); return; }
-
-  const originalIds = [item.entry_id_a, item.entry_id_b].filter(Boolean);
-  if (originalIds.length) {
-    const { error: archiveError } = await supabase
-      .from('entries')
-      .update({ status: 'archived' })
-      .in('id', originalIds);
-    if (archiveError) { toast('Merged, but failed to archive originals', 'error'); return; }
-  }
-
-  await resolveInbox(id, 'merge');
-  if (data?.id) generateEmbedding(data.id, `${payload.title} ${payload.body} ${payload.tags.join(' ')}`);
-  toast('Merged memory created');
-}
-
-async function archiveDecayEntry(inboxId, entryId) {
-  await supabase.from('entries').update({ status: 'archived' }).eq('id', entryId);
-  await resolveInbox(inboxId, 'archived');
-  await loadEntries();
-}
-
-async function runScanNow(sendEmail = false) {
-  const status = document.getElementById('scanStatus') || document.getElementById('emailSettingStatus');
-  status.textContent = sendEmail ? 'Running scan and sending weekly digest…' : 'Running scan…';
-  try {
-    const sbUrl = currentSupabaseUrl;
-    const sbKey = currentSupabaseKey;
-    const res = await fetch(`${sbUrl}/functions/v1/weekly-scan`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': sbKey,
-        'Authorization': `Bearer ${userJwt}`
-      },
-      body: JSON.stringify({ send_email: sendEmail })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || res.statusText);
-    const emailBit = data.email_sent ? ' · weekly digest sent' : '';
-    const reflectionBit = data.reflection_items != null ? `, ${data.reflection_items} reflection signals` : '';
-    status.textContent = `Done — ${data.decay_flagged||0} decay, ${data.coherence_flagged||0} conflicts, ${data.total_pending||0} pending${reflectionBit}${emailBit}`;
-    if (sendEmail && !data.email_sent) {
-      const reason = data.email_error
-        ? 'Email send failed: ' + data.email_error
-        : data.email_skipped_reason === 'no_reflection_or_inbox_activity'
-          ? 'Weekly digest not sent because there is no new reflection or inbox activity'
-          : data.email_skipped_reason === 'missing_resend_api_key'
-            ? 'Digest not sent; Resend API key is not set in Supabase secrets'
-            : 'Digest not sent; check notification settings';
-      status.textContent += ` · ${reason}`;
-      toast(reason, 'error');
-    }
-    await loadInbox();
-  } catch(e) {
-    status.textContent = 'Scan failed: ' + e.message;
-  }
-}
-
-async function sendDigestNow() {
-  await runScanNow(true);
-}
-
-// ── EMAIL SETTINGS ────────────────────────────
-
-function saveImportKeys() {
-  const deepSeekKey = document.getElementById('settingDeepSeekKey').value.trim();
-  const groqKey = document.getElementById('settingGroqKey').value.trim();
-  const status = document.getElementById('importKeyStatus');
-  if (deepSeekKey) localStorage.setItem('byoc_deepseek_key', deepSeekKey);
-  if (groqKey) localStorage.setItem('byoc_groq_key', groqKey);
-  if (!deepSeekKey && !groqKey) { status.textContent = '⚠ Enter at least one key'; return; }
-  status.textContent = deepSeekKey ? '✓ Saved · Extract uses DeepSeek' : '✓ Saved Groq for Compare only';
-  setTimeout(() => status.textContent = '', 2500);
-}
-
-async function saveEmailSettings() {
-  if (!supabase) return;
-  const payload = {
-    user_id:             currentUser.id,
-    email:               document.getElementById('settingEmail').value.trim(),
-    emailjs_service_id:  document.getElementById('settingEjsService').value.trim(),
-    emailjs_template_id: document.getElementById('settingEjsTemplate').value.trim(),
-    emailjs_public_key:  document.getElementById('settingEjsKey').value.trim(),
-    updated_at:          new Date().toISOString()
-  };
-  const { error } = await supabase.from('user_settings').upsert(payload);
-  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
-  // Cache in localStorage for sendTestEmail
-  localStorage.setItem('byoc_ejs_service', payload.emailjs_service_id);
-  localStorage.setItem('byoc_ejs_template', payload.emailjs_template_id);
-  localStorage.setItem('byoc_ejs_key', payload.emailjs_public_key);
-  localStorage.setItem('byoc_email', payload.email);
-  toast('Email settings saved', 'success');
-  document.getElementById('emailSettingStatus').textContent = '✓ Saved';
-}
-
-async function loadEmailSettings() {
-  if (!supabase || !currentUser) return;
-  const { data } = await supabase
-    .from('user_settings')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .single();
-  // Pre-fill baked-in defaults so fields are never blank
-  document.getElementById('settingEjsService').value  = EJS_SERVICE;
-  document.getElementById('settingEjsTemplate').value = EJS_TEMPLATE;
-  document.getElementById('settingEjsKey').value      = EJS_KEY;
-  if (document.getElementById('settingEmail')) document.getElementById('settingEmail').value = EJS_EMAIL;
-  if (!data) return;
-  if (data.email)               document.getElementById('settingEmail').value = data.email;
-  if (data.emailjs_service_id)  document.getElementById('settingEjsService').value = data.emailjs_service_id;
-  if (data.emailjs_template_id) document.getElementById('settingEjsTemplate').value = data.emailjs_template_id;
-  if (data.emailjs_public_key)  document.getElementById('settingEjsKey').value = data.emailjs_public_key;
-}
-
-async function sendTestEmail() {
-  const serviceId  = document.getElementById('settingEjsService').value.trim();
-  const templateId = document.getElementById('settingEjsTemplate').value.trim();
-  const publicKey  = document.getElementById('settingEjsKey').value.trim();
-  const toEmail = (document.getElementById('settingEmail')?.value.trim()) || EJS_EMAIL;
-
-  if (!serviceId || !templateId || !publicKey) {
-    toast('Fill in all EmailJS fields in Settings first', 'error'); return;
-  }
-
-  const status = document.getElementById('scanStatus') || document.getElementById('emailSettingStatus');
-  status.textContent = 'Sending test email…';
-
-  try {
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id:  serviceId,
-        template_id: templateId,
-        user_id:     publicKey,
-        template_params: {
-          to_email:      toEmail,
-          pending_count: inboxItems.length,
-          new_decay:     0,
-          new_conflicts: 0,
-          expired_count: 0,
-          inbox_summary: inboxItems.length
-            ? inboxItems.slice(0,5).map(i => `• ${i.title}`).join('\n')
-            : 'No pending items — inbox is clear.',
-          app_url: `${window.location.origin}${window.location.pathname}?tab=inbox`
-        }
-      })
-    });
-    if (res.ok) {
-      toast('Test email sent to ' + toEmail, 'success');
-      status.textContent = 'Test email sent ✓';
-    } else {
-      const txt = await res.text();
-      throw new Error(txt || res.statusText);
-    }
-  } catch(e) {
-    toast('Email failed: ' + e.message, 'error');
-    status.textContent = '';
-  }
-}
-
+animate();
 </script>
 </body>
 </html>

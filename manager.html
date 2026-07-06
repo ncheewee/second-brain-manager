@@ -1,0 +1,2529 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Second Brain Manager</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* ── TOKENS ─────────────────────────────────── */
+:root {
+  --bg:        #FAFAF7;
+  --bg2:       #F2F2ED;
+  --bg3:       #E8E8E2;
+  --border:    #D8D8D0;
+  --text:      #1A1A14;
+  --text2:     #5A5A50;
+  --text3:     #9A9A8E;
+  --accent:    #C17B2A;
+  --accent-bg: #FDF3E3;
+  --accent2:   #2A6B8A;
+  --danger:    #C0392B;
+  --success:   #2E7D52;
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+  --radius:    10px;
+  --font-size: 15px;
+}
+[data-theme="dark"] {
+  --bg:        #12120E;
+  --bg2:       #1C1C16;
+  --bg3:       #28281E;
+  --border:    #3A3A2E;
+  --text:      #F0F0E8;
+  --text2:     #A8A898;
+  --text3:     #686858;
+  --accent:    #D4922E;
+  --accent-bg: #2A200E;
+  --accent2:   #4A9BBF;
+  --shadow:    0 1px 3px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.2);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: var(--font-size); }
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+  transition: background .2s, color .2s;
+}
+button { cursor: pointer; font-family: inherit; }
+input, textarea, select { font-family: inherit; }
+
+/* ── LAYOUT ─────────────────────────────────── */
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+.codex-build-banner {
+  background: #102A3A;
+  color: #F7FBFD;
+  border-bottom: 1px solid rgba(255,255,255,.16);
+  padding: 8px 24px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .72rem;
+  line-height: 1.4;
+  letter-spacing: .02em;
+  text-align: center;
+}
+.codex-build-banner strong { color: #F5B35C; font-weight: 700; }
+
+header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-left { display: flex; align-items: baseline; gap: 10px; }
+.header-title {
+  font-family: 'Lora', serif;
+  font-size: 1.15rem; font-weight: 700;
+  color: var(--text); letter-spacing: -.02em;
+}
+.version-badge {
+  font-size: .65rem; font-weight: 600;
+  color: var(--text3); background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 1px 6px; border-radius: 20px;
+  font-family: 'IBM Plex Mono', monospace; letter-spacing: .04em;
+}
+.header-right { display: flex; align-items: center; gap: 10px; }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); transition: background .3s; }
+.conn-dot.connected { background: var(--success); }
+.conn-label { font-size: .75rem; color: var(--text3); }
+.theme-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text2); width: 32px; height: 32px;
+  border-radius: 8px; font-size: .9rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.theme-btn:hover { background: var(--border); }
+
+.tabs {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 0 24px; display: flex;
+}
+.tab-btn {
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text3); font-size: .8rem; font-weight: 500;
+  padding: 10px 14px; letter-spacing: .02em;
+  text-transform: uppercase; transition: color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text2); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+main { flex: 1; padding: 28px 24px; max-width: 960px; margin: 0 auto; width: 100%; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fadeIn .15s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── SETUP CARD ─────────────────────────────── */
+.setup-card {
+  background: var(--accent-bg); border: 1px solid var(--accent);
+  border-radius: var(--radius); padding: 28px 32px; margin-bottom: 28px;
+}
+.setup-card h2 { font-family: 'Lora', serif; font-size: 1.1rem; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+.setup-card p { font-size: .85rem; color: var(--text2); margin-bottom: 14px; }
+
+/* ── SEMANTIC SEARCH BAR ────────────────────── */
+.search-bar {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 18px;
+}
+.search-input-wrap {
+  flex: 1; position: relative;
+}
+.search-input {
+  width: 100%;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text);
+  font-size: .88rem; padding: 9px 38px 9px 14px;
+  transition: border-color .15s;
+}
+.search-input:focus { outline: none; border-color: var(--accent); }
+.search-input::placeholder { color: var(--text3); }
+.search-clear {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--text3);
+  font-size: .9rem; padding: 2px; display: none;
+}
+.search-clear:hover { color: var(--text); }
+.search-mode-badge {
+  font-size: .7rem; font-weight: 600;
+  padding: 3px 9px; border-radius: 12px;
+  white-space: nowrap; letter-spacing: .04em;
+  border: 1px solid var(--border); color: var(--text3);
+  background: var(--bg2);
+  transition: all .2s;
+}
+.search-mode-badge.semantic {
+  color: var(--accent2); border-color: var(--accent2);
+  background: #EDF4FA;
+}
+[data-theme="dark"] .search-mode-badge.semantic { background: #0E1E2A; }
+
+/* ── TOOLBAR ────────────────────────────────── */
+.toolbar {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.toolbar-spacer { flex: 1; }
+.filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-chip {
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--text2); font-size: .75rem; font-weight: 500;
+  padding: 4px 10px; border-radius: 20px; cursor: pointer;
+  transition: all .15s; text-transform: capitalize;
+}
+.filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+.filter-chip.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+/* ── ENTRY CARDS ────────────────────────────── */
+.entries-grid { display: flex; flex-direction: column; gap: 10px; }
+.entry-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+  cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .1s;
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 6px 12px; align-items: start;
+}
+.entry-card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-1px); }
+.entry-card.semantic-result { border-left: 3px solid var(--accent2); }
+.entry-title { font-family: 'Lora', serif; font-size: .95rem; font-weight: 600; color: var(--text); line-height: 1.3; }
+.entry-body-preview {
+  font-size: .8rem; color: var(--text2); grid-column: 1;
+  line-height: 1.5; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.entry-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; grid-column: 1; margin-top: 4px; }
+.entry-actions { grid-column: 2; grid-row: 1 / 4; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.similarity-bar {
+  width: 48px; height: 4px; background: var(--bg3);
+  border-radius: 2px; overflow: hidden; margin-top: 4px;
+}
+.similarity-fill { height: 100%; background: var(--accent2); border-radius: 2px; }
+.similarity-label { font-size: .67rem; color: var(--accent2); font-family: 'IBM Plex Mono', monospace; }
+
+/* ── CHIPS ──────────────────────────────────── */
+.chip {
+  font-size: .67rem; font-weight: 600; padding: 2px 7px;
+  border-radius: 12px; text-transform: uppercase;
+  letter-spacing: .04em; white-space: nowrap;
+}
+.chip-space  { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+.chip-layer  { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent); }
+.chip-perish { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+.chip-perish.evergreen { color: var(--success); border-color: var(--success); background: #edf7f1; }
+.chip-perish.fast      { color: var(--danger); border-color: var(--danger); background: #fdf0ee; }
+.chip-perish.single_use { color: #8B4513; border-color: #C4A060; background: #FDF8F0; }
+[data-theme="dark"] .chip-perish.evergreen { background: #0E2A1A; }
+[data-theme="dark"] .chip-perish.fast      { background: #2A0E0E; }
+[data-theme="dark"] .chip-perish.single_use { background: #1E1408; }
+.chip-noembedding { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); font-size: .6rem; }
+
+.entry-date { font-size: .7rem; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+.entry-archived { opacity: .5; }
+
+/* ── BUTTONS ────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .8rem; font-weight: 500; padding: 7px 14px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text2);
+  transition: all .15s; white-space: nowrap;
+}
+.btn:hover { background: var(--bg3); color: var(--text); }
+.btn-accent { background: var(--accent); border-color: var(--accent); color: white; }
+.btn-accent:hover { filter: brightness(1.1); color: white; }
+.btn-danger { color: var(--danger); border-color: var(--danger); }
+.btn-danger:hover { background: var(--danger); color: white; }
+.btn-sm { padding: 4px 10px; font-size: .75rem; }
+
+/* ── MODAL ──────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  z-index: 200; display: none; align-items: center;
+  justify-content: center; padding: 20px; backdrop-filter: blur(2px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 14px; width: 100%; max-width: 600px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg); animation: slideUp .2s ease;
+}
+@keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-family: 'Lora', serif; font-size: 1rem; font-weight: 600; }
+.modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+.modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+.close-btn { background: none; border: none; color: var(--text3); font-size: 1.2rem; padding: 2px 6px; border-radius: 6px; transition: color .15s; }
+.close-btn:hover { color: var(--text); }
+
+/* FORM FIELDS */
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: .75rem; font-weight: 600; color: var(--text2); letter-spacing: .03em; text-transform: uppercase; }
+.field input, .field textarea, .field select {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: .88rem;
+  padding: 9px 12px; transition: border-color .15s; resize: vertical;
+}
+.field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--accent); }
+.field select option { background: var(--bg2); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── AUDIT LOG ──────────────────────────────── */
+.audit-list { display: flex; flex-direction: column; gap: 8px; }
+.audit-item {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: 8px 14px; align-items: start;
+}
+.audit-action-badge {
+  font-size: .67rem; font-weight: 600; padding: 2px 8px;
+  border-radius: 12px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
+}
+.badge-insert  { background: #EDF7F1; color: var(--success); border: 1px solid var(--success); }
+.badge-update  { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent); }
+.badge-delete  { background: #FDF0EE; color: var(--danger); border: 1px solid var(--danger); }
+.badge-archive { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+.badge-restore { background: #EDF4FA; color: var(--accent2); border: 1px solid var(--accent2); }
+[data-theme="dark"] .badge-insert  { background: #0E2A1A; }
+[data-theme="dark"] .badge-update  { background: #2A200E; }
+[data-theme="dark"] .badge-delete  { background: #2A0E0E; }
+[data-theme="dark"] .badge-restore { background: #0E1E2A; }
+.audit-entry-title { font-size: .85rem; font-weight: 500; color: var(--text); }
+.audit-meta { font-size: .72rem; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+.audit-detail { font-size: .78rem; color: var(--text2); grid-column: 2; }
+.rollback-btn { grid-column: 3; grid-row: 1 / 3; align-self: center; }
+
+/* ── SETTINGS ───────────────────────────────── */
+.settings-section {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px 24px; margin-bottom: 18px;
+}
+.settings-section h3 { font-family: 'Lora', serif; font-size: .95rem; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+.font-slider-row { display: flex; align-items: center; gap: 14px; }
+.font-slider-row input[type=range] { flex: 1; accent-color: var(--accent); }
+
+/* ── EXPORT ─────────────────────────────────── */
+.export-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 24px; margin-bottom: 14px;
+}
+.export-box h3 { font-family: 'Lora', serif; font-size: .95rem; font-weight: 600; margin-bottom: 6px; }
+.export-box p { font-size: .82rem; color: var(--text2); margin-bottom: 14px; line-height: 1.5; }
+
+/* ── EMPTY STATE ────────────────────────────── */
+.empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.empty h3 { font-family: 'Lora', serif; font-size: 1rem; font-weight: 600; margin-bottom: 6px; color: var(--text2); }
+.empty p { font-size: .82rem; }
+
+/* ── SEARCH RESULTS HEADER ──────────────────── */
+.results-header {
+  font-size: .78rem; color: var(--text3); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.results-header strong { color: var(--text2); }
+
+/* ── TOAST ──────────────────────────────────── */
+.toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--text); color: var(--bg); font-size: .8rem;
+  padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow-lg);
+  animation: toastIn .2s ease; max-width: 280px;
+}
+.toast.error   { background: var(--danger); }
+.toast.success { background: var(--success); }
+.toast.info    { background: var(--accent2); }
+@keyframes toastIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.section-heading {
+  font-family: 'Lora', serif; font-size: 1.1rem; font-weight: 700;
+  margin-bottom: 20px; color: var(--text);
+}
+.count-badge {
+  font-size: .7rem; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text3); padding: 1px 7px; border-radius: 12px;
+  font-family: 'IBM Plex Mono', monospace; margin-left: 8px; font-weight: 400;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── IMPORT TAB ─────────────────────────────── */
+.import-info {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px;
+}
+.import-info p { font-size: .83rem; color: var(--text2); line-height: 1.6; }
+.import-label { font-size: .75rem; font-weight: 600; color: var(--text2); letter-spacing: .03em; text-transform: uppercase; display: block; margin-bottom: 8px; }
+.import-source-row { margin-bottom: 16px; }
+
+/* PROPOSAL CARDS */
+.proposals-header {
+  font-size: .78rem; color: var(--text3); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.proposal-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 12px;
+  overflow: hidden; transition: border-color .15s;
+}
+.proposal-card.approved { border-color: var(--success); }
+.proposal-card.skipped  { opacity: .45; }
+.proposal-header {
+  padding: 13px 16px; display: flex; align-items: center;
+  gap: 10px; cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.proposal-header:hover { background: var(--bg3); }
+.proposal-num {
+  font-size: .7rem; font-weight: 600;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--text3); min-width: 24px;
+}
+.proposal-title-text { font-family: 'Lora', serif; font-size: .9rem; font-weight: 600; flex: 1; }
+.proposal-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.proposal-body {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.proposal-body-text { font-size: .83rem; color: var(--text2); line-height: 1.6; white-space: pre-wrap; }
+.proposal-field { font-size: .75rem; color: var(--text3); margin-bottom: 4px; }
+.proposal-field strong { color: var(--text2); }
+.proposal-actions {
+  padding: 10px 16px; display: flex; gap: 8px; align-items: center;
+  background: var(--bg3);
+}
+.proposal-edit {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: .82rem;
+  padding: 8px 10px; resize: vertical; margin-bottom: 8px;
+  font-family: 'IBM Plex Sans', sans-serif; line-height: 1.5;
+}
+.proposal-edit:focus { outline: none; border-color: var(--accent); }
+
+
+/* ── INBOX TAB ──────────────────────────────── */
+.inbox-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 12px; overflow: hidden;
+}
+.inbox-card.conflict { border-left: 3px solid var(--danger); }
+.inbox-card.decay    { border-left: 3px solid var(--accent); }
+.inbox-card.proposal { border-left: 3px solid var(--accent2); }
+.inbox-card.resolved { opacity: .5; }
+
+.inbox-card-header {
+  padding: 13px 16px; display: flex; align-items: center; gap: 10px;
+  cursor: pointer;
+}
+.inbox-card-header:hover { background: var(--bg3); }
+.inbox-type-icon { font-size: 1rem; }
+.inbox-card-title { font-family: 'Lora', serif; font-size: .88rem; font-weight: 600; flex: 1; }
+.inbox-deadline {
+  font-size: .68rem; font-family: 'IBM Plex Mono', monospace;
+  color: var(--text3); white-space: nowrap;
+}
+.inbox-deadline.urgent { color: var(--danger); font-weight: 600; }
+
+.inbox-card-body { padding: 14px 16px; border-top: 1px solid var(--border); }
+.inbox-desc { font-size: .83rem; color: var(--text2); margin-bottom: 12px; line-height: 1.5; }
+.inbox-entry-preview {
+  background: var(--bg3); border-radius: 8px; padding: 10px 12px;
+  font-size: .78rem; color: var(--text2); margin-bottom: 12px; line-height: 1.5;
+}
+.inbox-entry-preview strong { color: var(--text); display: block; margin-bottom: 2px; }
+.coherence-meta {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+}
+.coherence-pill {
+  font-size: .64rem; font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase; letter-spacing: .03em;
+  color: var(--text2); background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px 7px;
+}
+.merge-proposal {
+  background: var(--bg2); border: 1px solid var(--accent);
+  border-radius: 8px; padding: 11px 12px; margin: 12px 0;
+}
+.merge-proposal-title {
+  font-size: .72rem; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px;
+}
+.merge-field {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: .8rem;
+  padding: 8px 9px; margin-bottom: 8px; font-family: inherit;
+}
+.merge-field.body { min-height: 126px; resize: vertical; line-height: 1.5; }
+.inbox-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.inbox-btn {
+  font-size: .75rem; font-weight: 500; padding: 5px 12px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text2); cursor: pointer;
+  transition: all .15s; font-family: inherit;
+}
+.inbox-btn:hover { background: var(--bg3); color: var(--text); }
+.inbox-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+.inbox-btn.primary:hover { filter: brightness(1.1); }
+.inbox-btn.danger { color: var(--danger); border-color: var(--danger); }
+.inbox-btn.danger:hover { background: var(--danger); color: white; }
+.inbox-btn.success { color: var(--success); border-color: var(--success); }
+.inbox-btn.success:hover { background: var(--success); color: white; }
+
+/* ── MOBILE (Pixel 8 / phones) ──────────────── */
+@media (max-width: 640px) {
+  :root { --font-size: 14px; }
+
+  .codex-build-banner { padding: 6px 12px; font-size: .6rem; }
+
+  header { padding: 0 14px; height: auto; min-height: 52px; flex-wrap: wrap; row-gap: 6px; padding-top: 8px; padding-bottom: 8px; }
+  .header-title { font-size: 1rem; }
+  .header-left, .header-right { gap: 6px; }
+  .conn-label { display: none; }
+
+  .tabs { padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 10px 11px; font-size: .7rem; flex-shrink: 0; }
+
+  main { padding: 16px 12px; }
+
+  .setup-card { padding: 18px 16px; }
+
+  .search-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .search-mode-badge { align-self: flex-start; }
+
+  .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .toolbar-spacer { display: none; }
+  .filter-group { width: 100%; }
+  .toolbar > .btn { width: 100%; justify-content: center; }
+
+  .entry-card { grid-template-columns: 1fr; padding: 14px; }
+  .entry-card .entry-actions { grid-column: 1; grid-row: auto; flex-direction: row; align-items: center; justify-content: flex-end; margin-top: 6px; }
+  .entry-body-preview, .entry-meta { grid-column: 1; }
+
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal { max-width: 100%; width: 100%; max-height: 92vh; border-radius: 14px 14px 0 0; }
+  .modal-header, .modal-body, .modal-footer { padding-left: 16px; padding-right: 16px; }
+  .modal-footer { flex-wrap: wrap; }
+  .modal-footer .btn { flex: 1; justify-content: center; }
+
+  .field-row { grid-template-columns: 1fr; }
+
+  .audit-item { grid-template-columns: 1fr; }
+  .audit-item .audit-detail, .audit-item .rollback-btn { grid-column: 1; }
+  .rollback-btn { grid-row: auto; align-self: flex-start; margin-top: 6px; }
+
+  .proposal-header, .inbox-card-header { flex-wrap: wrap; }
+  .proposal-title-text, .inbox-card-title { width: 100%; order: -1; }
+
+  .toast-container { left: 12px; right: 12px; bottom: 12px; }
+  .toast { max-width: 100%; }
+
+  #tab-brainstate .bs-metrics { grid-template-columns: repeat(2, 1fr); }
+  #tab-brainstate .bs-two { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ── Second Brain password gate (client-side deterrent; data itself is protected by Supabase auth) ── -->
+<div id="sb-gate" style="position:fixed;inset:0;z-index:2147483647;background:#06060e;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;">
+  <form id="sb-gate-form" style="display:flex;flex-direction:column;gap:14px;width:min(320px,86vw);padding:30px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:16px;">
+    <div style="color:#ccd;font-size:12px;letter-spacing:.16em;text-transform:uppercase;text-align:center;">Second Brain</div>
+    <input id="sb-gate-input" type="password" autocomplete="current-password" placeholder="Password" style="padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#eee;font-size:15px;outline:none;" />
+    <button type="submit" style="padding:12px;border-radius:10px;border:none;background:#4a4af0;color:#fff;font-size:14px;cursor:pointer;">Enter</button>
+    <div id="sb-gate-err" style="color:#f66;font-size:12px;text-align:center;min-height:14px;"></div>
+  </form>
+</div>
+<script>
+(function(){
+  var HASH="9d8e84f07fca07771e6ba133b5dd0259c9bc79245c4c7d3c622a1c50a808fa5b", KEY="sb_gate_ok";
+  var gate=document.getElementById("sb-gate");
+  if(sessionStorage.getItem(KEY)==="1"){ gate.remove(); return; }
+  document.documentElement.style.overflow="hidden";
+  var form=document.getElementById("sb-gate-form"),
+      inp=document.getElementById("sb-gate-input"),
+      err=document.getElementById("sb-gate-err");
+  setTimeout(function(){ inp.focus(); },50);
+  async function sha256(s){
+    var buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return Array.prototype.map.call(new Uint8Array(buf), function(b){ return b.toString(16).padStart(2,"0"); }).join("");
+  }
+  form.addEventListener("submit", async function(e){
+    e.preventDefault(); err.textContent="";
+    try{
+      var h=await sha256(inp.value);
+      if(h===HASH){
+        sessionStorage.setItem(KEY,"1");
+        document.documentElement.style.overflow="";
+        gate.remove();
+      } else { err.textContent="Incorrect password"; inp.value=""; inp.focus(); }
+    }catch(ex){ err.textContent="Secure context (https) required"; }
+  });
+})();
+</script>
+<!-- ── end gate ── -->
+<div class="app">
+
+  <div class="codex-build-banner">
+    <strong>CODEX BUILD</strong> · branch: codex-import-compare-debug · Import compare debugging
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <span class="header-title">⬡ Second Brain Manager</span>
+      <span class="version-badge">v6.6-codex</span>
+    </div>
+    <div class="header-right">
+      <span class="conn-dot" id="connDot"></span>
+      <span class="conn-label" id="connLabel">Not connected</span>
+      <button class="theme-btn" id="themeBtn" title="Toggle theme">☀</button>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="entries">Entries</button>
+    <button class="tab-btn" data-tab="inbox">Inbox <span id="inboxBadge" style="display:none;background:var(--danger);color:white;font-size:.6rem;padding:1px 5px;border-radius:8px;margin-left:4px;"></span></button>
+    <button class="tab-btn" data-tab="audit">Audit Log</button>
+    <button class="tab-btn" data-tab="import">Import</button>
+    <button class="tab-btn" data-tab="export">Export</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+    <button class="tab-btn" data-tab="brainstate">Brain State</button>
+  </nav>
+
+  <main>
+
+    <!-- ── ENTRIES TAB ── -->
+    <div class="tab-panel active" id="tab-entries">
+
+      <div id="setupBanner" class="setup-card" style="display:none">
+        <h2>Connect your database</h2>
+        <p>Enter your Supabase credentials in Settings to start managing your second brain.</p>
+        <button class="btn btn-accent" onclick="switchTab('settings')">Go to Settings →</button>
+      </div>
+
+      <!-- SEMANTIC SEARCH -->
+      <div class="search-bar">
+        <div class="search-input-wrap">
+          <input
+            type="text" id="searchInput"
+            class="search-input"
+            placeholder="Search by meaning… e.g. 'stakeholder communication preferences'"
+            oninput="onSearchInput()"
+          />
+          <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+        </div>
+        <span class="search-mode-badge" id="searchModeBadge">Filter mode</span>
+      </div>
+
+      <!-- FILTER TOOLBAR (hidden during semantic search) -->
+      <div class="toolbar" id="filterToolbar">
+        <div class="filter-group" id="spaceFilters"></div>
+        <div class="toolbar-spacer"></div>
+        <div class="filter-group" id="layerFilters"></div>
+        <button class="btn btn-sm" id="toggleArchived" onclick="toggleArchived()">Show archived</button>
+        <button class="btn btn-accent btn-sm" onclick="openNewEntry()">+ New Entry</button>
+      </div>
+
+      <!-- ADD ENTRY BUTTON during search -->
+      <div id="searchToolbar" style="display:none; margin-bottom:16px; text-align:right;">
+        <button class="btn btn-accent btn-sm" onclick="openNewEntry()">+ New Entry</button>
+      </div>
+
+      <div id="entriesContainer">
+        <div class="empty"><div class="empty-icon">◈</div><h3>No entries yet</h3><p>Connect your database and add your first memory.</p></div>
+      </div>
+    </div>
+
+    <!-- ── AUDIT TAB ── -->
+    <div class="tab-panel" id="tab-audit">
+      <div class="section-heading">Audit Log <span class="count-badge" id="auditCount">0</span></div>
+      <div id="auditContainer">
+        <div class="empty"><div class="empty-icon">◈</div><h3>No edits yet</h3><p>All writes appear here automatically.</p></div>
+      </div>
+    </div>
+
+    <!-- ── INBOX TAB ── -->
+    <div class="tab-panel" id="tab-inbox">
+      <div class="section-heading">
+        Review Inbox
+        <span class="count-badge" id="inboxCount">0</span>
+      </div>
+
+      <div id="inboxEmpty" class="empty" style="display:none">
+        <div class="empty-icon">✓</div>
+        <h3>Inbox clear</h3>
+        <p>No pending items. Your second brain is coherent and up to date.</p>
+      </div>
+
+      <div class="filter-group" style="margin-bottom:18px;" id="inboxFilters">
+        <button class="filter-chip active" onclick="setInboxFilter('all')">All</button>
+        <button class="filter-chip" onclick="setInboxFilter('coherence_conflict')">🔴 Conflicts</button>
+        <button class="filter-chip" onclick="setInboxFilter('decay_review')">🟡 Decay</button>
+        <button class="filter-chip" onclick="setInboxFilter('memory_proposal')">🔵 Proposals</button>
+      </div>
+
+      <div id="inboxContainer"></div>
+
+    </div>
+
+    <!-- ── IMPORT TAB ── -->
+    <div class="tab-panel" id="tab-import">
+      <div class="section-heading">Import from Text</div>
+
+      <div class="import-info">
+        <p>Paste any freeform text — a Grok or Gemini session, meeting notes, a document, voice memo transcript.
+        Claude will extract structured memory proposals for you to review before anything saves.</p>
+      </div>
+
+      <div class="import-source-row">
+        <label class="import-label">Source</label>
+        <div class="filter-group">
+          <button class="filter-chip active" id="src-grok" onclick="setSource('grok')">Grok session</button>
+          <button class="filter-chip" id="src-gemini" onclick="setSource('gemini')">Gemini session</button>
+          <button class="filter-chip" id="src-notes" onclick="setSource('notes')">Meeting notes</button>
+          <button class="filter-chip" id="src-doc" onclick="setSource('doc')">Document</button>
+          <button class="filter-chip" id="src-other" onclick="setSource('other')">Other</button>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:14px;">
+        <label>Paste text here</label>
+        <textarea id="importText" rows="10"
+          placeholder="Paste your text here — conversation transcript, notes, document excerpt..."
+          style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.85rem;padding:12px;resize:vertical;line-height:1.6;"></textarea>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:24px;">
+        <button class="btn btn-accent" onclick="extractEntries()" id="extractBtn">✦ Extract</button>
+        <button class="btn" onclick="compareExtract()" id="compareBtn">⇄ Compare LLMs</button>
+        <button class="btn btn-sm" onclick="clearImport()">Clear</button>
+        <span id="extractStatus" style="font-size:.78rem;color:var(--text3);"></span>
+      </div>
+
+      <!-- PROPOSALS AREA -->
+      <div id="proposalsContainer"></div>
+
+      <!-- BATCH APPROVE -->
+      <div id="batchBar" style="display:none;position:sticky;bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 20px;display:none;align-items:center;gap:12px;box-shadow:var(--shadow-lg);margin-top:16px;">
+        <span id="approvedCount" style="font-size:.85rem;font-weight:600;color:var(--text);flex:1;"></span>
+        <button class="btn btn-sm" onclick="skipAll()">Skip all</button>
+        <button class="btn btn-accent" onclick="saveApproved()" id="saveApprovedBtn">Save approved entries</button>
+      </div>
+    </div>
+
+    <!-- ── EXPORT TAB ── -->
+    <div class="tab-panel" id="tab-export">
+      <div class="section-heading">Export</div>
+      <div class="export-box">
+        <h3>📄 Context Bundle (Markdown)</h3>
+        <p>All active entries organised by space and layer. Paste at the start of any AI session as a fallback when MCP is unavailable.</p>
+        <button class="btn btn-accent" onclick="exportMarkdown()">Export CONTEXT_SUMMARY.md</button>
+      </div>
+      <div class="export-box">
+        <h3>🗂 Audit Log (JSON)</h3>
+        <p>Full audit trail with before/after snapshots. Use to migrate between BYOC setups or reconstruct your database.</p>
+        <button class="btn" onclick="exportAuditJSON()">Export audit_log.json</button>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS TAB ── -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="section-heading">Settings</div>
+
+      <div class="settings-section">
+        <h3>Connection</h3>
+        <div class="field">
+          <label>Supabase URL</label>
+          <input type="text" id="settingSupabaseUrl" placeholder="https://your-project.supabase.co" />
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Supabase publishable key</label>
+          <input type="password" id="settingSupabaseKey" placeholder="sb_publishable_..." />
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Supabase email</label>
+          <input type="email" id="settingSupabaseEmail" placeholder="you@example.com" />
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Supabase password</label>
+          <input type="password" id="settingSupabasePassword" placeholder="Password" />
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn btn-accent btn-sm" onclick="saveAndConnect()">Save & connect</button>
+          <span id="connectStatus" style="font-size:.82rem;color:var(--text3);"></span>
+          <button class="btn btn-danger btn-sm" onclick="clearCredentials()">Clear</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Font Size</h3>
+        <div class="font-slider-row">
+          <span style="font-size:.75rem;color:var(--text3)">A</span>
+          <input type="range" id="fontSlider" min="13" max="19" value="15" oninput="updateFontSize(this.value)">
+          <span style="font-size:1rem;color:var(--text3)">A</span>
+          <span id="fontPreview" style="font-size:.82rem;color:var(--text3);">15px</span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Notifications</h3>
+        <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px;line-height:1.5;">
+          Weekly digest emails are sent by Resend from the backend. EmailJS below is kept for browser-side test emails only.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="field">
+            <label>Your Email</label>
+            <input type="email" id="settingEmail" placeholder="you@email.com" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>EmailJS Service ID</label>
+              <input type="text" id="settingEjsService" placeholder="service_..." />
+            </div>
+            <div class="field">
+              <label>EmailJS Template ID</label>
+              <input type="text" id="settingEjsTemplate" placeholder="template_..." />
+            </div>
+          </div>
+          <div class="field">
+            <label>EmailJS Public Key</label>
+            <input type="text" id="settingEjsKey" placeholder="Your EmailJS public key" />
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-accent btn-sm" onclick="saveEmailSettings()">Save</button>
+            <button class="btn btn-sm" onclick="sendTestEmail()">✉ Send test email</button>
+            <button class="btn btn-sm" onclick="runScanNow()">⟳ Run scan now</button>
+            <button class="btn btn-sm" onclick="sendDigestNow()">✉ Send weekly digest now</button>
+            <span id="emailSettingStatus" style="font-size:.78rem;color:var(--text3);"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Import LLM Keys</h3>
+        <div class="field">
+          <label>DeepSeek API Key <span style="font-weight:400;color:var(--text3);font-size:.78rem;">— used for Extract</span></label>
+          <input type="password" id="settingDeepSeekKey" placeholder="sk-..." />
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Groq API Key <span style="font-weight:400;color:var(--text3);font-size:.78rem;">— optional, only for Compare</span></label>
+          <input type="password" id="settingGroqKey" placeholder="gsk_..." />
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-accent btn-sm" onclick="saveImportKeys()">Save</button>
+          <span id="importKeyStatus" style="font-size:.78rem;color:var(--text3);align-self:center;"></span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Manage Spaces</h3>
+        <div id="spacesList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="newSpaceName" placeholder="New space name"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 11px;color:var(--text);font-size:.85rem;flex:1;">
+          <button class="btn btn-sm btn-accent" onclick="addSpace()">Add Space</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Semantic Search</h3>
+        <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px;line-height:1.5;">
+          Semantic search uses vector embeddings — each entry is automatically embedded when saved.
+          Entries saved before Phase 2.5 won't appear in semantic results until re-saved.
+          Search finds meaning, not just keywords.
+        </p>
+        <button class="btn btn-sm" onclick="reembedAll()">Re-embed all entries</button>
+        <span id="reembedStatus" style="font-size:.78rem;color:var(--text3);margin-left:10px;"></span>
+      </div>
+    </div>
+
+    <!-- ── BRAIN STATE TAB ── -->
+    <div class="tab-panel" id="tab-brainstate">
+
+      <style>
+        .bs-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:22px; }
+        .bs-metric { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+        .bs-metric-label { font-size:.72rem; color:var(--text3); margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em; }
+        .bs-metric-value { font-size:1.5rem; font-weight:600; color:var(--text); }
+        .bs-metric-sub { font-size:.72rem; color:var(--text3); margin-top:2px; }
+        .bs-two { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+        .bs-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+        .bs-card-title { font-size:.78rem; font-weight:600; color:var(--text2); margin-bottom:12px; text-transform:uppercase; letter-spacing:.04em; }
+        .bs-space-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+        .bs-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .bs-space-name { font-size:.82rem; color:var(--text); width:62px; flex-shrink:0; }
+        .bs-bar-track { flex:1; background:var(--bg3); border-radius:4px; height:5px; overflow:hidden; }
+        .bs-bar-fill { height:100%; border-radius:4px; }
+        .bs-count { font-size:.78rem; color:var(--text3); min-width:24px; text-align:right; }
+        .bs-entry-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); }
+        .bs-entry-row:last-child { border-bottom:none; }
+        .bs-entry-name { font-size:.82rem; color:var(--text); flex:1; }
+        .bs-space-pill { font-size:.68rem; padding:2px 7px; border-radius:4px; flex-shrink:0; }
+        .bs-dots { font-size:.8rem; min-width:32px; text-align:right; }
+        .bs-status-row { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); }
+        .bs-status-row:last-child { border-bottom:none; }
+        .bs-status-name { font-size:.82rem; color:var(--text); flex:1; }
+        .bs-badge { font-size:.68rem; padding:2px 8px; border-radius:4px; }
+        .bs-decay-row { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; }
+        .bs-decay-label { font-size:.78rem; color:var(--text3); width:68px; flex-shrink:0; padding-top:2px; }
+        .bs-pills { display:flex; gap:4px; flex-wrap:wrap; flex:1; }
+        .bs-pill { font-size:.68rem; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+        .bs-heat { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+        .bs-heat-cell { aspect-ratio:1; border-radius:3px; }
+        .bs-full { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; }
+        .bs-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+        .bs-link { font-size:.78rem; color:var(--accent2); background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:5px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; }
+        .bs-link:hover { background:var(--border); }
+        .heat-legend { display:flex; align-items:center; gap:12px; margin-top:10px; }
+        .heat-legend-item { display:flex; align-items:center; gap:4px; font-size:.7rem; color:var(--text3); }
+        .heat-legend-swatch { width:10px; height:10px; border-radius:2px; }
+      </style>
+
+      <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;">
+        Brain State
+        <a href="index.html" class="bs-link" target="_blank">🧠 3D view ↗</a>
+      </div>
+
+      <div class="bs-metrics">
+        <div class="bs-metric">
+          <div class="bs-metric-label">Active entries</div>
+          <div class="bs-metric-value">37</div>
+          <div class="bs-metric-sub">↓8 pruned 24 May</div>
+        </div>
+        <div class="bs-metric">
+          <div class="bs-metric-label">Cited this week</div>
+          <div class="bs-metric-value">12</div>
+          <div class="bs-metric-sub">tier1 loads</div>
+        </div>
+        <div class="bs-metric">
+          <div class="bs-metric-label">Never cited 30d</div>
+          <div class="bs-metric-value">9</div>
+          <div class="bs-metric-sub">candidates to prune</div>
+        </div>
+        <div class="bs-metric">
+          <div class="bs-metric-label">Inbox</div>
+          <div class="bs-metric-value">0</div>
+          <div class="bs-metric-sub">pending items</div>
+        </div>
+      </div>
+
+      <div class="bs-two">
+        <div class="bs-card">
+          <div class="bs-card-title">Entries by space</div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#534AB7"></div><div class="bs-space-name">work</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:100%;background:#534AB7"></div></div><div class="bs-count">12</div></div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#1D9E75"></div><div class="bs-space-name">personal</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:83%;background:#1D9E75"></div></div><div class="bs-count">10</div></div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#D85A30"></div><div class="bs-space-name">family</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:42%;background:#D85A30"></div></div><div class="bs-count">5</div></div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#378ADD"></div><div class="bs-space-name">leisure</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:42%;background:#378ADD"></div></div><div class="bs-count">5</div></div>
+          <div class="bs-space-row"><div class="bs-dot" style="background:#888780"></div><div class="bs-space-name">core</div><div class="bs-bar-track"><div class="bs-bar-fill" style="width:25%;background:#888780"></div></div><div class="bs-count">3</div></div>
+        </div>
+
+        <div class="bs-card">
+          <div class="bs-card-title">Top activated entries</div>
+          <div class="bs-entry-row"><div class="bs-entry-name">Career Arc</div><span class="bs-space-pill" style="background:#EEEDFE;color:#3C3489">core</span><div class="bs-dots" style="color:#534AB7">●●●</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">Core Values</div><span class="bs-space-pill" style="background:#EEEDFE;color:#3C3489">core</span><div class="bs-dots" style="color:#534AB7">●●●</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">Personal Working Style</div><span class="bs-space-pill" style="background:#EEEDFE;color:#3C3489">core</span><div class="bs-dots" style="color:#534AB7">●●○</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">How I Build</div><span class="bs-space-pill" style="background:#F1EFE8;color:#444441">work</span><div class="bs-dots" style="color:#5F5E5A">●●○</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">Career Transition Target</div><span class="bs-space-pill" style="background:#F1EFE8;color:#444441">work</span><div class="bs-dots" style="color:#5F5E5A">●○○</div></div>
+          <div class="bs-entry-row"><div class="bs-entry-name">100 Ideas Portfolio</div><span class="bs-space-pill" style="background:#F1EFE8;color:#444441">work</span><div class="bs-dots" style="color:#5F5E5A">●○○</div></div>
+        </div>
+      </div>
+
+      <div class="bs-two">
+        <div class="bs-card">
+          <div class="bs-card-title">Decay profile</div>
+          <div class="bs-decay-row"><div class="bs-decay-label">evergreen</div><div class="bs-pills"><span class="bs-pill" style="background:#EAF3DE;color:#27500A">Career Arc</span><span class="bs-pill" style="background:#EAF3DE;color:#27500A">Core Values</span><span class="bs-pill" style="background:#EAF3DE;color:#27500A">Inner Circle</span></div></div>
+          <div class="bs-decay-row"><div class="bs-decay-label">slow</div><div class="bs-pills"><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">InspectPro</span><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">MetrIQ</span><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">SplitLah</span><span class="bs-pill" style="background:#E6F1FB;color:#0C447C">+9 more</span></div></div>
+          <div class="bs-decay-row"><div class="bs-decay-label">fast 90d</div><div class="bs-pills"><span class="bs-pill" style="background:#FAEEDA;color:#633806">BMW COE</span><span class="bs-pill" style="background:#FAEEDA;color:#633806">Motorcycle</span><span class="bs-pill" style="background:#FAEEDA;color:#633806">Cost of Living</span></div></div>
+          <div class="bs-decay-row"><div class="bs-decay-label">single use</div><div class="bs-pills"><span class="bs-pill" style="background:#FCEBEB;color:#791F1F">JB Trip ↓ Jun 10</span><span class="bs-pill" style="background:#FCEBEB;color:#791F1F">Shanghai ↓ Oct 20</span></div></div>
+        </div>
+
+        <div class="bs-card">
+          <div class="bs-card-title">Engine status</div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">Activation telemetry</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">live</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">Weekly decay scan</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">running</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">Coherence scan (0.85)</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">running</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#2E7D52"></div><div class="bs-status-name">cite_entries tool</div><span class="bs-badge" style="background:#EAF3DE;color:#27500A">live</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#D4922E"></div><div class="bs-status-name">Phase C — synthesis</div><span class="bs-badge" style="background:#FDF3E3;color:#7A5020">not started</span></div>
+          <div class="bs-status-row"><div class="bs-dot" style="background:#9A9A8E"></div><div class="bs-status-name">3D visualisation</div><span class="bs-badge" style="background:#F2F2ED;color:#5A5A50">deferred Jun</span></div>
+        </div>
+      </div>
+
+      <div class="bs-full">
+        <div class="bs-card-title">Activation heatmap — last 30 days</div>
+        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 1</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div></div></div>
+          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 2</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#534AB7"></div></div></div>
+          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 3</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#AFA9EC"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#7F77DD"></div></div></div>
+          <div><div style="font-size:.7rem;color:var(--text3);margin-bottom:5px">Week 4 (live)</div><div class="bs-heat" style="width:112px"><div class="bs-heat-cell" style="background:#7F77DD"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:#EEEDFE"></div><div class="bs-heat-cell" style="background:#534AB7"></div><div class="bs-heat-cell" style="background:var(--bg3)"></div><div class="bs-heat-cell" style="background:var(--bg3)"></div><div class="bs-heat-cell" style="background:var(--bg3)"></div></div></div>
+          <div style="margin-left:auto;padding-top:18px"><div class="heat-legend"><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:#534AB7"></div>high</div><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:#AFA9EC"></div>mid</div><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:#EEEDFE"></div>low</div><div class="heat-legend-item"><div class="heat-legend-swatch" style="background:var(--bg3)"></div>none</div></div></div>
+        </div>
+        <p style="font-size:.72rem;color:var(--text3);margin-top:10px">Wires to live <code>entry_activation_stats</code> data ~7 June once 2wk telemetry matures.</p>
+      </div>
+
+      <div class="bs-actions">
+        <a class="bs-link" href="index.html" target="_blank">🧠 Open 3D Brain View</a>
+        <a class="bs-link" href="../activation_dashboard.html" target="_blank">📊 Activation Dashboard</a>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- ENTRY MODAL -->
+<div class="modal-overlay" id="entryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">New Entry</span>
+      <button class="close-btn" onclick="closeModal('entryModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="fTitle" placeholder="Short, memorable label for this memory" />
+      </div>
+      <div class="field">
+        <label>Body</label>
+        <textarea id="fBody" rows="5" placeholder="The context itself — be specific and self-contained"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Space</label>
+          <select id="fSpace"></select>
+        </div>
+        <div class="field">
+          <label>Layer</label>
+          <select id="fLayer">
+            <option value="domain">Domain</option>
+            <option value="workflow">Workflow</option>
+            <option value="behavioural">Behavioural</option>
+            <option value="artifact">Artifact</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Perishability</label>
+          <select id="fPerish">
+            <option value="evergreen">Evergreen</option>
+            <option value="slow" selected>Slow</option>
+            <option value="fast">Fast</option>
+            <option value="single_use">Single-use</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tags (comma-separated)</label>
+          <input type="text" id="fTags" placeholder="e.g. strategy, q2, reporting" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Source Tool</label>
+        <input type="text" id="fTool" placeholder="e.g. manual, claude, chatgpt" value="manual" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="archiveBtn" style="margin-right:auto;display:none" onclick="archiveEntry()">Archive</button>
+      <button class="btn" onclick="closeModal('entryModal')">Cancel</button>
+      <button class="btn btn-accent" id="saveEntryBtn" onclick="saveEntry()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ROLLBACK MODAL -->
+<div class="modal-overlay" id="rollbackModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <span class="modal-title">Confirm Rollback</span>
+      <button class="close-btn" onclick="closeModal('rollbackModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:var(--text2);">This restores the entry to its previous state. Current content will be overwritten and logged in the audit trail.</p>
+      <div class="field">
+        <label>Previous state preview</label>
+        <textarea id="rollbackPreview" rows="5" readonly style="background:var(--bg3);font-size:.78rem;font-family:'IBM Plex Mono',monospace;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('rollbackModal')">Cancel</button>
+      <button class="btn btn-accent" onclick="confirmRollback()">Restore this version</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ── HARDCODED CONFIG ──────────────────────────
+const GROQ_KEY_DEFAULT  = ''; // Set via Settings → Import
+const DEEPSEEK_MODEL    = 'deepseek-v4-pro';
+const EJS_SERVICE   = 'service_pkta469';
+const EJS_TEMPLATE  = 'template_ijdn4y8';
+const EJS_KEY       = 'FCXGhGYhKSY8mzokZ';
+const EJS_EMAIL     = '';
+
+// ── STATE ─────────────────────────────────────
+let supabase = null;
+let currentUser = null;
+let userJwt = null;
+let currentSupabaseUrl = '';
+let currentSupabaseKey = '';
+let entries = [];
+let spaces = [];
+let auditLog = [];
+let activeSpaceFilter = 'all';
+let activeLayerFilter = 'all';
+let showArchived = false;
+let editingId = null;
+let rollbackTarget = null;
+let searchMode = 'filter';
+let searchTimeout = null;
+
+const LAYERS = ['domain','workflow','behavioural','artifact'];
+const PERISH_LABELS = { evergreen:'Evergreen', slow:'Slow', fast:'Fast', single_use:'Single-use' };
+const VALID_TABS = ['entries','inbox','audit','import','export','settings'];
+
+// ── INIT ──────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  const initialTab = getRequestedTab();
+  const creds = getSavedCreds();
+  if (creds.url && creds.key && creds.email && creds.password) {
+    initSupabase(creds.url, creds.key, creds.email, creds.password, initialTab);
+  } else {
+    showSetupBanner(true);
+    if (initialTab !== 'entries') switchTab(initialTab, false);
+  }
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+  document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal('entryModal'); closeModal('rollbackModal'); }
+  });
+});
+
+// ── CREDENTIALS ──────────────────────────────
+function getSavedCreds() {
+  return {
+    url:      localStorage.getItem('byoc_supabase_url') || '',
+    key:      localStorage.getItem('byoc_supabase_key') || '',
+    email:    localStorage.getItem('byoc_supabase_email') || '',
+    password: localStorage.getItem('byoc_supabase_password') || ''
+  };
+}
+function clearCredentials() {
+  if (!confirm('Clear all saved credentials?')) return;
+  [
+    'byoc_supabase_url',
+    'byoc_supabase_key',
+    'byoc_supabase_email',
+    'byoc_supabase_password',
+    'byoc_password'
+  ].forEach(k => localStorage.removeItem(k));
+  populateCredentialFields();
+  supabase = null; currentUser = null; userJwt = null; currentSupabaseUrl = ''; currentSupabaseKey = '';
+  setConnStatus(false); showSetupBanner(true); toast('Credentials cleared');
+}
+
+// ── SUPABASE ──────────────────────────────────
+async function initSupabase(url, key, email, password, initialTab = 'entries') {
+  try {
+    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+    supabase = createClient(url, key);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    currentUser = data.user;
+    userJwt = data.session.access_token;
+    currentSupabaseUrl = url;
+    currentSupabaseKey = key;
+    setConnStatus(true);
+    showSetupBanner(false);
+    await Promise.all([loadSpaces(), loadEntries(), loadAudit(), loadInbox(), loadEmailSettings()]);
+    if (initialTab !== 'entries') switchTab(initialTab, false);
+  } catch(e) {
+    setConnStatus(false); showSetupBanner(true);
+    toast('Connection failed: ' + e.message, 'error');
+    document.getElementById('connectStatus').textContent = '⚠ ' + e.message;
+  }
+}
+
+async function saveAndConnect() {
+  const url = document.getElementById('settingSupabaseUrl').value.trim();
+  const key = document.getElementById('settingSupabaseKey').value.trim();
+  const email = document.getElementById('settingSupabaseEmail').value.trim();
+  const pw = document.getElementById('settingSupabasePassword').value;
+
+  if (!url || !key || !email || !pw) {
+    toast('Enter all Supabase connection fields', 'error');
+    return;
+  }
+
+  localStorage.setItem('byoc_supabase_url', url);
+  localStorage.setItem('byoc_supabase_key', key);
+  localStorage.setItem('byoc_supabase_email', email);
+  localStorage.setItem('byoc_supabase_password', pw);
+  document.getElementById('connectStatus').textContent = 'Connecting…';
+  await initSupabase(url, key, email, pw);
+}
+
+// ── DATA LOADERS ──────────────────────────────
+async function loadSpaces() {
+  const { data, error } = await supabase.from('spaces').select('*').order('is_core', { ascending: false });
+  if (error) { toast('Error loading spaces', 'error'); return; }
+  spaces = data;
+  renderSpaceFilters(); renderSpaceSelect(); renderSpacesList();
+}
+
+async function loadEntries() {
+  let q = supabase.from('entries').select('*').order('updated_at', { ascending: false });
+  if (!showArchived) q = q.eq('status', 'active');
+  const { data, error } = await q;
+  if (error) { toast('Error loading entries', 'error'); return; }
+  entries = data;
+  renderEntries();
+}
+
+async function loadAudit() {
+  const { data, error } = await supabase.from('context_edits').select('*').order('timestamp', { ascending: false }).limit(100);
+  if (error) return;
+  auditLog = data;
+  renderAudit();
+}
+
+// ── SEMANTIC SEARCH ───────────────────────────
+function onSearchInput() {
+  const q = document.getElementById('searchInput').value.trim();
+  document.getElementById('searchClear').style.display = q ? '' : 'none';
+
+  if (!q) {
+    exitSearchMode();
+    return;
+  }
+
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => runSemanticSearch(q), 600);
+}
+
+async function runSemanticSearch(query) {
+  if (!supabase || !userJwt) return;
+
+  // Enter search UI mode
+  document.getElementById('filterToolbar').style.display = 'none';
+  document.getElementById('searchToolbar').style.display = '';
+  document.getElementById('searchModeBadge').textContent = '⟳ Searching…';
+  document.getElementById('searchModeBadge').className = 'search-mode-badge';
+
+  try {
+    const sbUrl = currentSupabaseUrl;
+    const sbKey = currentSupabaseKey;
+
+    const resp = await fetch(`${sbUrl}/functions/v1/search-entries`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': sbKey,
+        'Authorization': `Bearer ${userJwt}`
+      },
+      body: JSON.stringify({
+        query,
+        user_id: currentUser.id,
+        spaces: activeSpaceFilter !== 'all' ? [activeSpaceFilter] : null,
+        threshold: 0.35,
+        limit: 15
+      })
+    });
+
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error);
+
+    searchMode = 'semantic';
+    document.getElementById('searchModeBadge').textContent = '◈ Semantic';
+    document.getElementById('searchModeBadge').className = 'search-mode-badge semantic';
+    renderSemanticResults(data.results || [], query);
+
+  } catch(e) {
+    // Fallback to keyword filter if edge function not yet deployed
+    searchMode = 'filter';
+    document.getElementById('searchModeBadge').textContent = 'Keyword filter';
+    document.getElementById('searchModeBadge').className = 'search-mode-badge';
+    renderKeywordResults(query);
+  }
+}
+
+function renderSemanticResults(results, query) {
+  const container = document.getElementById('entriesContainer');
+  if (!results.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><h3>No similar entries found</h3><p>Try different keywords, or add entries that cover this topic.</p></div>`;
+    return;
+  }
+  const header = `<div class="results-header"><strong>${results.length}</strong> entries similar to "${esc(query)}"</div>`;
+  const cards = results.map(r => entryCard(r, true)).join('');
+  container.innerHTML = header + `<div class="entries-grid">${cards}</div>`;
+}
+
+function renderKeywordResults(query) {
+  const q = query.toLowerCase();
+  const filtered = entries.filter(e =>
+    e.title.toLowerCase().includes(q) ||
+    e.body.toLowerCase().includes(q) ||
+    (e.tags||[]).some(t => t.toLowerCase().includes(q))
+  );
+  const container = document.getElementById('entriesContainer');
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><h3>No matches</h3><p>No entries match "${esc(query)}".</p></div>`;
+    return;
+  }
+  const header = `<div class="results-header"><strong>${filtered.length}</strong> keyword matches for "${esc(query)}" <span style="color:var(--text3)">(semantic search unavailable — deploy Edge Functions first)</span></div>`;
+  container.innerHTML = header + `<div class="entries-grid">${filtered.map(e => entryCard(e)).join('')}</div>`;
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  exitSearchMode();
+}
+
+function exitSearchMode() {
+  searchMode = 'filter';
+  document.getElementById('filterToolbar').style.display = '';
+  document.getElementById('searchToolbar').style.display = 'none';
+  document.getElementById('searchModeBadge').textContent = 'Filter mode';
+  document.getElementById('searchModeBadge').className = 'search-mode-badge';
+  renderEntries();
+}
+
+// ── RENDER ENTRIES ────────────────────────────
+function renderEntries() {
+  const filtered = entries.filter(e => {
+    const spaceOk = activeSpaceFilter === 'all' || e.space === activeSpaceFilter;
+    const layerOk = activeLayerFilter === 'all' || e.layer === activeLayerFilter;
+    return spaceOk && layerOk;
+  });
+  const container = document.getElementById('entriesContainer');
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><h3>No entries found</h3><p>Try a different filter or add a new memory.</p></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="entries-grid">${filtered.map(e => entryCard(e)).join('')}</div>`;
+}
+
+function entryCard(e, isSemantic = false) {
+  const date = new Date(e.updated_at).toLocaleDateString('en-SG', { day:'numeric', month:'short', year:'2-digit' });
+  const tags = e.tags?.length ? e.tags.map(t => `<span class="chip chip-space">${esc(t)}</span>`).join('') : '';
+  const noEmbed = !e.embedding ? '<span class="chip chip-noembedding" title="No embedding yet — re-save to index">no embed</span>' : '';
+
+  let similarityEl = '';
+  if (isSemantic && e.similarity != null) {
+    const pct = Math.round(e.similarity * 100);
+    similarityEl = `
+      <div class="similarity-bar"><div class="similarity-fill" style="width:${pct}%"></div></div>
+      <span class="similarity-label">${pct}%</span>`;
+  }
+
+  return `
+  <div class="entry-card ${e.status==='archived'?'entry-archived':''} ${isSemantic?'semantic-result':''}" onclick="openEditEntry('${e.id}')">
+    <div class="entry-title">${esc(e.title)}</div>
+    <div class="entry-actions">
+      <span class="chip chip-layer">${e.layer}</span>
+      ${similarityEl}
+    </div>
+    <div class="entry-body-preview">${esc(e.body)}</div>
+    <div class="entry-meta">
+      <span class="chip chip-space">${e.space}</span>
+      <span class="chip chip-perish ${e.perishability}">${PERISH_LABELS[e.perishability]||e.perishability}</span>
+      ${tags}
+      ${noEmbed}
+      <span class="entry-date">${date}</span>
+    </div>
+  </div>`;
+}
+
+function renderSpaceFilters() {
+  const all = [{name:'all'}, ...spaces];
+  document.getElementById('spaceFilters').innerHTML = all.map(s =>
+    `<button class="filter-chip ${activeSpaceFilter===s.name?'active':''}" onclick="setSpaceFilter('${s.name}')">${s.name==='all'?'All spaces':s.name}</button>`
+  ).join('');
+}
+
+function renderLayerFilters() {
+  const all = ['all', ...LAYERS];
+  document.getElementById('layerFilters').innerHTML = all.map(l =>
+    `<button class="filter-chip ${activeLayerFilter===l?'active':''}" onclick="setLayerFilter('${l}')">${l==='all'?'All layers':l}</button>`
+  ).join('');
+}
+
+function renderSpaceSelect() {
+  document.getElementById('fSpace').innerHTML = spaces.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+}
+
+function renderSpacesList() {
+  document.getElementById('spacesList').innerHTML = spaces.map(s => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="flex:1;font-size:.85rem;">${esc(s.name)}</span>
+      ${s.is_core ? '<span class="chip chip-layer">core</span>' : ''}
+      ${!s.is_core ? `<button class="btn btn-sm btn-danger" onclick="deleteSpace('${s.id}','${s.name}')">Remove</button>` : ''}
+    </div>`).join('');
+}
+
+// ── RENDER AUDIT ──────────────────────────────
+function renderAudit() {
+  document.getElementById('auditCount').textContent = auditLog.length;
+  const container = document.getElementById('auditContainer');
+  if (!auditLog.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><h3>No edits yet</h3></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="audit-list">${auditLog.map(auditItem).join('')}</div>`;
+}
+
+function auditItem(a) {
+  const date = new Date(a.timestamp).toLocaleString('en-SG', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+  const before = a.entry_before ? (typeof a.entry_before==='string'?JSON.parse(a.entry_before):a.entry_before) : null;
+  const after  = a.entry_after  ? (typeof a.entry_after==='string' ?JSON.parse(a.entry_after) :a.entry_after)  : null;
+  const title = esc(after?.title || before?.title || 'Untitled');
+  const canRollback = a.action === 'update' && before;
+  return `
+  <div class="audit-item">
+    <span class="audit-action-badge badge-${a.action}">${a.action}</span>
+    <span class="audit-entry-title">${title}</span>
+    <span class="audit-meta">${date}</span>
+    <span class="audit-detail">${a.space||''} · ${a.ai_tool||'manual'}</span>
+    ${canRollback ? `<button class="btn btn-sm rollback-btn" onclick="openRollback('${a.id}')">↩ Rollback</button>` : '<span></span>'}
+  </div>`;
+}
+
+// ── FILTERS ───────────────────────────────────
+function setSpaceFilter(s) { activeSpaceFilter = s; renderSpaceFilters(); renderEntries(); }
+function setLayerFilter(l) { activeLayerFilter = l; renderLayerFilters(); renderEntries(); }
+function toggleArchived() {
+  showArchived = !showArchived;
+  document.getElementById('toggleArchived').textContent = showArchived ? 'Hide archived' : 'Show archived';
+  loadEntries();
+}
+
+// ── ENTRY MODAL ───────────────────────────────
+function openNewEntry() {
+  if (!supabase) { switchTab('settings'); return; }
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'New Entry';
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fBody').value = '';
+  document.getElementById('fTags').value = '';
+  document.getElementById('fPerish').value = 'slow';
+  document.getElementById('fTool').value = 'manual';
+  document.getElementById('archiveBtn').style.display = 'none';
+  renderSpaceSelect();
+  openModal('entryModal');
+}
+
+function openEditEntry(id) {
+  const e = entries.find(x => x.id === id) ||
+            document.querySelector(`[onclick="openEditEntry('${id}')"]`);
+  // Try from global entries array; if semantic result, find by id
+  const entry = entries.find(x => x.id === id);
+  if (!entry) {
+    // Entry might be a semantic result not in filtered list — re-fetch
+    loadEntryById(id); return;
+  }
+  _populateModal(entry);
+}
+
+async function loadEntryById(id) {
+  const { data } = await supabase.from('entries').select('*').eq('id', id).single();
+  if (data) _populateModal(data);
+}
+
+function _populateModal(e) {
+  editingId = e.id;
+  document.getElementById('modalTitle').textContent = 'Edit Entry';
+  document.getElementById('fTitle').value = e.title;
+  document.getElementById('fBody').value = e.body;
+  document.getElementById('fTags').value = (e.tags||[]).join(', ');
+  document.getElementById('fPerish').value = e.perishability || 'slow';
+  document.getElementById('fTool').value = e.created_by_tool || 'manual';
+  document.getElementById('archiveBtn').style.display = e.status === 'archived' ? 'none' : '';
+  renderSpaceSelect();
+  document.getElementById('fSpace').value = e.space;
+  document.getElementById('fLayer').value = e.layer;
+  openModal('entryModal');
+}
+
+async function saveEntry() {
+  const title = document.getElementById('fTitle').value.trim();
+  const body  = document.getElementById('fBody').value.trim();
+  if (!title || !body) { toast('Title and body are required', 'error'); return; }
+
+  const btn = document.getElementById('saveEntryBtn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+
+  const payload = {
+    title, body,
+    space:           document.getElementById('fSpace').value,
+    layer:           document.getElementById('fLayer').value,
+    perishability:   document.getElementById('fPerish').value,
+    tags:            document.getElementById('fTags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    created_by_tool: document.getElementById('fTool').value || 'manual',
+    user_id:         currentUser.id
+  };
+
+  let error, savedId;
+  if (editingId) {
+    ({ error } = await supabase.from('entries').update(payload).eq('id', editingId));
+    savedId = editingId;
+  } else {
+    const { data, error: e } = await supabase.from('entries').insert(payload).select().single();
+    error = e; savedId = data?.id;
+  }
+
+  btn.innerHTML = 'Save Entry';
+  btn.disabled = false;
+
+  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+
+  toast(editingId ? 'Entry updated' : 'Entry saved', 'success');
+  closeModal('entryModal');
+  await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
+
+  // Fire-and-forget embedding generation
+  if (savedId) generateEmbedding(savedId, `${payload.title} ${payload.body} ${payload.tags.join(' ')}`);
+}
+
+// ── EMBEDDING GENERATION ──────────────────────
+async function generateEmbedding(entry_id, text) {
+  try {
+    const sbUrl = currentSupabaseUrl;
+    const sbKey = currentSupabaseKey;
+    await fetch(`${sbUrl}/functions/v1/embed-entry`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': sbKey,
+        'Authorization': `Bearer ${userJwt}`
+      },
+      body: JSON.stringify({ entry_id, text })
+    });
+    // Silent success — no toast needed
+  } catch(e) {
+    // Silent failure — entry saved, embedding can be generated later via re-embed
+    console.warn('Embedding generation failed (deploy Edge Functions to enable):', e.message);
+  }
+}
+
+// Re-embed all entries (for entries saved before Phase 2.5)
+async function reembedAll() {
+  const btn = document.querySelector('[onclick="reembedAll()"]');
+  const status = document.getElementById('reembedStatus');
+  if (!entries.length) { toast('No entries to re-embed', 'error'); return; }
+
+  btn.innerHTML = '<span class="spinner"></span> Re-embedding…';
+  btn.disabled = true;
+
+  let done = 0;
+  for (const e of entries.filter(x => x.status === 'active')) {
+    await generateEmbedding(e.id, `${e.title} ${e.body} ${(e.tags||[]).join(' ')}`);
+    done++;
+    status.textContent = `${done}/${entries.filter(x=>x.status==='active').length}`;
+    await new Promise(r => setTimeout(r, 100)); // small delay to avoid rate limit
+  }
+
+  btn.innerHTML = 'Re-embed all entries';
+  btn.disabled = false;
+  status.textContent = `Done — ${done} entries embedded`;
+  toast('All entries re-embedded', 'success');
+  await loadEntries();
+}
+
+// ── ARCHIVE ───────────────────────────────────
+async function archiveEntry() {
+  if (!editingId) return;
+  const { error } = await supabase.from('entries').update({ status: 'archived' }).eq('id', editingId);
+  if (error) { toast('Archive failed', 'error'); return; }
+  toast('Entry archived');
+  closeModal('entryModal');
+  await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
+}
+
+// ── ROLLBACK ──────────────────────────────────
+function openRollback(auditId) {
+  const a = auditLog.find(x => x.id === auditId);
+  if (!a || !a.entry_before) return;
+  rollbackTarget = a;
+  const before = typeof a.entry_before==='string' ? JSON.parse(a.entry_before) : a.entry_before;
+  document.getElementById('rollbackPreview').value =
+    `Title: ${before.title}\nSpace: ${before.space} | Layer: ${before.layer}\nBody:\n${before.body}`;
+  openModal('rollbackModal');
+}
+
+async function confirmRollback() {
+  if (!rollbackTarget) return;
+  const before = typeof rollbackTarget.entry_before==='string'
+    ? JSON.parse(rollbackTarget.entry_before) : rollbackTarget.entry_before;
+  const { error } = await supabase.from('entries').update({
+    title: before.title, body: before.body, space: before.space,
+    layer: before.layer, perishability: before.perishability,
+    tags: before.tags, created_by_tool: 'rollback'
+  }).eq('id', rollbackTarget.entry_id);
+  if (error) { toast('Rollback failed: ' + error.message, 'error'); return; }
+  toast('Entry restored', 'success');
+  closeModal('rollbackModal');
+  await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
+  // Re-embed after rollback
+  generateEmbedding(rollbackTarget.entry_id, `${before.title} ${before.body}`);
+}
+
+// ── SPACES ────────────────────────────────────
+async function addSpace() {
+  const name = document.getElementById('newSpaceName').value.trim().toLowerCase().replace(/\s+/g,'-');
+  if (!name) return;
+  const { error } = await supabase.from('spaces').insert({ name, user_id: currentUser.id });
+  if (error) { toast('Failed: ' + error.message, 'error'); return; }
+  document.getElementById('newSpaceName').value = '';
+  toast('Space added');
+  await loadSpaces();
+}
+
+async function deleteSpace(id, name) {
+  if (!confirm(`Remove space "${name}"? Entries tagged with it will not be deleted.`)) return;
+  const { error } = await supabase.from('spaces').delete().eq('id', id);
+  if (error) { toast('Failed: ' + error.message, 'error'); return; }
+  toast('Space removed');
+  await loadSpaces();
+}
+
+// ── EXPORT ────────────────────────────────────
+async function exportMarkdown() {
+  if (!entries.length) { toast('No entries to export', 'error'); return; }
+  const active = entries.filter(e => e.status === 'active');
+  const bySpace = {};
+  active.forEach(e => {
+    if (!bySpace[e.space]) bySpace[e.space] = {};
+    if (!bySpace[e.space][e.layer]) bySpace[e.space][e.layer] = [];
+    bySpace[e.space][e.layer].push(e);
+  });
+  let md = `# CONTEXT_SUMMARY\n_Generated: ${new Date().toLocaleString('en-SG')}_\n\n`;
+  md += `> Portable AI context bundle. Paste at the start of any AI session.\n\n---\n\n`;
+  for (const [space, layers] of Object.entries(bySpace)) {
+    md += `## Space: ${space}\n\n`;
+    for (const [layer, items] of Object.entries(layers)) {
+      md += `### ${layer}\n\n`;
+      items.forEach(e => {
+        md += `**${e.title}**  \n${e.body}\n`;
+        if (e.tags?.length) md += `_Tags: ${e.tags.join(', ')}_\n`;
+        md += `\n`;
+      });
+    }
+  }
+  downloadFile('CONTEXT_SUMMARY.md', md, 'text/markdown');
+  toast('Exported CONTEXT_SUMMARY.md', 'success');
+}
+
+async function exportAuditJSON() {
+  if (!auditLog.length) { toast('No audit entries', 'error'); return; }
+  downloadFile('audit_log.json', JSON.stringify(auditLog, null, 2), 'application/json');
+  toast('Exported audit_log.json', 'success');
+}
+
+function downloadFile(name, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = name; a.click();
+}
+
+// ── UI HELPERS ────────────────────────────────
+function getRequestedTab() {
+  const fromQuery = new URLSearchParams(window.location.search).get('tab');
+  const fromHash = window.location.hash.replace('#', '');
+  const requested = fromQuery || fromHash || 'entries';
+  return VALID_TABS.includes(requested) ? requested : 'entries';
+}
+
+function switchTab(name, updateUrl = true) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  if (name === 'entries') renderLayerFilters();
+  if (name === 'inbox') renderInbox();
+  if (updateUrl) {
+    const url = new URL(window.location.href);
+    if (name === 'entries') {
+      url.searchParams.delete('tab');
+      url.hash = '';
+    } else {
+      url.searchParams.set('tab', name);
+      url.hash = '';
+    }
+    history.replaceState(null, '', url);
+  }
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function setConnStatus(ok) {
+  document.getElementById('connDot').className = 'conn-dot' + (ok?' connected':'');
+  document.getElementById('connLabel').textContent = ok ? 'Connected' : 'Not connected';
+}
+
+function showSetupBanner(show) {
+  document.getElementById('setupBanner').style.display = show ? '' : 'none';
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const dark = html.dataset.theme === 'dark';
+  html.dataset.theme = dark ? 'light' : 'dark';
+  document.getElementById('themeBtn').textContent = dark ? '☀' : '☾';
+  localStorage.setItem('byoc_theme', html.dataset.theme);
+}
+
+function loadSettings() {
+  const theme = localStorage.getItem('byoc_theme') || 'light';
+  document.documentElement.dataset.theme = theme;
+  document.getElementById('themeBtn').textContent = theme==='dark'?'☾':'☀';
+  const fs = localStorage.getItem('byoc_fontsize') || '15';
+  document.getElementById('fontSlider').value = fs;
+  updateFontSize(fs, false);
+  populateCredentialFields();
+  // Pre-fill import keys from localStorage
+  const savedDeepSeekKey = localStorage.getItem('byoc_deepseek_key');
+  if (savedDeepSeekKey) document.getElementById('settingDeepSeekKey').value = savedDeepSeekKey;
+  const savedGroqKey = localStorage.getItem('byoc_groq_key');
+  if (savedGroqKey) document.getElementById('settingGroqKey').value = savedGroqKey;
+  // Pre-fill EmailJS fields from localStorage or baked-in defaults
+  document.getElementById('settingEjsService').value  = localStorage.getItem('byoc_ejs_service')  || EJS_SERVICE;
+  document.getElementById('settingEjsTemplate').value = localStorage.getItem('byoc_ejs_template') || EJS_TEMPLATE;
+  document.getElementById('settingEjsKey').value      = localStorage.getItem('byoc_ejs_key')      || EJS_KEY;
+  renderLayerFilters();
+}
+
+function populateCredentialFields() {
+  const creds = getSavedCreds();
+  const urlField = document.getElementById('settingSupabaseUrl');
+  const keyField = document.getElementById('settingSupabaseKey');
+  const emailField = document.getElementById('settingSupabaseEmail');
+  const passwordField = document.getElementById('settingSupabasePassword');
+  if (!urlField || !keyField || !emailField || !passwordField) return;
+  urlField.value = creds.url;
+  keyField.value = creds.key;
+  emailField.value = creds.email;
+  passwordField.value = creds.password;
+}
+
+function updateFontSize(val, save=true) {
+  document.documentElement.style.setProperty('--font-size', val+'px');
+  document.getElementById('fontPreview').textContent = val+'px';
+  if (save) localStorage.setItem('byoc_fontsize', val);
+}
+
+function toast(msg, type='') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast'+(type?' '+type:'');
+  t.textContent = msg; c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── IMPORT FROM TEXT ─────────────────────────
+
+let importSource = 'grok';
+let proposals = []; // {id, title, body, space, layer, perishability, tags, rationale, status: 'pending'|'approved'|'skipped', expanded: bool}
+
+function setSource(src) {
+  importSource = src;
+  document.querySelectorAll('[id^="src-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('src-' + src).classList.add('active');
+}
+
+function clearImport() {
+  document.getElementById('importText').value = '';
+  document.getElementById('extractStatus').textContent = '';
+  proposals = [];
+  document.getElementById('proposalsContainer').innerHTML = '';
+  document.getElementById('batchBar').style.display = 'none';
+}
+
+async function extractEntries() {
+  const text = document.getElementById('importText').value.trim();
+  if (!text) { toast('Paste some text first', 'error'); return; }
+  const deepSeekKey = localStorage.getItem('byoc_deepseek_key');
+  if (!deepSeekKey) { toast('Add your DeepSeek API key in Settings → Import', 'error'); return; }
+
+  const btn = document.getElementById('extractBtn');
+  const status = document.getElementById('extractStatus');
+  btn.innerHTML = '<span class="spinner"></span> Extracting…'; btn.disabled = true;
+  status.textContent = '';
+
+  try {
+    const { entries: extracted, meta } = await extractWithModel(
+      'https://api.deepseek.com/chat/completions', deepSeekKey, DEEPSEEK_MODEL, text, {
+        jsonMode: true,
+        thinking: { type: 'disabled' }
+      }
+    );
+
+    if (!Array.isArray(extracted) || extracted.length === 0) {
+      status.textContent = `No memory-worthy entries found in this text. (${meta.model}: ${meta.finishReason || 'unknown finish'})`;
+      btn.innerHTML = '✦ Extract Entries'; btn.disabled = false;
+      return;
+    }
+
+    proposals = extracted.map((e, i) => ({
+      ...e,
+      id: `prop_${Date.now()}_${i}`,
+      status: 'approved', // default approved, user can skip
+      expanded: true
+    }));
+
+    renderProposals();
+    status.textContent = `${proposals.length} entr${proposals.length === 1 ? 'y' : 'ies'} extracted · ${meta.model}`;
+
+  } catch(e) {
+    toast('Extraction failed: ' + e.message, 'error');
+    status.textContent = '';
+  }
+
+  btn.innerHTML = '✦ Extract'; btn.disabled = false;
+}
+
+// ── SHARED EXTRACTION HELPER ──────────────────────────────
+async function extractWithModel(apiUrl, apiKey, model, text, options = {}) {
+  const spaceNames = spaces.map(s => s.name).join(', ');
+  const systemPrompt = `You are a second brain assistant. Extract structured memory entries from the provided text.
+Available spaces: ${spaceNames}
+Available layers: domain, workflow, behavioural, artifact
+
+Return ONLY valid JSON with this shape: {"entries":[...]}.
+Each object must have: title (string), body (string, full context — never truncate), space (string), layer (string), perishability (evergreen|slow|fast|single_use), tags (string[]), rationale (string — why this is worth saving).
+
+Rules:
+- Only extract genuinely reusable, durable knowledge — not temporary task outputs
+- body must be complete and self-contained — never a summary or placeholder
+- Assign the most specific matching space
+- evergreen = timeless personal traits; slow = stable facts; fast = time-bound priorities; single_use = one-off
+- If the text contains stable user preferences, project facts, workflow decisions, architecture notes, credentials setup steps, or recurring goals, extract them
+- Return {"entries":[]} only if there is truly nothing worth saving`;
+
+  const requestBody = {
+    model,
+    temperature: 0.2,
+    max_tokens: 4000,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: 'Source: ' + importSource + '\n\n' + text }
+    ]
+  };
+
+  if (options.jsonMode) requestBody.response_format = { type: 'json_object' };
+  if (options.thinking) requestBody.thinking = options.thinking;
+
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify(requestBody)
+  });
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const e = await res.json();
+      message = e.error?.message || e.message || message;
+    } catch(_) {}
+    throw new Error(`${model}: ${message}`);
+  }
+  const data = await res.json();
+  const choice = data.choices?.[0] || {};
+  const raw = choice.message?.content || '';
+  const parsed = parseExtractionPayload(raw);
+  return {
+    entries: normalizeExtractedEntries(parsed),
+    raw,
+    meta: {
+      model,
+      finishReason: choice.finish_reason,
+      usage: data.usage || null
+    }
+  };
+}
+
+function parseExtractionPayload(raw) {
+  const cleaned = String(raw || '').replace(/```json|```/g, '').trim();
+  if (!cleaned) return { entries: [] };
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {
+    const startObj = cleaned.indexOf('{');
+    const endObj = cleaned.lastIndexOf('}');
+    if (startObj !== -1 && endObj > startObj) return JSON.parse(cleaned.slice(startObj, endObj + 1));
+    const startArr = cleaned.indexOf('[');
+    const endArr = cleaned.lastIndexOf(']');
+    if (startArr !== -1 && endArr > startArr) return JSON.parse(cleaned.slice(startArr, endArr + 1));
+    throw new Error('Model returned non-JSON content: ' + cleaned.slice(0, 180));
+  }
+}
+
+function normalizeExtractedEntries(parsed) {
+  const list = Array.isArray(parsed)
+    ? parsed
+    : parsed?.entries || parsed?.memories || parsed?.proposals || [];
+
+  if (!Array.isArray(list)) return [];
+
+  const validSpaces = new Set(spaces.map(s => s.name));
+  const validLayers = new Set(LAYERS);
+  const validPerish = new Set(Object.keys(PERISH_LABELS));
+
+  return list
+    .filter(e => e && e.title && e.body)
+    .map(e => ({
+      title: String(e.title).trim(),
+      body: String(e.body).trim(),
+      space: validSpaces.has(e.space) ? e.space : 'core',
+      layer: validLayers.has(e.layer) ? e.layer : 'artifact',
+      perishability: validPerish.has(e.perishability) ? e.perishability : 'slow',
+      tags: Array.isArray(e.tags) ? e.tags.map(t => String(t).trim()).filter(Boolean) : [],
+      rationale: e.rationale ? String(e.rationale).trim() : 'Extracted as reusable context.'
+    }));
+}
+
+// ── COMPARE MODE ──────────────────────────────────────────
+async function compareExtract() {
+  const text = document.getElementById('importText').value.trim();
+  if (!text) { toast('Paste some text first', 'error'); return; }
+  const deepSeekKey = localStorage.getItem('byoc_deepseek_key');
+  const groqKey = localStorage.getItem('byoc_groq_key') || GROQ_KEY_DEFAULT;
+  if (!deepSeekKey || !groqKey) { toast('Add both DeepSeek and Groq keys in Settings → Import to compare', 'error'); return; }
+
+  const btn = document.getElementById('compareBtn');
+  const status = document.getElementById('extractStatus');
+  btn.innerHTML = '<span class="spinner"></span> Comparing…'; btn.disabled = true;
+  document.getElementById('extractBtn').disabled = true;
+  status.textContent = 'Running both models in parallel…';
+
+  try {
+    const [groqRun, dsRun] = await Promise.all([
+      extractWithModel('https://api.groq.com/openai/v1/chat/completions', groqKey, 'llama-3.3-70b-versatile', text),
+      extractWithModel('https://api.deepseek.com/chat/completions', deepSeekKey, DEEPSEEK_MODEL, text, {
+        jsonMode: true,
+        thinking: { type: 'disabled' }
+      })
+    ]);
+
+    renderComparison(groqRun, dsRun);
+    status.textContent = `Groq: ${groqRun.entries.length} entries · DeepSeek V4 Pro: ${dsRun.entries.length} entries`;
+  } catch(e) {
+    toast('Compare failed: ' + e.message, 'error');
+    status.textContent = '';
+  }
+  btn.innerHTML = '⇄ Compare LLMs'; btn.disabled = false;
+  document.getElementById('extractBtn').disabled = false;
+}
+
+function renderComparison(groqRun, dsRun) {
+  const groqEntries = groqRun.entries || [];
+  const dsEntries = dsRun.entries || [];
+  const perishColor = { evergreen: '#4caf50', slow: '#2196f3', fast: '#ff9800', single_use: '#9e9e9e' };
+  const renderMeta = (run) => {
+    const finish = run.meta?.finishReason || 'unknown';
+    const tokens = run.meta?.usage?.total_tokens ? ` · ${run.meta.usage.total_tokens} tokens` : '';
+    const rawNote = !run.raw ? ' · empty content' : '';
+    return `<div style="font-size:.72rem;color:var(--text3);margin:-6px 0 10px;">finish: ${esc(finish)}${tokens}${rawNote}</div>`;
+  };
+  const renderCol = (entries, colId) => {
+    if (!entries.length) return `<p style="color:var(--text3);font-size:.85rem;">No entries extracted.</p>`;
+    return entries.map((e, i) => `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+          <strong style="font-size:.88rem;color:var(--text);line-height:1.4;">${esc(e.title)}</strong>
+          <span style="font-size:.72rem;background:${perishColor[e.perishability]||'#888'};color:#fff;border-radius:4px;padding:2px 7px;white-space:nowrap;flex-shrink:0;">${esc(e.perishability)}</span>
+        </div>
+        <div style="font-size:.78rem;color:var(--text3);margin-bottom:6px;">[${esc(e.space)}] · ${esc(e.layer)}</div>
+        <div style="font-size:.82rem;color:var(--text2);line-height:1.5;margin-bottom:8px;">${esc(e.body)}</div>
+        <div style="font-size:.75rem;color:var(--text3);font-style:italic;margin-bottom:10px;">${esc(e.rationale)}</div>
+        <button class="btn btn-accent btn-sm" onclick="saveCompareEntry('${colId}',${i}, event)">+ Save to Brain</button>
+      </div>`).join('');
+  };
+
+  window._compareGroq = groqEntries;
+  window._compareDS   = dsEntries;
+
+  document.getElementById('proposalsContainer').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div>
+        <div style="font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
+          🟣 Groq · Llama 3.3 70B <span style="font-weight:400;color:var(--text3);">(${groqEntries.length} entries)</span>
+        </div>
+        ${renderMeta(groqRun)}
+        ${renderCol(groqEntries, 'groq')}
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
+          🔵 DeepSeek V4 Pro <span style="font-weight:400;color:var(--text3);">(${dsEntries.length} entries)</span>
+        </div>
+        ${renderMeta(dsRun)}
+        ${renderCol(dsEntries, 'ds')}
+      </div>
+    </div>`;
+}
+
+async function saveCompareEntry(col, idx, evt) {
+  const entry = col === 'groq' ? window._compareGroq[idx] : window._compareDS[idx];
+  if (!supabase || !currentUser) { toast('Not connected', 'error'); return; }
+  const btn = evt?.currentTarget;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const { data, error } = await supabase.from('entries').insert({
+      title: entry.title, body: entry.body,
+      space: entry.space, layer: entry.layer, perishability: entry.perishability,
+      tags: entry.tags || [], user_id: currentUser.id,
+      created_by_tool: col === 'groq' ? 'import-compare-groq' : 'import-compare-deepseek',
+      status: 'active'
+    }).select().single();
+    if (error) throw error;
+    if (data?.id) generateEmbedding(data.id, `${entry.title} ${entry.body} ${(entry.tags||[]).join(' ')}`);
+    toast(`Saved: ${entry.title}`, 'success');
+    if (btn) btn.textContent = '✓ Saved';
+  } catch(e) {
+    if (btn) { btn.textContent = '+ Save to Brain'; btn.disabled = false; }
+    toast('Save failed: ' + e.message, 'error');
+  }
+}
+
+function renderProposals() {
+  const container = document.getElementById('proposalsContainer');
+  if (!proposals.length) { container.innerHTML = ''; return; }
+
+  const approved = proposals.filter(p => p.status === 'approved').length;
+  const html = [
+    `<div class="proposals-header"><strong>${proposals.length}</strong> proposals extracted — <strong>${approved}</strong> approved</div>`,
+    ...proposals.map((p, i) => proposalCard(p, i))
+  ].join('');
+
+  container.innerHTML = html;
+
+  // Show/hide batch bar
+  const bar = document.getElementById('batchBar');
+  bar.style.display = approved > 0 ? 'flex' : 'none';
+  document.getElementById('approvedCount').textContent =
+    `${approved} of ${proposals.length} entr${proposals.length === 1 ? 'y' : 'ies'} approved`;
+}
+
+function proposalCard(p, i) {
+  const statusClass = p.status === 'approved' ? 'approved' : p.status === 'skipped' ? 'skipped' : '';
+  const statusIcon = p.status === 'approved' ? '✓' : p.status === 'skipped' ? '✕' : '○';
+  const statusColor = p.status === 'approved' ? 'var(--success)' : p.status === 'skipped' ? 'var(--danger)' : 'var(--text3)';
+
+  return `
+<div class="proposal-card ${statusClass}" id="pcard_${p.id}">
+  <div class="proposal-header" onclick="toggleProposal('${p.id}')">
+    <span class="proposal-num">#${i+1}</span>
+    <span class="proposal-title-text">${esc(p.title)}</span>
+    <div class="proposal-chips">
+      <span class="chip chip-space">${p.space}</span>
+      <span class="chip chip-layer">${p.layer}</span>
+      <span class="chip chip-perish ${p.perishability}">${PERISH_LABELS[p.perishability]||p.perishability}</span>
+    </div>
+    <span style="font-size:.9rem;font-weight:600;color:${statusColor};min-width:18px;">${statusIcon}</span>
+  </div>
+  ${p.expanded ? `
+  <div class="proposal-body">
+    <div class="proposal-field"><strong>Body:</strong></div>
+    <textarea class="proposal-edit" id="pbody_${p.id}" rows="4" onchange="updateProposalBody('${p.id}', this.value)">${esc(p.body)}</textarea>
+    <div class="proposal-field"><strong>Tags:</strong> ${(p.tags||[]).join(', ') || '—'}</div>
+    <div class="proposal-field"><strong>Why:</strong> ${esc(p.rationale||'—')}</div>
+  </div>
+  <div class="proposal-actions">
+    ${p.status !== 'approved'
+      ? `<button class="btn btn-sm btn-accent" onclick="setProposalStatus('${p.id}','approved')">✓ Approve</button>`
+      : `<button class="btn btn-sm" style="color:var(--success);border-color:var(--success);" onclick="setProposalStatus('${p.id}','approved')">✓ Approved</button>`
+    }
+    ${p.status !== 'skipped'
+      ? `<button class="btn btn-sm btn-danger" onclick="setProposalStatus('${p.id}','skipped')">✕ Skip</button>`
+      : `<button class="btn btn-sm" onclick="setProposalStatus('${p.id}','pending')">↩ Undo</button>`
+    }
+    <span style="font-size:.75rem;color:var(--text3);margin-left:auto;">${p.space} · ${p.layer} · ${p.perishability}</span>
+  </div>` : ''}
+</div>`;
+}
+
+function toggleProposal(id) {
+  const p = proposals.find(x => x.id === id);
+  if (p) { p.expanded = !p.expanded; renderProposals(); }
+}
+
+function setProposalStatus(id, status) {
+  const p = proposals.find(x => x.id === id);
+  if (p) { p.status = status; renderProposals(); }
+}
+
+function updateProposalBody(id, val) {
+  const p = proposals.find(x => x.id === id);
+  if (p) p.body = val;
+}
+
+function skipAll() {
+  proposals.forEach(p => p.status = 'skipped');
+  renderProposals();
+}
+
+async function saveApproved() {
+  const toSave = proposals.filter(p => p.status === 'approved');
+  if (!toSave.length) { toast('No approved entries to save', 'error'); return; }
+  if (!supabase) { toast('Not connected', 'error'); return; }
+
+  const btn = document.getElementById('saveApprovedBtn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+
+  let saved = 0;
+  for (const p of toSave) {
+    try {
+      const { data, error } = await supabase.from('entries').insert({
+        title: p.title, body: p.body,
+        space: p.space, layer: p.layer,
+        perishability: p.perishability,
+        tags: p.tags || [],
+        user_id: currentUser.id,
+        created_by_tool: importSource,
+        status: 'active'
+      }).select().single();
+      if (error) throw error;
+      // Fire and forget embedding
+      generateEmbedding(data.id, `${p.title} ${p.body} ${(p.tags||[]).join(' ')}`);
+      p.status = 'saved';
+      saved++;
+    } catch(e) {
+      toast(`Failed to save "${p.title}": ${e.message}`, 'error');
+    }
+  }
+
+  btn.innerHTML = 'Save approved entries'; btn.disabled = false;
+
+  if (saved) {
+    toast(`${saved} entr${saved===1?'y':'ies'} saved to second brain`, 'success');
+    await Promise.all([loadEntries(), loadAudit(), loadInbox()]);
+    renderProposals();
+    document.getElementById('batchBar').style.display = 'none';
+  }
+}
+
+
+
+// ── INBOX ─────────────────────────────────────
+
+let inboxItems = [];
+let inboxFilter = 'all';
+
+function parseInboxPayload(item) {
+  if (!item?.payload) return {};
+  return typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
+}
+
+function truncateText(text, max = 160) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  return clean.length > max ? clean.slice(0, max - 1).trim() + '…' : clean;
+}
+
+function coherenceLabel(value) {
+  return String(value || 'review').replace(/_/g, ' ');
+}
+
+async function loadInbox() {
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from('review_inbox')
+    .select('*')
+    .eq('status', 'pending')
+    .order('deadline', { ascending: true });
+  if (error) return;
+  inboxItems = data || [];
+  updateInboxBadge();
+  if (document.getElementById('tab-inbox').classList.contains('active')) renderInbox();
+}
+
+function updateInboxBadge() {
+  const count = inboxItems.length;
+  const badge = document.getElementById('inboxBadge');
+  const countEl = document.getElementById('inboxCount');
+  badge.style.display = count > 0 ? '' : 'none';
+  badge.textContent = count;
+  if (countEl) countEl.textContent = count;
+}
+
+function setInboxFilter(f) {
+  inboxFilter = f;
+  document.querySelectorAll('#inboxFilters .filter-chip').forEach((b, i) => {
+    const filters = ['all','coherence_conflict','decay_review','memory_proposal'];
+    b.classList.toggle('active', filters[i] === f);
+  });
+  renderInbox();
+}
+
+function renderInbox() {
+  const filtered = inboxFilter === 'all'
+    ? inboxItems
+    : inboxItems.filter(i => i.type === inboxFilter);
+
+  const container = document.getElementById('inboxContainer');
+  const empty = document.getElementById('inboxEmpty');
+
+  if (!filtered.length) {
+    container.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  container.innerHTML = filtered.map(inboxCard).join('');
+}
+
+function inboxCard(item) {
+  const icon = item.type === 'coherence_conflict' ? '🔴'
+             : item.type === 'decay_review' ? '🟡' : '🔵';
+  const typeClass = item.type === 'coherence_conflict' ? 'conflict'
+                  : item.type === 'decay_review' ? 'decay' : 'proposal';
+
+  const deadline = new Date(item.deadline);
+  const daysLeft = Math.ceil((deadline - Date.now()) / 86400000);
+  const deadlineStr = deadline.toLocaleDateString('en-SG', { day:'numeric', month:'short' });
+  const urgent = daysLeft <= 3;
+
+  let actionsHtml = '';
+  let previewHtml = '';
+
+  if (item.payload) {
+    const p = parseInboxPayload(item);
+    if (item.type === 'coherence_conflict' && p.entry_a && p.entry_b) {
+      const isV2 = p.version === 2;
+      const similarity = p.similarity != null ? Math.round(p.similarity * 100) + '% match' : '';
+      const merge = p.merge_candidate || {};
+      const recommendation = coherenceLabel(p.recommendation || 'review');
+      const classification = coherenceLabel(p.classification || 'possible overlap');
+      const confidence = coherenceLabel(p.confidence || 'unknown confidence');
+      previewHtml = `
+        ${isV2 ? `
+          <div class="coherence-meta">
+            <span class="coherence-pill">${esc(classification)}</span>
+            <span class="coherence-pill">${esc(confidence)}</span>
+            ${similarity ? `<span class="coherence-pill">${esc(similarity)}</span>` : ''}
+            <span class="coherence-pill">${esc(recommendation)}</span>
+          </div>
+          <p class="inbox-desc">${esc(p.rationale || '')}</p>
+        ` : ''}
+        <div class="inbox-entry-preview"><strong>A · ${esc(p.entry_a.title)}</strong>${esc(truncateText(p.entry_a.body, 180))}</div>
+        <div class="inbox-entry-preview"><strong>B · ${esc(p.entry_b.title)}</strong>${esc(truncateText(p.entry_b.body, 180))}</div>
+        ${isV2 && merge.title ? `
+          <div class="merge-proposal">
+            <div class="merge-proposal-title">Proposed merged memory</div>
+            <input class="merge-field" id="mergeTitle_${item.id}" value="${esc(merge.title || '')}" />
+            <textarea class="merge-field body" id="mergeBody_${item.id}">${esc(merge.body || '')}</textarea>
+            <input class="merge-field" id="mergeTags_${item.id}" value="${esc((merge.tags || []).join(', '))}" placeholder="tags" />
+          </div>
+        ` : ''}`;
+      actionsHtml = isV2 ? `
+        ${merge.title ? `<button class="inbox-btn primary" onclick="applyMergeProposal('${item.id}')">Create merged memory</button>` : ''}
+        <button class="inbox-btn" onclick="resolveInbox('${item.id}','supersede_a')">Keep A</button>
+        <button class="inbox-btn" onclick="resolveInbox('${item.id}','supersede_b')">Keep B</button>
+        <button class="inbox-btn success" onclick="resolveInbox('${item.id}','coexist')">Keep both distinct</button>
+        <button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`
+      : `
+        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_a')">Keep A, archive B</button>
+        <button class="inbox-btn primary" onclick="resolveInbox('${item.id}','supersede_b')">Keep B, archive A</button>
+        <button class="inbox-btn success" onclick="resolveInbox('${item.id}','coexist')">Both valid</button>
+        <button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`;
+    } else if (item.type === 'decay_review' && p.title) {
+      previewHtml = `<div class="inbox-entry-preview"><strong>${esc(p.title)}</strong>${esc(p.body?.slice(0,160))}…</div>`;
+      actionsHtml = `
+        <button class="inbox-btn success" onclick="resolveInbox('${item.id}','still_relevant')">Still relevant</button>
+        <button class="inbox-btn" onclick="openEditEntry('${item.entry_id_a}');resolveInbox('${item.id}','update')">Update entry</button>
+        <button class="inbox-btn danger" onclick="archiveDecayEntry('${item.id}','${item.entry_id_a}')">Archive entry</button>`;
+    }
+  }
+  if (!actionsHtml) {
+    actionsHtml = `<button class="inbox-btn danger" onclick="resolveInbox('${item.id}','dismiss')">Dismiss</button>`;
+  }
+
+  return `
+<div class="inbox-card ${typeClass}" id="icard_${item.id}">
+  <div class="inbox-card-header" onclick="toggleInboxCard('${item.id}')">
+    <span class="inbox-type-icon">${icon}</span>
+    <span class="inbox-card-title">${esc(item.title)}</span>
+    <span class="chip chip-space" style="font-size:.6rem">${item.space||''}</span>
+    <span class="inbox-deadline ${urgent?'urgent':''}">${daysLeft}d · ${deadlineStr}</span>
+  </div>
+  <div class="inbox-card-body" id="ibody_${item.id}" style="display:none">
+    <p class="inbox-desc">${esc(item.description)}</p>
+    ${previewHtml}
+    <div class="inbox-actions">${actionsHtml}</div>
+  </div>
+</div>`;
+}
+
+function toggleInboxCard(id) {
+  const body = document.getElementById('ibody_' + id);
+  if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+}
+
+async function resolveInbox(id, resolution) {
+  const item = inboxItems.find(i => i.id === id);
+  const resolvedAt = new Date().toISOString();
+
+  if (item?.type === 'coherence_conflict') {
+    const archiveId = resolution === 'supersede_a'
+      ? item.entry_id_b
+      : resolution === 'supersede_b'
+        ? item.entry_id_a
+        : null;
+    if (archiveId) {
+      const { error: archiveError } = await supabase
+        .from('entries')
+        .update({ status: 'archived' })
+        .eq('id', archiveId);
+      if (archiveError) { toast('Failed to archive superseded entry', 'error'); return; }
+    }
+  }
+
+  if (item?.type === 'decay_review' && resolution === 'still_relevant' && item.entry_id_a) {
+    const { error: reviewError } = await supabase
+      .from('entries')
+      .update({ last_reviewed_at: resolvedAt })
+      .eq('id', item.entry_id_a);
+    if (reviewError) { toast('Failed to update review timestamp', 'error'); return; }
+  }
+
+  const nextStatus = resolution === 'dismiss' ? 'dismissed' : 'resolved';
+  const { error } = await supabase
+    .from('review_inbox')
+    .update({ status: nextStatus, resolution, resolved_at: resolvedAt })
+    .eq('id', id);
+  if (error) { toast('Failed to resolve', 'error'); return; }
+  const message = resolution === 'supersede_a' ? 'Resolved — archived B'
+    : resolution === 'supersede_b' ? 'Resolved — archived A'
+    : resolution === 'still_relevant' ? 'Marked still relevant'
+    : resolution === 'dismiss' ? 'Dismissed'
+    : 'Resolved';
+  toast(message);
+  inboxItems = inboxItems.filter(i => i.id !== id);
+  updateInboxBadge();
+  renderInbox();
+  await loadEntries();
+}
+
+async function applyMergeProposal(id) {
+  const item = inboxItems.find(i => i.id === id);
+  if (!item) return;
+  const p = parseInboxPayload(item);
+  const merge = p.merge_candidate || {};
+  const title = document.getElementById('mergeTitle_' + id)?.value.trim() || merge.title;
+  const body = document.getElementById('mergeBody_' + id)?.value.trim() || merge.body;
+  const tags = (document.getElementById('mergeTags_' + id)?.value || (merge.tags || []).join(','))
+    .split(',').map(t => t.trim()).filter(Boolean);
+
+  if (!title || !body) { toast('Merged title and body are required', 'error'); return; }
+
+  const payload = {
+    title,
+    body,
+    space: merge.space || item.space || p.entry_a?.space,
+    layer: merge.layer || item.layer || p.entry_a?.layer,
+    perishability: merge.perishability || p.entry_a?.perishability || 'slow',
+    tags,
+    created_by_tool: 'coherence-v2-merge',
+    user_id: currentUser.id
+  };
+
+  const { data, error } = await supabase.from('entries').insert(payload).select().single();
+  if (error) { toast('Merge failed: ' + error.message, 'error'); return; }
+
+  const originalIds = [item.entry_id_a, item.entry_id_b].filter(Boolean);
+  if (originalIds.length) {
+    const { error: archiveError } = await supabase
+      .from('entries')
+      .update({ status: 'archived' })
+      .in('id', originalIds);
+    if (archiveError) { toast('Merged, but failed to archive originals', 'error'); return; }
+  }
+
+  await resolveInbox(id, 'merge');
+  if (data?.id) generateEmbedding(data.id, `${payload.title} ${payload.body} ${payload.tags.join(' ')}`);
+  toast('Merged memory created');
+}
+
+async function archiveDecayEntry(inboxId, entryId) {
+  await supabase.from('entries').update({ status: 'archived' }).eq('id', entryId);
+  await resolveInbox(inboxId, 'archived');
+  await loadEntries();
+}
+
+async function runScanNow(sendEmail = false) {
+  const status = document.getElementById('scanStatus') || document.getElementById('emailSettingStatus');
+  status.textContent = sendEmail ? 'Running scan and sending weekly digest…' : 'Running scan…';
+  try {
+    const sbUrl = currentSupabaseUrl;
+    const sbKey = currentSupabaseKey;
+    const res = await fetch(`${sbUrl}/functions/v1/weekly-scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': sbKey,
+        'Authorization': `Bearer ${userJwt}`
+      },
+      body: JSON.stringify({ send_email: sendEmail })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    const emailBit = data.email_sent ? ' · weekly digest sent' : '';
+    const reflectionBit = data.reflection_items != null ? `, ${data.reflection_items} reflection signals` : '';
+    status.textContent = `Done — ${data.decay_flagged||0} decay, ${data.coherence_flagged||0} conflicts, ${data.total_pending||0} pending${reflectionBit}${emailBit}`;
+    if (sendEmail && !data.email_sent) {
+      const reason = data.email_error
+        ? 'Email send failed: ' + data.email_error
+        : data.email_skipped_reason === 'no_reflection_or_inbox_activity'
+          ? 'Weekly digest not sent because there is no new reflection or inbox activity'
+          : data.email_skipped_reason === 'missing_resend_api_key'
+            ? 'Digest not sent; Resend API key is not set in Supabase secrets'
+            : 'Digest not sent; check notification settings';
+      status.textContent += ` · ${reason}`;
+      toast(reason, 'error');
+    }
+    await loadInbox();
+  } catch(e) {
+    status.textContent = 'Scan failed: ' + e.message;
+  }
+}
+
+async function sendDigestNow() {
+  await runScanNow(true);
+}
+
+// ── EMAIL SETTINGS ────────────────────────────
+
+function saveImportKeys() {
+  const deepSeekKey = document.getElementById('settingDeepSeekKey').value.trim();
+  const groqKey = document.getElementById('settingGroqKey').value.trim();
+  const status = document.getElementById('importKeyStatus');
+  if (deepSeekKey) localStorage.setItem('byoc_deepseek_key', deepSeekKey);
+  if (groqKey) localStorage.setItem('byoc_groq_key', groqKey);
+  if (!deepSeekKey && !groqKey) { status.textContent = '⚠ Enter at least one key'; return; }
+  status.textContent = deepSeekKey ? '✓ Saved · Extract uses DeepSeek' : '✓ Saved Groq for Compare only';
+  setTimeout(() => status.textContent = '', 2500);
+}
+
+async function saveEmailSettings() {
+  if (!supabase) return;
+  const payload = {
+    user_id:             currentUser.id,
+    email:               document.getElementById('settingEmail').value.trim(),
+    emailjs_service_id:  document.getElementById('settingEjsService').value.trim(),
+    emailjs_template_id: document.getElementById('settingEjsTemplate').value.trim(),
+    emailjs_public_key:  document.getElementById('settingEjsKey').value.trim(),
+    updated_at:          new Date().toISOString()
+  };
+  const { error } = await supabase.from('user_settings').upsert(payload);
+  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  // Cache in localStorage for sendTestEmail
+  localStorage.setItem('byoc_ejs_service', payload.emailjs_service_id);
+  localStorage.setItem('byoc_ejs_template', payload.emailjs_template_id);
+  localStorage.setItem('byoc_ejs_key', payload.emailjs_public_key);
+  localStorage.setItem('byoc_email', payload.email);
+  toast('Email settings saved', 'success');
+  document.getElementById('emailSettingStatus').textContent = '✓ Saved';
+}
+
+async function loadEmailSettings() {
+  if (!supabase || !currentUser) return;
+  const { data } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .single();
+  // Pre-fill baked-in defaults so fields are never blank
+  document.getElementById('settingEjsService').value  = EJS_SERVICE;
+  document.getElementById('settingEjsTemplate').value = EJS_TEMPLATE;
+  document.getElementById('settingEjsKey').value      = EJS_KEY;
+  if (document.getElementById('settingEmail')) document.getElementById('settingEmail').value = EJS_EMAIL;
+  if (!data) return;
+  if (data.email)               document.getElementById('settingEmail').value = data.email;
+  if (data.emailjs_service_id)  document.getElementById('settingEjsService').value = data.emailjs_service_id;
+  if (data.emailjs_template_id) document.getElementById('settingEjsTemplate').value = data.emailjs_template_id;
+  if (data.emailjs_public_key)  document.getElementById('settingEjsKey').value = data.emailjs_public_key;
+}
+
+async function sendTestEmail() {
+  const serviceId  = document.getElementById('settingEjsService').value.trim();
+  const templateId = document.getElementById('settingEjsTemplate').value.trim();
+  const publicKey  = document.getElementById('settingEjsKey').value.trim();
+  const toEmail = (document.getElementById('settingEmail')?.value.trim()) || EJS_EMAIL;
+
+  if (!serviceId || !templateId || !publicKey) {
+    toast('Fill in all EmailJS fields in Settings first', 'error'); return;
+  }
+
+  const status = document.getElementById('scanStatus') || document.getElementById('emailSettingStatus');
+  status.textContent = 'Sending test email…';
+
+  try {
+    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id:  serviceId,
+        template_id: templateId,
+        user_id:     publicKey,
+        template_params: {
+          to_email:      toEmail,
+          pending_count: inboxItems.length,
+          new_decay:     0,
+          new_conflicts: 0,
+          expired_count: 0,
+          inbox_summary: inboxItems.length
+            ? inboxItems.slice(0,5).map(i => `• ${i.title}`).join('\n')
+            : 'No pending items — inbox is clear.',
+          app_url: `${window.location.origin}${window.location.pathname}?tab=inbox`
+        }
+      })
+    });
+    if (res.ok) {
+      toast('Test email sent to ' + toEmail, 'success');
+      status.textContent = 'Test email sent ✓';
+    } else {
+      const txt = await res.text();
+      throw new Error(txt || res.statusText);
+    }
+  } catch(e) {
+    toast('Email failed: ' + e.message, 'error');
+    status.textContent = '';
+  }
+}
+
+</script>
+</body>
+</html>
