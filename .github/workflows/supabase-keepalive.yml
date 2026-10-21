@@ -11,13 +11,15 @@ jobs:
       - name: Real DB read via Supabase REST
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # Prefer the service role key (bypasses RLS so a real row comes back).
+          # Falls back to the anon key, which RLS blocks (returns []).
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_ANON_KEY }}
         run: |
           for i in 1 2 3 4 5; do
             code=$(curl -sS -m 90 -o body.json -w '%{http_code}' \
               "$SUPABASE_URL/rest/v1/entries?select=id&limit=1" \
-              -H "apikey: $SUPABASE_ANON_KEY" \
-              -H "Authorization: Bearer $SUPABASE_ANON_KEY" || echo 000)
+              -H "apikey: $SUPABASE_KEY" \
+              -H "Authorization: Bearer $SUPABASE_KEY" || echo 000)
             bytes=$(wc -c < body.json 2>/dev/null || echo 0)
             echo "Attempt $i: HTTP $code, body $bytes bytes"
             if [ "$code" = "200" ] && grep -q '"id"' body.json; then
