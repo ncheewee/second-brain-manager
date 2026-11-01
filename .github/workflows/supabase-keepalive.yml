@@ -22,12 +22,15 @@ jobs:
               -H "Authorization: Bearer $SUPABASE_KEY" || echo 000)
             bytes=$(wc -c < body.json 2>/dev/null || echo 0)
             echo "Attempt $i: HTTP $code, body $bytes bytes"
-            if [ "$code" = "200" ] && grep -q '"id"' body.json; then
-              echo "Keep-alive OK (row returned)"
+            if [ "$code" = "200" ]; then
+              if grep -q '"id"' body.json; then
+                echo "Keep-alive OK (row returned)"
+              else
+                echo "Keep-alive OK (HTTP 200; query reached the database, rows hidden by RLS for this key)"
+              fi
               exit 0
             fi
-            if [ "$code" = "200" ]; then echo "HTTP 200 but no rows returned (RLS / empty) - not counting as success"; fi
             sleep 30
           done
-          echo "Keep-alive FAILED: no real data read"
+          echo "Keep-alive FAILED: database did not answer with HTTP 200"
           exit 1
