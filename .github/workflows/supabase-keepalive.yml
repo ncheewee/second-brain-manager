@@ -1,8 +1,9 @@
 name: Supabase keep-alive
+# Retired 2026-11-17: replaced by the Cloudflare Worker "second-brain-keepalive",
+# which calls public.keepalive() (a real DB write) every 2 days. Anon reads that
+# RLS returns empty for did NOT count as activity, so this ping could not prevent pausing.
+# Manual-only now; the check below fails unless a row is actually returned.
 on:
-  schedule:
-    # Every 2 days at 01:17 UTC
-    - cron: '17 1 */2 * *'
   workflow_dispatch:
 jobs:
   ping:
@@ -25,10 +26,10 @@ jobs:
             if [ "$code" = "200" ]; then
               if grep -q '"id"' body.json; then
                 echo "Keep-alive OK (row returned)"
-              else
-                echo "Keep-alive OK (HTTP 200; query reached the database, rows hidden by RLS for this key)"
+                exit 0
               fi
-              exit 0
+              echo "Empty result (RLS) - does not count as activity"
+              exit 1
             fi
             sleep 30
           done
