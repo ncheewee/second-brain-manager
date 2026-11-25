@@ -105,7 +105,7 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 #look-reset{background:none;border:none;color:#4a4a70;font-size:10px;cursor:pointer;font-family:inherit;padding:0;}
 #look-reset:hover{color:#8a82c8;}
 .look-row{display:flex;align-items:center;gap:8px;}
-.look-row label{font-size:10px;color:#5a5a78;width:40px;letter-spacing:.04em;}
+.look-row label{font-size:10px;color:#5a5a78;width:52px;letter-spacing:.04em;}
 .look-row input[type=range]{-webkit-appearance:none;appearance:none;width:108px;height:3px;background:#1c1c32;border-radius:2px;outline:none;}
 .look-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#7a74b8;border:none;cursor:pointer;}
 .look-row input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#7a74b8;border:none;cursor:pointer;}
@@ -173,7 +173,7 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
   #bottom{padding:8px 16px max(10px,env(safe-area-inset-bottom));}
   #resumeBtn{font-size:13px;padding:7px 18px;}
   #look{left:10px;padding:10px 12px 12px;gap:8px;}
-  .look-row label{font-size:12px;width:46px;color:#707090;}
+  .look-row label{font-size:12px;width:58px;color:#707090;}
   .look-row input[type=range]{width:120px;height:4px;}
   .look-row input[type=range]::-webkit-slider-thumb{width:16px;height:16px;}
 
@@ -258,7 +258,8 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
   <div id="look-head"><span>Look</span><button type="button" id="look-reset">Reset</button></div>
   <div class="look-row"><label for="look-glow">Glow</label><input id="look-glow" type="range" min="10" max="100" step="1" /></div>
   <div class="look-row"><label for="look-size">Size</label><input id="look-size" type="range" min="20" max="100" step="1" /></div>
-  <div class="look-row"><label for="look-haze">Haze</label><input id="look-haze" type="range" min="0" max="100" step="1" /></div>
+  <div class="look-row"><label for="look-haze" title="Colored wash of each space — not the dots">Aura</label><input id="look-haze" type="range" min="0" max="100" step="1" /></div>
+  <div class="look-row"><label for="look-twinkle">Twinkle</label><input id="look-twinkle" type="range" min="0" max="100" step="1" /></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -287,13 +288,13 @@ const RINGS=[
 const PALPHA={evergreen:.36,slow:.26,fast:.20,single_use:.15};
 const PSIZE ={evergreen:.11,slow:.085,fast:.07,single_use:.055};
 const TYPE_GLOW={evergreen:1,slow:.78,fast:.62,single_use:.5};
-const LOOK_DEFAULT={glow:70,size:52,haze:38};
+const LOOK_DEFAULT={glow:70,size:52,haze:38,twinkle:62};
 const LOOK_KEY='sb_3d_look';
-let look={glow:LOOK_DEFAULT.glow,size:LOOK_DEFAULT.size,haze:LOOK_DEFAULT.haze};
+let look={glow:LOOK_DEFAULT.glow,size:LOOK_DEFAULT.size,haze:LOOK_DEFAULT.haze,twinkle:LOOK_DEFAULT.twinkle};
 try{
   const saved=JSON.parse(localStorage.getItem(LOOK_KEY)||'');
   if(saved&&typeof saved==='object'){
-    for(const k of ['glow','size','haze']) if(Number.isFinite(saved[k])) look[k]=saved[k];
+    for(const k of ['glow','size','haze','twinkle']) if(Number.isFinite(saved[k])) look[k]=saved[k];
   }
 }catch(_){}
 function clampLook(n,lo,hi){return Math.max(lo,Math.min(hi,n));}
@@ -446,7 +447,9 @@ function rebuildNodes(){
       const gMat=new THREE.SpriteMaterial({map:nodeTex[name],transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:alpha});
       const gSp=new THREE.Sprite(gMat);gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);gSp.scale.setScalar(nodeScale(e));scene.add(gSp);
       const hit=new THREE.Mesh(new THREE.SphereGeometry(Math.max(nsz*.7,.10)*BR,5,3),new THREE.MeshBasicMaterial({visible:false}));
-      hit.position.copy(gSp.position);hit.userData={entry:e,mat:gMat,alpha,sprite:gSp};scene.add(hit);nodeMeshes.push(hit);
+      const idx=gIdx-1;
+      const baseSpd=e.type==='evergreen'?0.55:e.type==='fast'?1.55:e.type==='single_use'?2.15:0.92;
+      hit.position.copy(gSp.position);hit.userData={entry:e,mat:gMat,alpha,sprite:gSp,ph:uh(idx*17)*Math.PI*2,tw:uh(idx*41),spd:baseSpd*(.72+uh(idx*23)*.55)};scene.add(hit);nodeMeshes.push(hit);
     });
   }
 }
@@ -593,9 +596,11 @@ function syncLookInputs(){
   const g=document.getElementById('look-glow');
   const s=document.getElementById('look-size');
   const h=document.getElementById('look-haze');
+  const tw=document.getElementById('look-twinkle');
   if(g) g.value=look.glow;
   if(s) s.value=look.size;
   if(h) h.value=look.haze;
+  if(tw) tw.value=look.twinkle;
 }
 function bindLook(){
   const save=()=>{try{localStorage.setItem(LOOK_KEY,JSON.stringify(look));}catch(_){ }};
@@ -607,8 +612,9 @@ function bindLook(){
   onInput('glow',document.getElementById('look-glow'));
   onInput('size',document.getElementById('look-size'));
   onInput('haze',document.getElementById('look-haze'));
+  onInput('twinkle',document.getElementById('look-twinkle'));
   document.getElementById('look-reset').addEventListener('click',()=>{
-    look={glow:LOOK_DEFAULT.glow,size:LOOK_DEFAULT.size,haze:LOOK_DEFAULT.haze};
+    look={glow:LOOK_DEFAULT.glow,size:LOOK_DEFAULT.size,haze:LOOK_DEFAULT.haze,twinkle:LOOK_DEFAULT.twinkle};
     syncLookInputs();applyLook();save();
   });
   document.getElementById('look').addEventListener('mousedown',e=>e.stopPropagation());
@@ -820,8 +826,19 @@ function animate(){
   camera.position.z=Math.cos(rotY)*Math.cos(rotX)*camZ;
   camera.lookAt(0,0,0);
   const haze=clampLook(look.haze,0,100)/100;
+  const twinkleAmt=clampLook(look.twinkle,0,100)/100;
   for(const name of LOBE_NAMES){const sp=lobeGlow[name],b=Math.sin(t*sp._spd+sp._ph),vis=activeFilter==='all'||name===activeFilter;sp.scale.setScalar(sp._base.sz*(1+b*.07));sp.material.opacity=Math.min(.82,sp._base.op*(1+b*.22)*haze*(vis?1:.06));}
-  if(!hoveredSpace){for(const m of nodeMeshes){const{entry,mat,alpha}=m.userData,vis=activeFilter==='all'||entry.space===activeFilter;if(!vis){mat.opacity=alpha*.06;continue;}let p=1;if(entry.type==='single_use')p=.70+Math.sin(t*2.5+m.id*.9)*.22;else if(entry.type==='fast')p=.85+Math.sin(t*1.4+m.id*.5)*.12;mat.opacity=Math.min(1,alpha*p);}}
+  for(const m of nodeMeshes){
+    const {entry,mat,alpha,sprite,ph=0,spd=1,tw=0}=m.userData;
+    const vis=activeFilter==='all'||entry.space===activeFilter;
+    if(!vis){mat.opacity=alpha*.06;continue;}
+    const dim=(hoveredSpace&&hoveredSpace!==entry.space)?0.08:1;
+    const breath=0.84+Math.sin(t*spd+ph)*(0.10+twinkleAmt*0.16);
+    const spark=Math.pow(Math.max(0,Math.sin(t*(spd*1.7+tw*1.3)+ph*2.2)), 11+tw*6);
+    const sparkGain=(entry.type==='single_use'?0.55:entry.type==='fast'?0.36:0.20)*twinkleAmt;
+    mat.opacity=Math.min(1, alpha*Math.max(0.38, breath+spark*sparkGain)*dim);
+    if(sprite) sprite.scale.setScalar(nodeScale(entry)*(1+Math.sin(t*spd*0.72+ph)*0.055*twinkleAmt+spark*0.10*twinkleAmt));
+  }
   const toCamera=camera.position.clone().normalize();
   for(const name of LOBE_NAMES){const c=LOBES[name].centroid,dot=toCamera.x*c[0]+toCamera.y*c[1]+toCamera.z*c[2],show=dot>0.28&&(activeFilter==='all'||activeFilter===name),el=lobeLbls[name];if(show){const wp=new THREE.Vector3(c[0],c[1],c[2]).multiplyScalar(BR*1.06),sc=project(wp);el.style.left=sc.x+'px';el.style.top=sc.y+'px';el.classList.add('on');}else el.classList.remove('on');}
   updateCallouts();
