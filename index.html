@@ -15,6 +15,10 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 #topbar-right{display:flex;align-items:center;gap:10px;pointer-events:all;}
 #topbar a{color:#2e2e48;text-decoration:none;font-size:11px;transition:color .2s;}
 #topbar a:hover{color:#888;}
+#live-status{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#2e2e48;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#live-status.live{color:#2f8a6a;}
+#live-status.snap{color:#8a7040;}
+#live-status.err{color:#a05050;}
 
 /* ── filter bar (top, below topbar) ── */
 #filterbar{position:fixed;left:0;right:0;display:flex;gap:6px;align-items:center;z-index:29;pointer-events:all;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:6px 14px;background:linear-gradient(to bottom,rgba(6,6,14,.92) 60%,transparent 100%);}
@@ -98,7 +102,7 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 .ccard{position:fixed;background:rgba(6,6,20,.45);border:none;border-radius:10px;padding:7px 11px;width:128px;pointer-events:none;z-index:19;opacity:0;transition:opacity .45s;cursor:pointer;}
 .ccard.on{pointer-events:all;}
 .ccard.on{opacity:1;}
-.cc-name{font-size:13px;font-weight:600;color:#dde;line-height:1.25;}
+.cc-name{font-size:13px;font-weight:600;color:#dde;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .cc-space{font-size:10px;margin-top:2px;text-transform:capitalize;letter-spacing:.06em;}
 .cc-ring{font-size:10px;color:#38385a;margin-top:1px;}
 #callout-svg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:18;}
@@ -110,6 +114,8 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
   /* topbar */
   #topbar h1{font-size:13px;color:#6060a0;}
   #topbar a{font-size:13px;color:#6060a0;}
+  #live-status{font-size:11px;color:#6060a0;}
+  #live-status.live{color:#3aaa80;}
 
   /* filter bar bigger pills */
   .fpill{font-size:14px;padding:6px 14px;min-height:36px;}
@@ -209,12 +215,13 @@ body{background:#06060e;overflow:hidden;font-family:system-ui,-apple-system,sans
 <div id="topbar">
   <h1>Second Brain · 3D</h1>
   <div id="topbar-right">
+    <span id="live-status">Loading…</span>
     <a href="manager.html">← Manager</a>
   </div>
 </div>
 
 <div id="filterbar">
-  <!-- populated by JS -->
+  <button class="fpill on">Loading…</button>
 </div>
 
 <div id="panel">
@@ -258,7 +265,7 @@ const PALPHA={evergreen:.80,slow:.54,fast:.34,single_use:.20};
 const PSIZE ={evergreen:.23,slow:.17,fast:.14,single_use:.11};
 const DECAY_LABEL={evergreen:'Never decays',slow:'Slow decay',fast:'Fast decay',single_use:'One-time use'};
 
-const ENTRIES=[
+const SNAPSHOT_ENTRIES=[
   {name:'Anniversary Trip',space:'leisure',ring:0,type:'single_use',activation:.90,summary:'Planning notes and itinerary for upcoming trip with Cheryl.',notes:['Dates, flights, and accommodation shortlist','Restaurants and experiences to try','Budget allocation per day','Things Cheryl specifically wants to do']},
   {name:'Shanghai Masters',space:'leisure',ring:0,type:'single_use',activation:.85,summary:'Tennis tournament attendance — schedule, tickets, logistics.',notes:['Session times and court assignments','Getting there from accommodation','Key matches to catch','Food and transport around the venue']},
   {name:'Coca-Cola Outcome',space:'work',ring:1,type:'fast',activation:.75,summary:'Debrief from the Coca-Cola application process.',notes:['Final decision and reasoning','What I could have done differently','Relationships worth maintaining','What this confirms about target role fit']},
@@ -297,27 +304,13 @@ const ENTRIES=[
   {name:'Career Arc',space:'core',ring:8,type:'evergreen',activation:.68,summary:'Long-arc career vision — where I am, where I want to be.',notes:['Current chapter: transitioning from FM ops to tech/product','5-year target: building or leading a product with real traction','What I\'m optimising for at each stage: skills → leverage → ownership','The through-line: I want to build things that run without me']},
   {name:'Core Values',space:'core',ring:8,type:'evergreen',activation:.75,summary:'Foundational values — what I stand for, what I won\'t compromise.',notes:['Integrity: I won\'t misrepresent myself or my work to get ahead','Ownership: if I said I\'d do it, it gets done','Curiosity: I stay genuinely interested in how things work','Presence: the people in front of me deserve my full attention']}
 ];
+let ENTRIES=[];
 
 // ── early constants ──────────────────────────────────────────
 const canvas=document.getElementById('c');
 const isMobile=window.innerWidth<=600;
 
-// ── filter bar — pill buttons with entry counts ──────────────
-(function(){
-  const cnt={};for(const n of LOBE_NAMES)cnt[n]=0;for(const e of ENTRIES)cnt[e.space]++;
-  const fb=document.getElementById('filterbar');
-  const allBtn=document.createElement('button');
-  allBtn.className='fpill on';allBtn.dataset.f='all';
-  allBtn.innerHTML=`All <span class="fpill-n">${ENTRIES.length}</span>`;
-  fb.appendChild(allBtn);
-  for(const n of LOBE_NAMES){
-    const L=LOBES[n];
-    const b=document.createElement('button');
-    b.className='fpill';b.dataset.f=n;
-    b.innerHTML=`<span class="fpill-dot" style="background:${L.hex}"></span><span style="color:${L.hex}">${n[0].toUpperCase()+n.slice(1)}</span> <span class="fpill-n">${cnt[n]}</span>`;
-    fb.appendChild(b);
-  }
-})();
+// Filter bar is filled after live entries load (see renderFilterBar).
 
 // Position filterbar below topbar
 (function(){
@@ -388,18 +381,31 @@ function uh(n){let x=n^(n>>>16);x=Math.imul(x,0x45d9f3b);x^=x>>>16;return(x>>>0)
 function coneDir(seed,deg,idx){const[sx,sy,sz]=seed;const th=Math.acos(Math.max(-1,Math.min(1,1-uh(idx*7+1)*(1-Math.cos(deg*Math.PI/180)))));const ph=uh(idx*13+3)*2*Math.PI;const up=Math.abs(sx)<.9?[0,1,0]:[1,0,0];let tx=up[1]*sz-up[2]*sy,ty=up[2]*sx-up[0]*sz,tz=up[0]*sy-up[1]*sx;const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1;tx/=tl;ty/=tl;tz/=tl;const bx=sy*tz-sz*ty,by=sz*tx-sx*tz,bz=sx*ty-sy*tx;const st=Math.sin(th),ct=Math.cos(th),sp2=Math.sin(ph),cp=Math.cos(ph);return vN([tx*st*cp+bx*st*sp2+sx*ct,ty*st*cp+by*st*sp2+sy*ct,tz*st*cp+bz*st*sp2+sz*ct]);}
 const nodeMeshes=[],nodeTex={};
 for(const n of LOBE_NAMES)nodeTex[n]=makeNodeTex(...LOBES[n].rgb);
-let gIdx=0;
-for(const name of LOBE_NAMES){
-  const L=LOBES[name];
-  ENTRIES.filter(e=>e.space===name).forEach((e,i)=>{
-    const seed=L.seedsN[i%L.seedsN.length],dir=coneDir(seed,30,gIdx++),rr=RINGS[e.ring].r*BR;
-    const mobileBright=isMobile?1.6:1.0;
-    const alpha=Math.min(1,PALPHA[e.type]*(.55+e.activation*.45)*mobileBright),nsz=PSIZE[e.type];
-    const gMat=new THREE.SpriteMaterial({map:nodeTex[name],transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:alpha});
-    const gSp=new THREE.Sprite(gMat);gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);gSp.scale.setScalar(nsz*BR*(0.8+e.activation*.4));scene.add(gSp);
-    const hit=new THREE.Mesh(new THREE.SphereGeometry(nsz*.48*BR,5,3),new THREE.MeshBasicMaterial({visible:false}));
-    hit.position.copy(gSp.position);hit.userData={entry:e,mat:gMat,alpha,sprite:gSp};scene.add(hit);nodeMeshes.push(hit);
-  });
+function rebuildNodes(){
+  for(const m of nodeMeshes){
+    scene.remove(m);
+    if(m.userData.sprite) scene.remove(m.userData.sprite);
+    if(m.geometry) m.geometry.dispose();
+    if(m.userData.mat) m.userData.mat.dispose();
+  }
+  nodeMeshes.length=0;
+  let gIdx=0;
+  for(const name of LOBE_NAMES){
+    const L=LOBES[name];
+    const lobeEntries=ENTRIES.filter(e=>e.space===name);
+    const deg=Math.min(62, 26+lobeEntries.length*0.85);
+    lobeEntries.forEach((e,i)=>{
+      e.ring=Math.max(0,Math.min(RINGS.length-1,e.ring|0));
+      const seed=L.seedsN[i%L.seedsN.length],dir=coneDir(seed,deg,gIdx++),rr=RINGS[e.ring].r*BR;
+      const mobileBright=isMobile?1.6:1.0;
+      const pType=PALPHA[e.type]?e.type:'slow';
+      const alpha=Math.min(1,PALPHA[pType]*(.55+e.activation*.45)*mobileBright),nsz=PSIZE[pType]||PSIZE.slow;
+      const gMat=new THREE.SpriteMaterial({map:nodeTex[name],transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:alpha});
+      const gSp=new THREE.Sprite(gMat);gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);gSp.scale.setScalar(nsz*BR*(0.8+e.activation*.4));scene.add(gSp);
+      const hit=new THREE.Mesh(new THREE.SphereGeometry(nsz*.48*BR,5,3),new THREE.MeshBasicMaterial({visible:false}));
+      hit.position.copy(gSp.position);hit.userData={entry:e,mat:gMat,alpha,sprite:gSp};scene.add(hit);nodeMeshes.push(hit);
+    });
+  }
 }
 
 // HTML labels
@@ -458,10 +464,10 @@ function updateCallouts(){
     if(!pick){card.classList.remove('on');line.style.opacity='0';continue;}
     const e=pick.entry,L=LOBES[e.space];
     card._mesh=pick.m;
-    card.querySelector('.cc-name').textContent=e.name;
+    card.querySelector('.cc-name').textContent=e.name.length>42?e.name.slice(0,40)+'…':e.name;
     card.querySelector('.cc-space').textContent=e.space;
     card.querySelector('.cc-space').style.color=L.hex;
-    card.querySelector('.cc-ring').textContent=RINGS[e.ring].label+' ago';
+    card.querySelector('.cc-ring').textContent=ringMeta(e).label+' ago';
     // Card: left/right of bubble, placed ABOVE (so y always differs from bubble.y)
     const onLeft=pick.sx>innerWidth*0.5;
     const cx=onLeft?pick.sx-CARD_W-20:pick.sx+20;
@@ -488,10 +494,13 @@ function updateCallouts(){
 // ═══════════════════════════════════════════════════════════
 // PANEL
 // ═══════════════════════════════════════════════════════════
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function ringMeta(e){return RINGS[e.ring]||RINGS[RINGS.length-1];}
 function buildPanel(e,L){
   const depthPct=Math.round((1-e.ring/8)*100),actPct=Math.round(e.activation*100);
-  const noteItems=e.notes.map(n=>`<li>${n}</li>`).join('');
-  return `<div class="p-section"><div class="p-section-body">${e.summary}</div></div>
+  const notes=Array.isArray(e.notes)?e.notes:[];
+  const noteItems=notes.length?notes.map(n=>`<li>${esc(n)}</li>`).join(''):'<li>No notes on this entry</li>';
+  return `<div class="p-section"><div class="p-section-body">${esc(e.summary||'')}</div></div>
     <div class="p-acc open">
       <div class="p-acc-head"><span class="p-acc-title">Key Notes</span><span class="p-acc-arrow">›</span></div>
       <div class="p-acc-body"><ul class="p-notes">${noteItems}</ul></div>
@@ -501,8 +510,9 @@ function buildPanel(e,L){
       <div class="p-acc-body">
         <div class="p-bar-wrap"><div class="p-bar-lbl">Activation · ${actPct}%</div><div class="p-bar-track"><div class="p-bar-fill" style="width:${actPct}%;background:${L.hex}cc"></div></div></div>
         <div class="p-bar-wrap"><div class="p-bar-lbl">Recency (surface = recent)</div><div class="p-bar-track"><div class="p-bar-fill" style="width:${depthPct}%;background:${L.hex}77"></div></div></div>
-        <div class="p-meta-row"><span class="p-meta-key">Age</span><span class="p-meta-val">${RINGS[e.ring].label} ago</span></div>
-        <div class="p-meta-row"><span class="p-meta-key">Decay</span><span class="p-meta-val">${DECAY_LABEL[e.type]}</span></div>
+        <div class="p-meta-row"><span class="p-meta-key">Age</span><span class="p-meta-val">${esc(ringMeta(e).label)} ago</span></div>
+        <div class="p-meta-row"><span class="p-meta-key">Decay</span><span class="p-meta-val">${esc(DECAY_LABEL[e.type]||e.type||'—')}</span></div>
+        <div class="p-meta-row"><span class="p-meta-key">Layer</span><span class="p-meta-val">${esc(e.layer||'—')}</span></div>
         <div class="p-meta-row"><span class="p-meta-key">Depth layer</span><span class="p-meta-val">${e.ring+1} of ${RINGS.length}</span></div>
       </div>
     </div>`;
@@ -574,12 +584,148 @@ function doHover(cx,cy){
     const e=hit.userData.entry;canvas.style.cursor='pointer';
     if(hoveredSpace!==e.space){hoveredSpace=e.space;for(const m of nodeMeshes){const same=m.userData.entry.space===e.space,vis=activeFilter==='all'||m.userData.entry.space===activeFilter;m.userData.mat.opacity=(same&&vis)?m.userData.alpha:m.userData.alpha*.07;}}
     const sc=project(hit.position);nodeLbl.style.left=sc.x+'px';nodeLbl.style.top=sc.y+'px';
-    nodeLbl.innerHTML=`${e.name}<span class="nl-sub">${RINGS[e.ring].label} ago · ${e.type}</span>`;nodeLbl.classList.add('on');
+    nodeLbl.innerHTML=`${esc(e.name)}<span class="nl-sub">${esc(ringMeta(e).label)} ago · ${esc(e.type)}</span>`;nodeLbl.classList.add('on');
   }else{canvas.style.cursor='default';if(hoveredSpace){hoveredSpace=null;applyFilter();}nodeLbl.classList.remove('on');}
 }
 function doClick(cx,cy){const hit=getHit(cx,cy);if(hit)showPanel(hit);else document.getElementById('panel').classList.remove('on');}
-document.querySelectorAll('.fpill').forEach(btn=>{btn.addEventListener('click',()=>{activeFilter=btn.dataset.f;document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');hoveredSpace=null;applyFilter();});});
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+// ═══════════════════════════════════════════════════════════
+// LIVE ENTRIES (Supabase) — same localStorage creds as Manager
+// ═══════════════════════════════════════════════════════════
+const RING_MS=[2,7,21,60,120,240,547,1461].map(d=>d*864e5);
+function setLiveStatus(kind,text,detail){
+  const el=document.getElementById('live-status');
+  if(!el)return;
+  el.className=kind||'';
+  el.textContent=text||'';
+  el.title=detail||text||'';
+}
+function renderFilterBar(){
+  const fb=document.getElementById('filterbar');
+  fb.innerHTML='';
+  if(!ENTRIES.length){
+    const b=document.createElement('button');
+    b.className='fpill on';b.textContent='Loading…';
+    fb.appendChild(b);return;
+  }
+  const cnt={};for(const n of LOBE_NAMES)cnt[n]=0;for(const e of ENTRIES)if(cnt[e.space]!=null)cnt[e.space]++;
+  const allBtn=document.createElement('button');
+  allBtn.className='fpill'+(activeFilter==='all'?' on':'');allBtn.dataset.f='all';
+  allBtn.innerHTML=`All <span class="fpill-n">${ENTRIES.length}</span>`;
+  fb.appendChild(allBtn);
+  for(const n of LOBE_NAMES){
+    const L=LOBES[n];
+    const b=document.createElement('button');
+    b.className='fpill'+(activeFilter===n?' on':'');b.dataset.f=n;
+    b.innerHTML=`<span class="fpill-dot" style="background:${L.hex}"></span><span style="color:${L.hex}">${n[0].toUpperCase()+n.slice(1)}</span> <span class="fpill-n">${cnt[n]}</span>`;
+    fb.appendChild(b);
+  }
+  fb.querySelectorAll('.fpill').forEach(btn=>{
+    if(!btn.dataset.f)return;
+    btn.addEventListener('click',()=>{
+      activeFilter=btn.dataset.f;
+      fb.querySelectorAll('.fpill').forEach(x=>x.classList.remove('on'));
+      btn.classList.add('on');
+      hoveredSpace=null;applyFilter();
+    });
+  });
+}
+function stripMd(s){
+  return String(s||'')
+    .replace(/```[\s\S]*?```/g,' ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g,'$1')
+    .replace(/[#>*_`]/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function summaryFromBody(body){
+  const t=stripMd(body);
+  if(!t) return 'No summary';
+  if(t.length<=220) return t;
+  return t.slice(0,217).replace(/\s+\S*$/,'')+'…';
+}
+function notesFromBody(body,tags){
+  const lines=String(body||'').split(/\n+/).map(l=>l.replace(/^[\s\-*>#]+/,'').trim()).filter(l=>l.length>18);
+  const notes=lines.slice(0,4).map(l=>stripMd(l).slice(0,140)).filter(Boolean);
+  if(notes.length) return notes;
+  if(Array.isArray(tags)&&tags.length) return tags.slice(0,4).map(t=>'#'+t);
+  return [];
+}
+function ringFromDate(iso){
+  if(!iso) return 8;
+  const age=Date.now()-new Date(iso).getTime();
+  if(!isFinite(age)) return 8;
+  if(age<=0) return 0;
+  for(let i=0;i<RING_MS.length;i++) if(age<=RING_MS[i]) return i;
+  return 8;
+}
+function mapLiveEntry(row,stats){
+  const space=LOBES[row.space]?row.space:null;
+  if(!space) return null;
+  const type=PALPHA[row.perishability]?row.perishability:'slow';
+  const st=stats&&stats[row.id];
+  const ring=ringFromDate(row.updated_at||row.created_at);
+  let activation=Math.max(0.22, Math.min(0.9, 0.28+(1-ring/8)*0.5));
+  if(st){
+    const s=Number(st.impact_score_30d)||0;
+    activation=Math.max(0.22, Math.min(0.95, 0.22+Math.log1p(s)/Math.log1p(12)*0.73));
+  }
+  return {
+    id:row.id,
+    name:row.title||'Untitled',
+    space, ring, type, activation,
+    layer:row.layer||'',
+    summary:summaryFromBody(row.body),
+    notes:notesFromBody(row.body,row.tags)
+  };
+}
+function applyEntries(rows,kind,label,detail){
+  ENTRIES=rows;
+  renderFilterBar();
+  rebuildNodes();
+  applyFilter();
+  setLiveStatus(kind,label,detail);
+}
+function useSnapshot(reason){
+  applyEntries(SNAPSHOT_ENTRIES.slice(),'snap','snapshot',reason||'Connect in Manager to load live entries');
+}
+async function loadLiveBrain(){
+  setLiveStatus('','Loading…');
+  const creds={
+    url:localStorage.getItem('byoc_supabase_url')||'',
+    key:localStorage.getItem('byoc_supabase_key')||'',
+    email:localStorage.getItem('byoc_supabase_email')||'',
+    password:localStorage.getItem('byoc_supabase_password')||''
+  };
+  if(!creds.url||!creds.key||!creds.email||!creds.password){
+    useSnapshot('Open Manager once and save Supabase login — 3D reuses those credentials.');
+    return;
+  }
+  try{
+    const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+    const sb=createClient(creds.url,creds.key);
+    const {error:authErr}=await sb.auth.signInWithPassword({email:creds.email,password:creds.password});
+    if(authErr) throw authErr;
+    const {data:rows,error:entErr}=await sb.from('entries')
+      .select('id,title,body,space,layer,perishability,tags,status,created_at,updated_at')
+      .eq('status','active')
+      .order('updated_at',{ascending:false})
+      .limit(1000);
+    if(entErr) throw entErr;
+    const statsMap={};
+    try{
+      const {data:stats,error:stErr}=await sb.from('entry_activation_stats')
+        .select('id,impact_score_30d,last_touched_at,citations_30d');
+      if(!stErr && stats) for(const s of stats) statsMap[s.id]=s;
+    }catch(_){}
+    const mapped=(rows||[]).map(r=>mapLiveEntry(r,statsMap)).filter(Boolean);
+    if(!mapped.length) throw new Error('No active entries returned');
+    applyEntries(mapped,'live',mapped.length+' live','Loaded from Supabase · same login as Manager');
+  }catch(err){
+    useSnapshot(err&&err.message?err.message:'Live load failed');
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 // RENDER LOOP
@@ -602,6 +748,7 @@ function animate(){
   renderer.render(scene,camera);
 }
 animate();
+loadLiveBrain();
 </script>
 </body>
 </html>
