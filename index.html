@@ -257,12 +257,12 @@ function vAN(a){const s=[0,0,0];a.forEach(v=>{s[0]+=v[0];s[1]+=v[1];s[2]+=v[2];}
 for(const n of LOBE_NAMES){LOBES[n].seedsN=LOBES[n].seeds.map(vN);LOBES[n].centroid=vAN(LOBES[n].seeds);LOBES[n].hex='#'+new THREE.Color(LOBES[n].color).getHexString();}
 
 const RINGS=[
-  {label:'2 days',r:.965},{label:'1 week',r:.905},{label:'3 weeks',r:.840},
-  {label:'2 months',r:.755},{label:'4 months',r:.650},{label:'8 months',r:.525},
-  {label:'1.5 yrs',r:.390},{label:'4 years',r:.250},{label:'10+ yrs',r:.115}
+  {label:'2 weeks',r:1.018},{label:'1 month',r:1.004},{label:'3 months',r:.988},
+  {label:'6 months',r:.962},{label:'1 year',r:.922},{label:'2 years',r:.860},
+  {label:'4 years',r:.760},{label:'8 years',r:.620},{label:'10+ yrs',r:.430}
 ];
-const PALPHA={evergreen:.80,slow:.54,fast:.34,single_use:.20};
-const PSIZE ={evergreen:.23,slow:.17,fast:.14,single_use:.11};
+const PALPHA={evergreen:.36,slow:.26,fast:.20,single_use:.15};
+const PSIZE ={evergreen:.11,slow:.085,fast:.07,single_use:.055};
 const DECAY_LABEL={evergreen:'Never decays',slow:'Slow decay',fast:'Fast decay',single_use:'One-time use'};
 
 const SNAPSHOT_ENTRIES=[
@@ -366,17 +366,17 @@ function makeGlowTex(r,g,b){const S=256,cv=document.createElement('canvas');cv.w
 const lobeGlow={};
 for(const name of LOBE_NAMES){
   const L=LOBES[name];
-  const lobeOpacity=isMobile?Math.min(1,(.26+L.activation*.15)*1.8):.26+L.activation*.15;
+  const lobeOpacity=isMobile?Math.min(.55,(.14+L.activation*.10)*1.4):.14+L.activation*.10;
   const mat=new THREE.SpriteMaterial({map:makeGlowTex(...L.rgb),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:lobeOpacity});
   const sp=new THREE.Sprite(mat);
-  const c=L.centroid,rr=BR*(.34+L.activation*.12);sp.position.set(c[0]*rr,c[1]*rr,c[2]*rr);
-  const sz=BR*(1.38+L.activation*.44);sp.scale.setScalar(sz);
-  sp._base={op:.26+L.activation*.15,sz};sp._spd=2*Math.PI/(2.6+(1-L.activation)*5.4);sp._ph=L.phase;
+  const c=L.centroid,rr=BR*(.72+L.activation*.12);sp.position.set(c[0]*rr,c[1]*rr,c[2]*rr);
+  const sz=BR*(.82+L.activation*.28);sp.scale.setScalar(sz);
+  sp._base={op:.14+L.activation*.10,sz};sp._spd=2*Math.PI/(2.6+(1-L.activation)*5.4);sp._ph=L.phase;
   lobeGlow[name]=sp;scene.add(sp);
 }
 
 // Nodes
-function makeNodeTex(r,g,b){const S=64,cv=document.createElement('canvas');cv.width=S;cv.height=S;const ctx=cv.getContext('2d');const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);gr.addColorStop(0,`rgba(${r},${g},${b},.95)`);gr.addColorStop(.40,`rgba(${r},${g},${b},.35)`);gr.addColorStop(.70,`rgba(${r},${g},${b},.08)`);gr.addColorStop(1,`rgba(${r},${g},${b},0)`);ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);}
+function makeNodeTex(r,g,b){const S=64,cv=document.createElement('canvas');cv.width=S;cv.height=S;const ctx=cv.getContext('2d');const gr=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);gr.addColorStop(0,`rgba(${r},${g},${b},.92)`);gr.addColorStop(.16,`rgba(${r},${g},${b},.55)`);gr.addColorStop(.34,`rgba(${r},${g},${b},.12)`);gr.addColorStop(.55,`rgba(${r},${g},${b},0)`);ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);return new THREE.CanvasTexture(cv);}
 function uh(n){let x=n^(n>>>16);x=Math.imul(x,0x45d9f3b);x^=x>>>16;return(x>>>0)/4294967295;}
 function coneDir(seed,deg,idx){const[sx,sy,sz]=seed;const th=Math.acos(Math.max(-1,Math.min(1,1-uh(idx*7+1)*(1-Math.cos(deg*Math.PI/180)))));const ph=uh(idx*13+3)*2*Math.PI;const up=Math.abs(sx)<.9?[0,1,0]:[1,0,0];let tx=up[1]*sz-up[2]*sy,ty=up[2]*sx-up[0]*sz,tz=up[0]*sy-up[1]*sx;const tl=Math.sqrt(tx*tx+ty*ty+tz*tz)||1;tx/=tl;ty/=tl;tz/=tl;const bx=sy*tz-sz*ty,by=sz*tx-sx*tz,bz=sx*ty-sy*tx;const st=Math.sin(th),ct=Math.cos(th),sp2=Math.sin(ph),cp=Math.cos(ph);return vN([tx*st*cp+bx*st*sp2+sx*ct,ty*st*cp+by*st*sp2+sy*ct,tz*st*cp+bz*st*sp2+sz*ct]);}
 const nodeMeshes=[],nodeTex={};
@@ -393,16 +393,16 @@ function rebuildNodes(){
   for(const name of LOBE_NAMES){
     const L=LOBES[name];
     const lobeEntries=ENTRIES.filter(e=>e.space===name);
-    const deg=Math.min(62, 26+lobeEntries.length*0.85);
+    const deg=Math.min(102, 58+lobeEntries.length*1.15);
     lobeEntries.forEach((e,i)=>{
       e.ring=Math.max(0,Math.min(RINGS.length-1,e.ring|0));
       const seed=L.seedsN[i%L.seedsN.length],dir=coneDir(seed,deg,gIdx++),rr=RINGS[e.ring].r*BR;
-      const mobileBright=isMobile?1.6:1.0;
+      const mobileBright=isMobile?1.2:1.0;
       const pType=PALPHA[e.type]?e.type:'slow';
-      const alpha=Math.min(1,PALPHA[pType]*(.55+e.activation*.45)*mobileBright),nsz=PSIZE[pType]||PSIZE.slow;
+      const alpha=Math.min(.55,PALPHA[pType]*(.50+e.activation*.28)*mobileBright),nsz=PSIZE[pType]||PSIZE.slow;
       const gMat=new THREE.SpriteMaterial({map:nodeTex[name],transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:alpha});
-      const gSp=new THREE.Sprite(gMat);gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);gSp.scale.setScalar(nsz*BR*(0.8+e.activation*.4));scene.add(gSp);
-      const hit=new THREE.Mesh(new THREE.SphereGeometry(nsz*.48*BR,5,3),new THREE.MeshBasicMaterial({visible:false}));
+      const gSp=new THREE.Sprite(gMat);gSp.position.set(dir[0]*rr,dir[1]*rr,dir[2]*rr);gSp.scale.setScalar(nsz*BR*(0.72+e.activation*.18));scene.add(gSp);
+      const hit=new THREE.Mesh(new THREE.SphereGeometry(Math.max(nsz*.7,.10)*BR,5,3),new THREE.MeshBasicMaterial({visible:false}));
       hit.position.copy(gSp.position);hit.userData={entry:e,mat:gMat,alpha,sprite:gSp};scene.add(hit);nodeMeshes.push(hit);
     });
   }
@@ -593,7 +593,7 @@ window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camer
 // ═══════════════════════════════════════════════════════════
 // LIVE ENTRIES (Supabase) — same localStorage creds as Manager
 // ═══════════════════════════════════════════════════════════
-const RING_MS=[2,7,21,60,120,240,547,1461].map(d=>d*864e5);
+const RING_MS=[14,30,90,180,365,730,1461,2922].map(d=>d*864e5);
 function setLiveStatus(kind,text,detail){
   const el=document.getElementById('live-status');
   if(!el)return;
@@ -741,7 +741,7 @@ function animate(){
   camera.position.z=Math.cos(rotY)*Math.cos(rotX)*camZ;
   camera.lookAt(0,0,0);
   for(const name of LOBE_NAMES){const sp=lobeGlow[name],b=Math.sin(t*sp._spd+sp._ph),vis=activeFilter==='all'||name===activeFilter;sp.scale.setScalar(sp._base.sz*(1+b*.07));sp.material.opacity=Math.min(.82,sp._base.op*(1+b*.22)*(vis?1:.06));}
-  if(!hoveredSpace){for(const m of nodeMeshes){const{entry,mat,alpha}=m.userData,vis=activeFilter==='all'||entry.space===activeFilter;if(!vis){mat.opacity=alpha*.06;continue;}let p=1;if(entry.type==='single_use')p=.65+Math.sin(t*2.5+m.id*.9)*.35;else if(entry.type==='fast')p=.82+Math.sin(t*1.4+m.id*.5)*.18;mat.opacity=Math.min(1,alpha*p);}}
+  if(!hoveredSpace){for(const m of nodeMeshes){const{entry,mat,alpha}=m.userData,vis=activeFilter==='all'||entry.space===activeFilter;if(!vis){mat.opacity=alpha*.06;continue;}let p=1;if(entry.type==='single_use')p=.70+Math.sin(t*2.5+m.id*.9)*.22;else if(entry.type==='fast')p=.85+Math.sin(t*1.4+m.id*.5)*.12;mat.opacity=Math.min(.55,alpha*p);}}
   const toCamera=camera.position.clone().normalize();
   for(const name of LOBE_NAMES){const c=LOBES[name].centroid,dot=toCamera.x*c[0]+toCamera.y*c[1]+toCamera.z*c[2],show=dot>0.28&&(activeFilter==='all'||activeFilter===name),el=lobeLbls[name];if(show){const wp=new THREE.Vector3(c[0],c[1],c[2]).multiplyScalar(BR*1.06),sc=project(wp);el.style.left=sc.x+'px';el.style.top=sc.y+'px';el.classList.add('on');}else el.classList.remove('on');}
   updateCallouts();
